@@ -1,0 +1,6 @@
+board.h
+board.ld
+main.v
+toplevel.v
+regdefs.h
+regdefs.cpp
