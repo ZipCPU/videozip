@@ -38,11 +38,11 @@
 ##
 ##
 .PHONY: all
-all:	archive datestamp rtl bench sw
+all:	archive datestamp autodata rtl sim sw
 # all:	verilated sw bench bit
 #
 # Could also depend upon load, if desired, but not necessary
-BENCH := `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
+SIM := `find sim -name Makefile` `find sim -name "*.cpp"` `find sim -name "*.h"`
 RTL   := `find rtl -name "*.v"` `find rtl -name Makefile`
 NOTES := `find . -name "*.txt"` `find . -name "*.html"`
 SW    := `find sw -name "*.cpp"` `find sw -name "*.c"`	\
@@ -65,20 +65,42 @@ datestamp:
 archive:
 	tar --transform s,^,$(YYMMDD)-video/, -chjf $(YYMMDD)-video.tjz $(BENCH) $(SW) $(RTL) $(NOTES) $(PROJ) $(BIN) $(CONSTRAINTS)
 
+.PHONY: autodata
+autodata:
+	$(MAKE) --no-print-directory --directory=auto-data
+	$(call copyif-changed,auto-data/toplevel.v,rtl/toplevel.v)
+	$(call copyif-changed,auto-data/main.v,rtl/main.v)
+	$(call copyif-changed,auto-data/regdefs.h,sw/host/regdefs.h)
+	$(call copyif-changed,auto-data/regdefs.cpp,sw/host/regdefs.cpp)
+	$(call copyif-changed,auto-data/board.h,sw/board/board.h)
+	$(call copyif-changed,auto-data/board.ld,sw/board/board.ld)
+
 .PHONY: verilated
-verilated: datestamp
+verilated: datestamp autodata
 	$(MAKE) --no-print-directory --directory=rtl
 
 .PHONY: rtl
 rtl: verilated
 
-# .PHONY: bench
-# bench: rtl
-#	$(MAKE) --no-print-directory --directory=bench/cpp
+.PHONY: sim
+sim: rtl
+	$(MAKE) --no-print-directory --directory=sim/verilated
 
-#.PHONY: sw
-#sw:
-#	$(MAKE) --no-print-directory --directory=sw
+.PHONY: sw
+sw: sw-host sw-board
+
+.PHONY: sw-host
+sw-host:
+	$(MAKE) --no-print-directory --directory=sw/host
+
+.PHONY: sw-board
+sw-board:
+	$(MAKE) --no-print-directory --directory=sw/board
+
+define	copyif-changed
+	@bash -c 'cmp $(1) $(2); if [[ $$? != 0 ]]; then echo "Copying $(1) to $(2)"; cp $(1) $(2); fi'
+endef
+
 
 # .PHONY: bit
 # bit:

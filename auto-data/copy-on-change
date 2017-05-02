@@ -1,0 +1,10 @@
+#!/bin/bash
+
+SOURCE=$1
+DEST=$2
+
+cmp $1 $2 > /dev/null
+if [[ $? != 0 ]];
+then
+	echo $1 and $2 differ
+fi
