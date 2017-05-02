@@ -69,11 +69,12 @@ class	QSPIFLASHSIM {
 	char		*m_mem, *m_pmem;
 	int		m_last_sck;
 	unsigned	m_write_count, m_ireg, m_oreg, m_sreg, m_addr,
-			m_count, m_config, m_mode_byte, m_creg;
+			m_count, m_config, m_mode_byte, m_creg, m_membytes,
+			m_memmask;
 	bool		m_quad_mode, m_debug;
 
 public:
-	QSPIFLASHSIM(void);
+	QSPIFLASHSIM(const int lglen = 24, bool debug = false);
 	void	load(const char *fname) { load(0, fname); }
 	void	load(const unsigned addr, const char *fname);
 	void	load(const uint32_t offset, const char *data, const uint32_t len);
