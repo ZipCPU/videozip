@@ -158,6 +158,9 @@ public:
 #ifdef	SDRAMBASE
 			, m_ram(1<<26)
 #endif
+#ifdef	HDMI_OUT_EDID_ACCESS
+			, m_hdmi_out_edid(0x50, 8)
+#endif
 			{
 		if (debug)
 			printf("Copy-to-stdout is %s\n", (copy_to_stdout)?"true":"false");
