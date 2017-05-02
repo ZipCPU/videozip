@@ -37,27 +37,29 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := wbregs netuart rdclocks mkedid # zipload zipstate zipdbg
-SCOPES := edidrxscope
+PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid
+SCOPES := edidrxscope edidtxscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
 BUSSRCS := ttybus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
-SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp	\
-	 mkedid.cpp $(BUSSRCS)
-	# zipload.cpp zipstate.cpp zipdbg.cpp netsetup.cpp
-	# ziprun.cpp cfgscope.cpp mdioscope.cpp manping.cpp
+SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
+	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
+	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp # netsetup.cpp
+	# manping.cpp wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
 BUSOBJS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(BUSSRCS)))
-CFLAGS := -g -Wall -I.
+CFLAGS := -g -Wall -I. -I../../rtl
 LIBS :=
 SUBMAKE := $(MAKE) --no-print-directory
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.cpp
+	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
 $(OBJDIR)/%.o: %.c
+	$(mk-objdir)
 	$(CXX) $(CFLAGS) -c $< -o $@
 
 .PHONY: gps
@@ -69,21 +71,20 @@ gps: $(BUSOBJS) # $(OBJDIR)/scopecls.o
 clean:
 	rm -rf $(OBJDIR)/ $(PROGRAMS) a.out
 
-$(OBJDIR)/scopecls.o: scopecls.cpp scopecls.h $(OBJDIR)/
-$(OBJDIR)/edidrxscope.o: edidrxscope.cpp scopecls.h $(OBJDIR)/
-$(OBJDIR)/dumpflash.o: dumpflash.cpp regdefs.h $(OBJDIR)/
+$(OBJDIR)/scopecls.o: scopecls.cpp scopecls.h
+$(OBJDIR)/edidrxscope.o: edidrxscope.cpp scopecls.h
+$(OBJDIR)/edidtxscope.o: edidtxscope.cpp scopecls.h
+$(OBJDIR)/dumpflash.o: dumpflash.cpp regdefs.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
 #
 # Some simple programs that just depend upon the ability to talk to the FPGA,
 # and little more. 
-#wbsettime: $(OBJDIR)/wbsettime.o $(BUSOBJS)
-#	$(CXX) $(CFLAGS) $^ -o $@
 #manping: $(OBJDIR)/manping.o $(BUSOBJS)
 #	$(CXX) $(CFLAGS) $^ -o $@
-#zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
-#	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 netsetup: $(OBJDIR)/netsetup.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
@@ -94,8 +95,8 @@ dumpflash: $(OBJDIR)/dumpflash.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 mkedid: $(OBJDIR)/mkedid.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
-#divutb: $(OBJDIR)/divutb.o
-#	$(CXX) $(CFLAGS) $^ -o $@
+cpedid: $(OBJDIR)/cpedid.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
 
 #
 # Programs that depend upon not just the bus objects, but the flash driver
@@ -111,17 +112,22 @@ zipload: $(OBJDIR)/zipload.o $(OBJDIR)/flashdrvr.o $(BUSOBJS) $(OBJDIR)/zipelf.o
 # main file(s).
 edidrxscope: $(OBJDIR)/edidrxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
+edidtxscope: $(OBJDIR)/edidtxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
 
 #
-#
-# DBGSRCS  := zopcodes.cpp twoc.cpp
-# DBGOBJS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(DBGSRCS)))
-# zipdbg: $(OBJDIR)/zipdbg.o $(BUSOBJS) $(DBGOBJS)
-#	$(CXX) -g $^ -lcurses -o $@
+DBGSRCS  := zopcodes.cpp twoc.cpp
+DBGOBJS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(DBGSRCS)))
+zipdbg: $(OBJDIR)/zipdbg.o $(BUSOBJS) $(DBGOBJS)
+	$(CXX) -g $^ -lcurses -o $@
+
+define	mk-objdir
+	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+endef
 
 define	build-depends
 	@echo "Building dependency file(s)"
-	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR)/; fi"
+	$(mk-objdir)
 	$(CXX) $(CPPFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
 	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
 	@rm $(OBJDIR)/xdepends.txt
@@ -137,8 +143,5 @@ depends: tags
 
 $(OBJDIR)/depends.txt: $(SOURCES) $(HEADERS)
 	$(build-depends)
-
-$(OBJDIR)/:
-	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR)/; fi"
 
 -include $(OBJDIR)/depends.txt
