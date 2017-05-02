@@ -37,11 +37,17 @@
 //
 `default_nettype	none
 //
+`define	HAS_CONSOLE_PORT
 module	wbubus(i_clk, i_rx_stb, i_rx_data, 
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
 		i_wb_ack, i_wb_stall, i_wb_err, i_wb_data,
 		i_interrupt,
-		o_tx_stb, o_tx_data, i_tx_busy, o_dbg);
+		o_tx_stb, o_tx_data, i_tx_busy,
+`ifdef	HAS_CONSOLE_PORT
+		i_console_stb, i_console_data, o_console_busy,
+		o_console_stb, o_console_data,
+`endif
+		o_dbg);
 	parameter	LGWATCHDOG=19;
 	input	wire		i_clk;
 	input	wire		i_rx_stb;
@@ -54,7 +60,26 @@ module	wbubus(i_clk, i_rx_stb, i_rx_data,
 	output	wire		o_tx_stb;
 	output	wire	[7:0]	o_tx_data;
 	input	wire		i_tx_busy;
+	//
+`ifdef	HAS_CONSOLE_PORT
+	input	wire		i_console_stb;
+	input	wire	[6:0]	i_console_data;
+	output	wire		o_console_busy;
+	//
+	output	reg		o_console_stb;
+	output	reg	[6:0]	o_console_data;
+`endif
+	//
 	output	wire		o_dbg;
+
+
+
+
+	always @(posedge i_clk)
+		o_console_stb <= (i_console_stb)&&(i_rx_data[7] == 1'b0);
+	always @(posedge i_clk)
+		o_console_data <= i_rx_data[6:0];
+
 
 
 	reg		r_wdt_reset;
@@ -62,7 +87,7 @@ module	wbubus(i_clk, i_rx_stb, i_rx_data,
 	// Decode ASCII input requests into WB bus cycle requests
 	wire		in_stb;
 	wire	[35:0]	in_word;
-	wbuinput	getinput(i_clk, i_rx_stb, i_rx_data, in_stb, in_word);
+	wbuinput	getinput(i_clk, (i_rx_stb)&&(i_rx_data[7]), { 1'b0, i_rx_data[6:0] }, in_stb, in_word);
 
 	wire	w_bus_busy, fifo_in_stb, exec_stb, w_bus_reset;
 	wire	[35:0]	fifo_in_word, exec_word;
@@ -88,32 +113,38 @@ module	wbubus(i_clk, i_rx_stb, i_rx_data,
 		i_wb_ack, i_wb_stall, i_wb_err, i_wb_data,
 		exec_stb, exec_word);
 
-	/*
-	wire	[31:0]	cyc_debug;
-	assign	cyc_debug = { 1'b0, o_wb_cyc, o_wb_stb, o_wb_we, i_wb_ack, i_wb_stall,
-				(i_wb_err||r_wdt_reset), o_wb_addr[14:0],
-				o_wb_data[4:0], i_wb_data[4:0] };
-	assign	o_dbg = cyc_debug;
-	*/
-	/*
-	wire	[31:0]	fif_debug;
-	assign	fif_debug = { 
-			(exec_stb)&&(exec_word[35:30] == 6'h05),// 1
-			fifo_in_stb, fifo_in_word[35:30],	// 7
-			exec_stb, exec_word[35:30],		// 7
-			o_wb_cyc, o_wb_stb, o_wb_we,
-				i_wb_ack, i_wb_stall,		// 5
-			w_bus_busy, ififo_empty_n, w_bus_reset,	// 3
-			i_rx_stb, o_wb_addr[7:0] };		// 9
-	assign	o_dbg = fif_debug;
-	*/
-			
+	reg		ps_full;
+	reg	[7:0]	ps_data;
+	wire		wbu_tx_stb;
+	wire	[7:0]	wbu_tx_data;
+
 	wire		ofifo_err;
 	// wire	[30:0]	out_dbg;
 	wbuoutput	wroutput(i_clk, w_bus_reset,
 			exec_stb, exec_word,
 			o_wb_cyc, i_interrupt, exec_stb,
-			o_tx_stb, o_tx_data, i_tx_busy, ofifo_err);
+			wbu_tx_stb, wbu_tx_data, ps_full, ofifo_err);
+
+	// Let's now arbitrate between the two outputs
+	initial	ps_full = 1'b0;
+	always @(posedge i_clk)
+		if (!ps_full)
+		begin
+			if (wbu_tx_stb)
+			begin
+				ps_full <= 1'b1;
+				ps_data <= { 1'b1, wbu_tx_data[6:0] };
+			end else if (i_console_stb)
+			begin
+				ps_full <= 1'b1;
+				ps_data <= { 1'b0, i_console_data[6:0] };
+			end
+		end else if (!i_tx_busy)
+			ps_full <= 1'b0;
+
+	assign	o_tx_stb = ps_full;
+	assign	o_tx_data = ps_data;
+	assign	o_console_busy = (wbu_tx_stb)||(ps_full);
 
 	// Add in a watchdog timer to the bus
 	reg	[(LGWATCHDOG-1):0]	r_wdt_timer;

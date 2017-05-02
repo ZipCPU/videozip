@@ -2,7 +2,7 @@
 //
 // Filename:	wbgpio.v
 //
-// Project:	WBUBUS, a UART (or other 8-bit) to wishbone B4/pipeline bridge
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This extremely simple GPIO controller, although minimally 
 //		featured, is designed to control up to sixteen general purpose
@@ -20,14 +20,21 @@
 //	needing to capture and maintain the prior bit values--something that
 //	might be difficult from a interrupt context within a CPU.
 //	
+//	Unlike other controllers, this controller offers no capability to
+//	change input/output direction, or to implement pull-up or pull-down
+//	resistors.  It simply changes and adjusts the values going out the
+//	output pins, while allowing a user to read the values on the input
+//	pins.
 //
+//	Any change of an input pin value will result in the generation of an
+//	interrupt signal.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -40,7 +47,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -55,7 +62,8 @@
 //
 module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, o_wb_data,
 		i_gpio, o_gpio, o_int);
-	parameter	NIN=16, NOUT=16, DEFAULT=16'h00;
+	parameter		NIN=16, NOUT=16;
+	parameter [(NOUT-1):0]	DEFAULT=16'h00;
 	input	wire		i_clk;
 	//
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
@@ -68,20 +76,32 @@ module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, o_wb_data,
 	output	reg		o_int;
 
 	// 9LUT's, 16 FF's
+	initial	o_gpio = DEFAULT;
 	always @(posedge i_clk)
 		if ((i_wb_stb)&&(i_wb_we))
 			o_gpio <= ((o_gpio)&(~i_wb_data[(NOUT+16-1):16]))
 				|((i_wb_data[(NOUT-1):0])&(i_wb_data[(NOUT+16-1):16]));
 
-	reg	[(NIN-1):0]	x_gpio, r_gpio;
+	reg	[(NIN-1):0]	x_gpio, q_gpio, r_gpio;
 	// 3 LUTs, 33 FF's
 	always @(posedge i_clk)
 	begin
 		x_gpio <= i_gpio;
-		r_gpio <= x_gpio;
+		q_gpio <= x_gpio;
+		r_gpio <= q_gpio;
 		o_int  <= (x_gpio != r_gpio);
 	end
 
-	assign	o_wb_data = { {(16-NIN){1'b0}}, r_gpio,
-					{(16-NOUT){1'b0}}, o_gpio };
+	wire	[15:0]	hi_bits, low_bits;
+	assign	hi_bits[ (NIN -1):0] = r_gpio;
+	assign	low_bits[(NOUT-1):0] = o_gpio;
+	generate
+	if (NIN < 16)
+		assign hi_bits[ 15: NIN] = 0;
+	if (NOUT < 16)
+		assign low_bits[15:NOUT] = 0;
+	endgenerate
+
+	assign	o_wb_data = { hi_bits, low_bits };
+
 endmodule

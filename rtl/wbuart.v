@@ -342,7 +342,7 @@ module	wbuart(i_clk, i_rst,
 			tx_uart_reset <= 1'b0;
 
 `ifdef	USE_LITE_UART
-	txuart	#(INITIAL_SETUP[23:0]) tx(i_clk, (tx_empty_n), tx_data,
+	txuartlite #(INITIAL_SETUP[23:0]) tx(i_clk, (tx_empty_n), tx_data,
 			o_uart_tx, tx_busy);
 `else
 	wire	cts_n;
