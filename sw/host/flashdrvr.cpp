@@ -48,6 +48,7 @@
 
 #include "port.h"
 #include "regdefs.h"
+#include "ttybus.h"
 #include "flashdrvr.h"
 #include "byteswap.h"
 
@@ -87,13 +88,9 @@ void	FLASHDRVR::flwait(void) {
 bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase) {
 	DEVBUS::BUSW	page[SZPAGEW];
 
-	if (m_debug) printf("EREG before   : %08x\n", m_fpga->readio(R_QSPI_EREG));
 	if (m_debug) printf("Erasing sector: %08x\n", sector);
 	m_fpga->writeio(R_QSPI_EREG, DISABLEWP);
-	if (m_debug) printf("EREG with WEL : %08x\n", m_fpga->readio(R_QSPI_EREG));
-	SETSCOPE;
 	m_fpga->writeio(R_QSPI_EREG, ERASEFLAG + (sector>>2));
-	if (m_debug) printf("EREG after    : %08x\n", m_fpga->readio(R_QSPI_EREG));
 
 	// If we're in high speed mode and we want to verify the erase, then
 	// we can skip waiting for the erase to complete by issueing a read
@@ -106,8 +103,8 @@ bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase) {
 		if (m_debug) {
 			printf("@%08x -> %08x\n", R_QSPI_EREG,
 				m_fpga->readio(R_QSPI_EREG));
-			printf("@%08x -> %08x\n", R_QSPI_STAT,
-				m_fpga->readio(R_QSPI_STAT));
+			printf("@%08x -> %08x\n", R_QSPI_SREG,
+					m_fpga->readio(R_QSPI_SREG));
 			printf("@%08x -> %08x\n", sector,
 				m_fpga->readio(sector));
 		}
@@ -181,44 +178,8 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	} return true;
 }
 
-#define	VCONF_VALUE	0x8b
-#define	VCONF_VALUE_ALT	0x83
-
-bool	FLASHDRVR::verify_config(void) {
-	unsigned cfg = m_fpga->readio(R_QSPI_VCONF);
-	if (cfg != VCONF_VALUE)
-		printf("Unexpected volatile configuration = %02x\n", cfg);
-	return ((cfg == VCONF_VALUE)||(cfg == VCONF_VALUE_ALT));
-}
-
-void	FLASHDRVR::set_config(void) {
-	// There is some delay associated with these commands, but it should
-	// be dwarfed by the communication delay.  If you wish to do this on the
-	// device itself, you may need to use some timers.
-	//
-	// Set the write-enable latch
-	m_fpga->writeio(R_QSPI_EREG, DISABLEWP);
-	// Set the volatile configuration register
-	m_fpga->writeio(R_QSPI_VCONF, VCONF_VALUE);
-	// Clear the write-enable latch, since it didn't clear automatically
-	printf("EREG = %08x\n", m_fpga->readio(R_QSPI_EREG));
-	m_fpga->writeio(R_QSPI_EREG, ENABLEWP);
-}
-
 bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 		const char *data, const bool verify) {
-
-	assert(addr >= EQSPIFLASH);
-	assert(addr+len <= EQSPIFLASH + FLASHLEN);
-
-	if (!verify_config()) {
-		set_config();
-		if (!verify_config()) {
-			printf("Invalid configuration, cannot program flash\n");
-			return false;
-		}
-	}
-
 	// Work through this one sector at a time.
 	// If this buffer is equal to the sector value(s), go on
 	// If not, erase the sector
