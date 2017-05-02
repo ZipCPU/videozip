@@ -41,6 +41,8 @@
 #include <stdint.h>
 #include <verilated_vcd_c.h>
 
+#define	TBASSERT(TB,A) do { if (!(A)) { (TB).closetrace(); } assert(A); } while(0);
+
 template <class VA>	class TESTB {
 public:
 	VA	*m_core;
@@ -50,6 +52,8 @@ public:
 	TESTB(void) : m_trace(NULL), m_tickcount(0l) {
 		m_core = new VA;
 		Verilated::traceEverOn(true);
+		m_core->i_clk = 0;
+		eval(); // Get our initial values set properly.
 	}
 	virtual ~TESTB(void) {
 		if (m_trace) m_trace->close();
@@ -88,13 +92,13 @@ public:
 		if (m_trace) m_trace->dump(10*m_tickcount-2);
 		m_core->i_clk = 1;
 		eval();
-		eval();
 		if (m_trace) m_trace->dump(10*m_tickcount);
 		m_core->i_clk = 0;
 		eval();
-		eval();
-		if (m_trace) m_trace->dump(10*m_tickcount+5);
-
+		if (m_trace) {
+			m_trace->dump(10*m_tickcount+5);
+			m_trace->flush();
+		}
 	}
 
 	virtual	void	reset(void) {
