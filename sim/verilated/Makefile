@@ -2,9 +2,9 @@
 ##
 ## Filename:	Makefile
 ##
-## Project:	OpenArty, an entirely open SoC based upon the Arty platform
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	
+## Purpose:
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -45,15 +45,14 @@ GFXLIBS := `pkg-config gtkmm-3.0 --cflags --libs`
 FLAGS	:= -Wall -Og -g
 VINCD   := $(VROOT)/include
 INCS	:= -I$(RTLD) -I$(RTLD)/obj_dir/ -I$(RTLD) -I$(VINCD) -I$(VINCD)/vltstd
-SOURCES := main_tb.cpp qspiflashsim.cpp				\
-	oledsim.cpp enetctrlsim.cpp zipelf.cpp byteswap.cpp		\
-	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp
-HEADERS := enetctrlsim.h byteswap.h qspiflashsim.h memsim.h	\
-	oledsim.h pipecmdr.h port.h sdspisim.h testb.h uartsim.h zipelf.h
+SIMSRCS := main_tb.cpp enetctrlsim.cpp qspiflashsim.cpp zipelf.cpp \
+	i2csim.cpp	\
+	memsim.cpp sdspisim.cpp uartsim.cpp oledsim.cpp byteswap.cpp
+SOURCES := main_tb.cpp $(SIMSRCS)
+HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \
+	dblpipecmdr.h pipecmdr.h port.h testb.h
 VOBJDR	:= $(RTLD)/obj_dir
 VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
-SIMSRCS := enetctrlsim.cpp qspiflashsim.cpp zipelf.cpp		\
-	memsim.cpp sdspisim.cpp uartsim.cpp oledsim.cpp byteswap.cpp
 SIMOBJ := $(subst .cpp,.o,$(SIMSRCS))
 SIMOBJS:= $(addprefix $(OBJDIR)/,$(SIMOBJ))
 PROGRAMS := main_tb
