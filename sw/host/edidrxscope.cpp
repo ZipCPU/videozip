@@ -64,35 +64,24 @@ public:
 	~EDIDRXSCOPE(void) {}
 
 	virtual	void	define_traces(void) {
-		register_trace("i2c_addr", 8, 16);
 		//
-		register_trace("wb_stb", 1, 15);
-		register_trace("wb_we",  1, 14);
-		register_trace("rd_stb", 1, 13);
-		register_trace("wr_stb", 5, 8);
-		//
-		register_trace("i2c_tx_stb", 1, 7);
-		register_trace("i2c_rx_stb", 1, 6);
-		register_trace("bus_wr_stb", 1, 5);
-		register_trace("bus_rd_stb", 1, 4);
-		//
-		register_trace("i_scl", 1, 3);
-		register_trace("i_sda", 1, 2);
-		register_trace("o_scl", 1, 1);
-		register_trace("o_sda", 1, 0);
+		register_trace("i_rx_scl", 1, 3);
+		register_trace("i_rx_sda", 1, 2);
+		register_trace("o_rx_scl", 1, 1);
+		register_trace("o_rx_sda", 1, 0);
 	}
 
 	virtual	void	decode(DEVBUS::BUSW val) const {
-		int	i_sck, i_sda, o_sck, o_sda;
+		int	i_rx_sck, i_rx_sda, o_rx_sck, o_rx_sda;
 
-		i_sck = (val>>3)&1;
-		i_sda = (val>>2)&1;
-		o_sck = (val>>1)&1;
-		o_sda = (val   )&1;
+		i_rx_sck = (val>>3)&1;
+		i_rx_sda = (val>>2)&1;
+		o_rx_sck = (val>>1)&1;
+		o_rx_sda = (val   )&1;
 
-		printf("CMD[%s %s] RCVD[%s %s]",
-			(o_sck)?"SCK":"   ", (o_sda)?"SDA":"   ",
-			(i_sck)?"SCK":"   ", (i_sda)?"SDA":"   ");
+		printf("RX-CMD[%s %s] TX-CMD[%s %s]",
+			(o_rx_sck)?"SCK":"   ", (o_rx_sda)?"SDA":"   ",
+			(i_rx_sck)?"SCK":"   ", (i_rx_sda)?"SDA":"   ");
 	}
 };
 
