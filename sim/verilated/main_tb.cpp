@@ -43,21 +43,24 @@
 #include <signal.h>
 #include <time.h>
 #include <ctype.h>
+#include <stdint.h>
 
 #include "verilated.h"
 #include "Vmain.h"
 #define	BASECLASS	Vmain
 
 #include "design.h"
+#include "regdefs.h"
 //
 #include "testb.h"
 #include "twoc.h"
-#include "pipecmdr.h"
+#include "dblpipecmdr.h"
 #include "qspiflashsim.h"
 #include "sdspisim.h"
 #include "uartsim.h"
 #include "enetctrlsim.h"
 #include "memsim.h"
+#include "i2csim.h"
 #ifdef	OLEDSIM
 #include "oledsim.h"
 #endif
@@ -101,32 +104,16 @@ const int	LGMEMSIZE = 28;
 // bytes, and so there are two phantom address lines that need to be
 // accounted for.
 #ifdef	BLKRAM_ACCESS
-#define	MEMBASE		(1<<(15+2))
-#endif
-#ifdef	FLASH_ACCESS
-#define	FLASHBASE	(1<<(22+2))
+#define	MEMBASE		BKMEMBASE
+#define	MEMLEN		BKMEMLEN
 #endif
 #ifdef	SDRAM_ACCESS
-#define	SDRAMBASE	(1<<(26+2))
+#define	SDRAMBASE	SDMEM
 #endif
 //
-// Setting the length to the base address works because the base address for
-// each of these memory regions is given by a 'one' in the first bit not used
-// by the respective device.  If the memory is ever placed elsewhere, that will
-// no longer work, and a proper  length will need to be entered in here.
-#ifdef	MEMBASE
-#define	MEMLEN		MEMBASE
-#endif
-#ifdef	FLASHBASE
-#define	FLASHLEN	FLASHBASE
-#endif
-#ifdef	SDRAMBASE
-#define	SDRAMLEN	SDRAMBASE
-#endif
-
 
 // No particular "parameters" need definition or redefinition here.
-class	TESTBENCH : public PIPECMDR<BASECLASS> {
+class	TESTBENCH : public DBLPIPECMDR<BASECLASS> {
 public:
 	unsigned long	m_tx_busy_count;
 #ifdef	FLASH_ACCESS
@@ -147,6 +134,9 @@ public:
 #ifdef	OLEDSIM_H
 	OLEDWIN		m_oled;
 #endif
+#ifdef	HDMI_OUT_EDID_ACCESS
+	I2CSIMSLAVE	m_hdmi_out_edid;
+#endif
 	int		m_halt_in_count;
 
 	unsigned	m_last_led, m_last_pic, m_last_tx_state, m_net_ticks;
@@ -158,7 +148,10 @@ public:
 	bool		m_done;
 
 	TESTBENCH(int fpgaport, int serialport, bool copy_to_stdout, bool debug)
-			: PIPECMDR(fpgaport, copy_to_stdout)
+			: DBLPIPECMDR(fpgaport, copy_to_stdout)
+#ifdef	FLASH_ACCESS
+			, m_flash(FLASHLGLEN)
+#endif
 #ifdef	CONSOLE_ACCESS
 			, m_uart(serialport)
 #endif
@@ -457,7 +450,16 @@ public:
 			m_core->i_ram_rdata);
 #endif
 
-		PIPECMDR::tick();
+#ifdef	HDMI_OUT_EDID_ACCESS
+		{
+			I2CBUS	i2cb;
+			i2cb = m_hdmi_out_edid(m_core->o_hdmi_out_scl, m_core->o_hdmi_out_sda);
+			m_core->i_hdmi_out_scl = i2cb.m_scl;
+			m_core->i_hdmi_out_sda = i2cb.m_scl;
+		}
+#endif
+
+		DBLPIPECMDR::tick();
 
 		// Sim instructions
 		if ((m_core->cpu_op_sim)
@@ -1117,7 +1119,7 @@ int	main(int argc, char **argv) {
 	const	char *sdload = "/dev/zero";
 #endif
 	bool	debug_flag = false, willexit = false;
-	int	fpga_port = FPGAPORT, serial_port = -(FPGAPORT+1);
+	int	fpga_port = FPGAPORT, serial_port = -(FPGAPORT+2);
 	int	copy_comms_to_stdout = -1;
 #ifdef	OLEDSIM_H
 	Gtk::Main	main_instance(argc, argv);
