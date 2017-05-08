@@ -61,13 +61,15 @@ JTAGBUS := wbubus.v wbufifo.v wbucompactlines.v				\
 NETSRCS := enetpacketst.v enetctrl.v					\
 	addecrc.v addemac.v addepad.v addepreamble.v			\
 	rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v
+SCOPESRCS := wbscopc.v wbscope.v
 
 PERIPHERALS:= rtcdate.v rtcgps.v wbuart.v ufifo.v rxuart.v txuart.v	\
 	wbqspiflash.v llqspi.v flash_config.v				\
 	wbicapetwo.v sdspi.v gpsclock_tb.v gpsclock.v wboledbw.v lloled.v \
-	memdev.v spio.v wbi2cslave.v hdmihist.v wbi2cmaster.v lli2cm.v
+	memdev.v spio.v wbi2cslave.v hdmihist.v wbi2cmaster.v lli2cm.v	\
+	hdmipixel.v
 BIGMATH:= bigadd.v bigsmpy.v bigsub.v
-SOURCES := main.v builddate.v					\
+SOURCES := main.v builddate.v $(SCOPESRCS)				\
 	$(CPUSOURCES) $(JTAGBUS) $(PERIPHERALS) $(BIGMATH)
 
 $(VDIRFB)/Vmain__ALL.a: $(VDIRFB)/Vmain.h $(VDIRFB)/Vmain.cpp
@@ -75,7 +77,7 @@ $(VDIRFB)/Vmain__ALL.a: $(VDIRFB)/Vmain.mk
 $(VDIRFB)/Vmain.h $(VDIRFB)/Vmain.cpp $(VDIRFB)/Vmain.mk: $(SOURCES)
 
 $(VDIRFB)/V%.cpp $(VDIRFB)/V%.h $(VDIRFB)/V%.mk: $(FBDIR)/%.v
-	verilator -trace -cc -y $(CPUDR) $*.v 
+	verilator -trace -cc -y $(CPUDR) $*.v
 
 cpudefs.h: cpu/cpudefs.v
 	@echo "Building cpudefs.h"
@@ -85,7 +87,9 @@ cpudefs.h: cpu/cpudefs.v
 	@echo "// " >> $@
 	@echo "#ifndef CPUDEFS_H" >> $@
 	@echo "#define CPUDEFS_H" >> $@
+	@echo >> $@
 	@sed -e '{ s/^`/#/ }' $< | sed -e ' s/cpudefs.v/cpudefs.h/' >> $@
+	@echo >> $@
 	@echo "#endif // CPUDEFS_H" >> $@
 
 design.h: main.v
@@ -96,7 +100,9 @@ design.h: main.v
 	@echo "// " >> $@
 	@echo "#ifndef DESIGN_H" >> $@
 	@echo "#define DESIGN_H" >> $@
+	@echo >> $@
 	@grep "^\`" $< | grep -v default_nettype | grep -v include | sed -e '{ s/^`/#/ }' | sed -e ' s/main.v/design.h/' >> $@
+	@echo >> $@
 	@echo "#endif // DESIGN_H" >> $@
 
 $(VDIRFB)/V%__ALL.a: $(VDIRFB)/V%.mk
