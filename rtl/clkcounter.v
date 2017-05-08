@@ -47,11 +47,14 @@ module	clkcounter(i_sys_clk, i_sys_pps, i_tst_clk, o_sys_counts);
 	always @(posedge i_tst_clk)
 		avgs <= avgs + 1'b1;
 
-	reg	q_v, qq_v, tst_posedge;
+	(* ASYNC_REG = "TRUE" *)
+	reg	q_v, qq_v;
 	always @(posedge i_sys_clk)
 		q_v <= avgs[(LGNAVGS-1)];
 	always @(posedge i_sys_clk)
 		qq_v <= q_v;
+
+	reg	tst_posedge;
 	always @(posedge i_sys_clk)
 		tst_posedge <= (!qq_v)&&(q_v);
 
