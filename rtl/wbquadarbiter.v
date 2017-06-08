@@ -52,6 +52,7 @@ module	wbquadarbiter(i_clk, i_rst,
 	// 19 bits will allow the ability to address things other than just
 	// the 1GB of memory we are expecting.
 	parameter			DW=32, AW=19;
+	parameter			METHOD = "PRIORITY";
 	// Wishbone doesn't use an i_ce signal.  While it could, they dislike
 	// what it would (might) do to the synchronous reset signal, i_rst.
 	input	wire			i_clk, i_rst;
@@ -79,26 +80,26 @@ module	wbquadarbiter(i_clk, i_rst,
 		if (i_rst)
 		begin
 			r_owner <= 2'b00; // A
-		end else casex({r_owner, i_a_cyc, i_b_cyc, i_c_cyc, i_d_cyc })
-		6'h001???: r_owner <= 2'b00;	// Maintain ownership
-		6'h0001??: r_owner <= 2'b01;
-		6'h00001?: r_owner <= 2'b10;
-		6'h000001: r_owner <= 2'b11;	// (Last choice)
+		end else casez({r_owner, i_a_cyc, i_b_cyc, i_c_cyc, i_d_cyc })
+		6'b001???: r_owner <= 2'b00;	// Maintain ownership
+		6'b0001??: r_owner <= 2'b01;
+		6'b00001?: r_owner <= 2'b10;
+		6'b000001: r_owner <= 2'b11;	// (Last choice)
 		//
-		6'h0110??: r_owner <= 2'b00;
-		6'h01?1??: r_owner <= 2'b01;	// Maintain ownership
-		6'h01001?: r_owner <= 2'b10;
-		6'h010001: r_owner <= 2'b11;	// (Last choice)
+		6'b0110??: r_owner <= 2'b00;
+		6'b01?1??: r_owner <= 2'b01;	// Maintain ownership
+		6'b01001?: r_owner <= 2'b10;
+		6'b010001: r_owner <= 2'b11;	// (Last choice)
 		//
-		6'h101?0?: r_owner <= 2'b00;
-		6'h10010?: r_owner <= 2'b01;
-		6'h10001?: r_owner <= 2'b10;	// Maintain ownership
-		6'h100001: r_owner <= 2'b11;	// (Last choice)
+		6'b101?0?: r_owner <= 2'b00;
+		6'b10010?: r_owner <= 2'b01;
+		6'b10001?: r_owner <= 2'b10;	// Maintain ownership
+		6'b100001: r_owner <= 2'b11;	// (Last choice)
 		//
-		6'h111??0: r_owner <= 2'b00;
-		6'h1101?0: r_owner <= 2'b01;
-		6'h110010: r_owner <= 2'b10;
-		6'h11???1: r_owner <= 2'b11;	// Maintain ownership
+		6'b111??0: r_owner <= 2'b00;
+		6'b1101?0: r_owner <= 2'b01;
+		6'b110010: r_owner <= 2'b10;
+		6'b11???1: r_owner <= 2'b11;	// Maintain ownership
 		//
 		default:   r_owner <= 2'b00;
 		endcase
@@ -110,32 +111,30 @@ module	wbquadarbiter(i_clk, i_rst,
 		if (i_rst)
 		begin
 			r_owner <= 2'b0;
-		end else casex({r_owner, i_a_cyc, i_b_cyc, i_c_cyc, i_d_cyc })
-		6'h001???: r_owner <= 2'b00;	// Maintain ownership
-		6'h0001??: r_owner <= 2'b01;
-		6'h00001?: r_owner <= 2'b10;
-		6'h000001: r_owner <= 2'b11;	// (Last choice)
+		end else casez({r_owner, i_a_cyc, i_b_cyc, i_c_cyc, i_d_cyc })
+		6'b001???: r_owner <= 2'b00;	// Maintain ownership
+		6'b0001??: r_owner <= 2'b01;
+		6'b00001?: r_owner <= 2'b10;
+		6'b000001: r_owner <= 2'b11;	// (Last choice)
 		//
-		6'h011000: r_owner <= 2'b00;	// (Last choice)
-		6'h01?1??: r_owner <= 2'b01;	// Maintain ownership
-		6'h01?01?: r_owner <= 2'b10;
-		6'h01?001: r_owner <= 2'b11;
+		6'b011000: r_owner <= 2'b00;	// (Last choice)
+		6'b01?1??: r_owner <= 2'b01;	// Maintain ownership
+		6'b01?01?: r_owner <= 2'b10;
+		6'b01?001: r_owner <= 2'b11;
 		//
-		6'h101?00: r_owner <= 2'b00;
-		6'h100100: r_owner <= 2'b01;	// (Last choice)
-		6'h10??1?: r_owner <= 2'b10;	// Maintain ownership
-		6'h10??01: r_owner <= 2'b11;
+		6'b101?00: r_owner <= 2'b00;
+		6'b100100: r_owner <= 2'b01;	// (Last choice)
+		6'b10??1?: r_owner <= 2'b10;	// Maintain ownership
+		6'b10??01: r_owner <= 2'b11;
 		//
-		6'h111??0: r_owner <= 2'b00;
-		6'h1101?0: r_owner <= 2'b01;
-		6'h110010: r_owner <= 2'b10;	// (Last choice)
-		6'h11???1: r_owner <= 2'b11;	// Maintain ownership
+		6'b111??0: r_owner <= 2'b00;
+		6'b1101?0: r_owner <= 2'b01;
+		6'b110010: r_owner <= 2'b10;	// (Last choice)
+		6'b11???1: r_owner <= 2'b11;	// Maintain ownership
 		//
 		default:   r_owner <= r_owner + 1'b1;
 		endcase
-	//
-		end
-	end
+	end endgenerate
 
 	//
 	// If you are the owner, retain ownership until i_x_cyc is no
