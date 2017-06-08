@@ -2,7 +2,7 @@
 //
 // Filename: 	edidrxscope.cpp
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To communicate with a generic scope, specifically the one for
 //		testing the I2C communication path associated with an EDID
@@ -52,6 +52,11 @@
 #include "scopecls.h"
 #include "ttybus.h"
 
+#if	defined(R_EDID_SCOPC) && defined(R_EDID_SCOPD)
+#else
+#define	NO_SCOPE
+#endif
+
 #define	WBSCOPE		R_EDID_SCOPC
 #define	WBSCOPEDATA	R_EDID_SCOPD
 
@@ -86,6 +91,9 @@ public:
 };
 
 int main(int argc, char **argv) {
+#ifdef	NO_SCOPE
+	printf("Design was built with no EDID-RX scope\n");
+#else
 	// Open and connect to our FPGA.  This macro needs to be defined in the
 	// include files above.
 	FPGAOPEN(m_fpga);
@@ -119,4 +127,5 @@ int main(int argc, char **argv) {
 	// down gracefully, rather than letting the O/S do it in ... whatever
 	// manner it chooses.
 	delete	m_fpga;
+#endif
 }

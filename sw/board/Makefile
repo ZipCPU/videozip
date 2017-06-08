@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015, Gisselquist Technology, LLC
+## Copyright (C) 2017, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -37,20 +37,31 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := cputest i2cdbg # helloworld
+PROGRAMS := cputest i2cdbg hdmistart hdmistest # readhist readframe # helloworld
 all:	$(PROGRAMS)
 #
 #
-OBJDIR  := obj-zip
-NM      := zip-nm
-RDELF   := zip-readelf
-CC      := zip-gcc
+CC	:=zip-gcc
+AS	:=zip-as
+LD	:=zip-ld
+NM	:=zip-nm
+OBJDIR	:= obj-zip
+RDELF	:= zip-readelf
 OBJDUMP := zip-objdump
-SOURCES := cputest.c i2cdbg.c helloworld.c
+SOURCES := cputest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 LSCRIPT := -Tboard.ld
 LFLAGS  := $(LSCRIPT)
-CFLAGS  := -O3 -I../zlib -I../../rtl
+INCS    := -I../zlib -I../../rtl -I.
+CFLAGS  := -O3 $(INCS)
+ZIPLIB	:= libvidzip.a
+LIBS    := -lc -lvidzip
+INSTALLD:=/home/dan/work/rnd/zipcpu/sw/install
+NLIBD	:=$(INSTALLD)/cross-tools/zip/lib
+ZLIBD	:=../zlib
+LIB	:=$(ZLIBD)/libzbaic.a $(NLIBD)/libg.a $(NLIBD)/libc.a
+#
+# For source analysis, the following macros are defined:
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.c
@@ -65,30 +76,68 @@ $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 %.txt: %
 	$(OBJDUMP) -S -D $^ > $@
 
+
+#
+# The CPUTest program here is special--it doesn't use the C library.  Hence,
+# it must have the -fno-builtin flag in order to build, and the -Tartyram.ld
+# linker script to build something that doesn't go into flash but directly into
+# RAM instead.
+#
 $(OBJDIR)/cputest.o: cputest.c
-	$(CC) -c $(CFLAGS) -Wa,-cis -fno-builtin $< -o $@
+	$(CC) $(CFLAGS) -c -Wa,-nocis -fno-builtin $< -o $@
+$(OBJDIR)/cputestcis.o: cputest.c
+	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
+$(OBJDIR)/cputest.s: cputest.c
+	$(CC) $(CFLAGS) -S -Wa,-cis -fno-builtin $< -o $@
+
 cputest: $(OBJDIR)/cputest.o boardram.ld
 	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
 
+I2CDBGOBJS := $(addprefix $(OBJDIR)/,i2cdbg.o txfns.o)
 $(OBJDIR)/i2cdbg.o: i2cdbg.c
-	$(CC) -c $(CFLAGS) -Wa,-cis -fno-builtin $< -o $@
-i2cdbg: $(OBJDIR)/i2cdbg.o boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/i2cdbg.map $(OBJDIR)/i2cdbg.o -o $@
+	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
+i2cdbg: $(I2CDBGOBJS) boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/i2cdbg.map $(I2CDBGOBJS) -o $@
+	echo $(I2CDBGOBJS)
 
-helloworld: $(OBJDIR)/helloworld.c
-	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.c -o $@
+HDMISTARTOBJS:= $(addprefix $(OBJDIR)/,hdmistart.o txfns.o)
+$(OBJDIR)/hdmistart.o: hdmistart.c
+	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
+hdmistart: $(HDMISTARTOBJS) boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
+
+HDMISTESTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
+$(OBJDIR)/hdmistest.o: hdmistest.c
+	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
+hdmistest: $(HDMISTESTOBJS) boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
+
+READHISTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
+$(OBJDIR)/readhist.o: readhist.c
+	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
+readhist: $(READHISTOBJS) boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/readhist.map $(READHISTOBJS) -o $@
+
+READFRAMEOBJS:= $(addprefix $(OBJDIR)/,readframe.o txfns.o)
+$(OBJDIR)/readframe.o: readframe.c
+	$(CC) -c $(CFLAGS) -Wa,-cis -fno-builtin $< -o $@
+readframe: $(READFRAMEOBJS) boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/readframe.map $(READFRAMEOBJS) -o $@
+
+helloworld: $(OBJDIR)/helloworld.o
+	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
 
 define	mk-objdir
-	bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
 endef
 
 define	build-depends
-	echo "Building dependency file(s)"
+	@echo "Building dependency file(s)"
 	$(mk-objdir)
-	$(CC) $(CFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
-	sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
-	rm $(OBJDIR)/xdepends.txt
+	@$(CC) $(CFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
+	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
+	@rm $(OBJDIR)/xdepends.txt
 endef
 
 tags: $(SOURCES) $(HEADERS)
@@ -104,6 +153,9 @@ $(OBJDIR)/depends.txt: $(SOURCES) $(HEADERS)
 
 .PHONY: clean
 clean:
-	rm -rf $(OBJDIR)/ $(PROGRAMS) $(addsuffix .txt,$(PROGRAMS))
+	rm -f $(PROGRAMS)
+	rm -rf $(addsuffix .map,$(PROGRAMS))
+	rm -rf $(addsuffix .txt,$(PROGRAMS))
+	rm -rf $(OBJDIR)/
 
 -include $(OBJDIR)/depends.txt

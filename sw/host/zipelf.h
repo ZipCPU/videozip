@@ -2,7 +2,7 @@
 //
 // Filename:	zipelf.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	
 //

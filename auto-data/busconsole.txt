@@ -109,7 +109,7 @@
 	assign	w_bus_int = 1'b0;
 `endif
 	wire	[31:0]	wbu_tmp_addr;
-	wbubus	genbus(i_clk, i_host_rx_stb, i_host_rx_data,
+	wbuconsole genbus(i_clk, i_host_rx_stb, i_host_rx_data,
 			wbu_cyc, wbu_stb, wbu_we, wbu_tmp_addr, wbu_data,
 			(wbu_zip_sel)?zip_dbg_ack:wbu_ack,
 			(wbu_zip_sel)?zip_dbg_stall:wbu_stall,
@@ -128,6 +128,10 @@
 #define	R_ZIPCTRL	@$.ZIP_ADDRESS
 #define	R_ZIPDATA	@$.ZIP_DBGDATA
 #define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
+@SIM.INCLUDE=
+#include "dblpipecmdr.h"
+@SIM.DEFINES=
+#define	PARENT	DBLPIPECMDR<BASECLASS>
 #
 #
 #
@@ -171,9 +175,11 @@ typedef struct  CONSOLE_S {
 	unsigned	u_rx, u_tx;
 } CONSOLE;
 
-#endif
-
 @BDEF.IONAME= io_console
 @BDEF.IOTYPE= CONSOLE
 @BDEF.OSDEF=	_BOARD_HAS_BUSCONSOLE
 @BDEF.OSVAL=static volatile CONSOLE *const _uart = ((CONSOLE *)@$.BASE);
+@RTL.MAKE.GROUP= WBUBUS
+@RTL.MAKE.FILES= wbuconsole.v wbufifo.v wbucompactlines.v wbucompress.v
+	wbudecompress.v wbudeword.v wbuexec.v wbuidleint.v wbuinput.v
+	wbuoutput.v wbureadcw.v wbusixchar.v wbutohex.v wbconsole.v

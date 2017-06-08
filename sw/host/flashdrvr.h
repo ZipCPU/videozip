@@ -2,7 +2,7 @@
 //
 // Filename: 	flashdrvr.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	Flash driver.  Encapsulates writing, both erasing sectors and
 //		the programming pages, to the flash device.

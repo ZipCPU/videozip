@@ -1,4 +1,8 @@
 *hex
+framedata.32t
+histdata.32t
+rdsync
+tmdscope
 capgps
 dbgfp.64t
 dumpflash
@@ -10,10 +14,13 @@ rdclocks
 tags
 tstgps
 wbregs
+zipdbg
 zipload
 zipstate
-zipdbg
 edidtxscope
 edidsrc.bin
 qspidump-original.bin
 cpedid
+rawdscope
+readframe
+readhist

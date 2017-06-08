@@ -38,9 +38,11 @@
 #include <stdint.h>
 #include <design.h>
 #include <cpudefs.h>
-#include "board.h"
-#include "zipcpu.h"
-#include "zipsys.h"
+#include <board.h>
+#include <zipcpu.h>
+#include <zipsys.h>
+
+#include "txfns.h"
 
 asm("\t.section\t.start\n"
 	"\t.global\t_start\n"
@@ -56,50 +58,18 @@ asm("\t.section\t.start\n"
 
 __attribute__((noinline))
 void	wait_while_edout_busy(void) {
+#ifdef	_BOARD_HAS_HDMI_SRC_EDID
 	int	this_edcmd;
 	while((this_edcmd = (int)_edout->o_cmd) < 0)
 		;
+#endif
 }
 
 unsigned	lasti2c[32];
 
-
-void	txchr(char v);
-void	txstr(const char *str);
-void	txhex(int num);
-void	tx4hex(int num);
-
-
-__attribute__((noinline))
-void	txchr(char v) {
-	while(_uart->u_fifo & 0x010000)
-		;
-	uint8_t c = v;
-	_uart->u_tx = (unsigned)c;
-}
-
-__attribute__((noinline))
-void	txstr(const char *str) {
-	const char *ptr = str;
-	while(*ptr)
-		txchr(*ptr++);
-}
-
-__attribute__((noinline))
-void	txhex(int num) {
-	for(int ds=28; ds>=0; ds-=4) {
-		int	ch;
-		ch = (num >> ds)&0x0f;
-		if (ch >= 10)
-			ch = 'A'+ch-10;
-		else
-			ch += '0';
-		txchr(ch);
-	}
-}
-
 __attribute__((noinline))
 void edout_test(int start) {
+#ifdef	_BOARD_HAS_HDMI_SRC_EDID
 	unsigned cmd;
 	cmd = (0xa10020)|(start<<8);
 	txstr("EDOUT.I_CMD : 0x"); txhex(cmd); txstr("\r\n");
@@ -114,9 +84,11 @@ void edout_test(int start) {
 			lasti2c[addr] = vl;
 		}
 	}
+#endif
 }
 
 void entry(void) {
+#ifdef	_BOARD_HAS_HDMI_SRC_EDID
 	txstr("Starting I2C Debugging program\n");
 	*_spio = 0x0ff00;
 	_edout->o_spd = 1000; // 100 kHz
@@ -129,4 +101,7 @@ void entry(void) {
 		edout_test(0x10);
 		edout_test(0x18);
 	}
+#else
+	txstr("I2C-Debugger requires an HDMI source EDID port\n");
+#endif
 }

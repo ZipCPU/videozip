@@ -39,16 +39,16 @@ ENTRY(_start)
 
 MEMORY
 {
-	     mem(wx) : ORIGIN = 0x00040000, LENGTH = 0x00040000
+	   bkram(wx) : ORIGIN = 0x00100000, LENGTH = 0x00100000
 	   flash(rx) : ORIGIN = 0x01000000, LENGTH = 0x01000000
 }
 
-_mem      = ORIGIN(mem);
+_bkram    = ORIGIN(bkram);
 _flash    = ORIGIN(flash);
-_top_of_stack = ORIGIN(mem) + LENGTH(mem) - 4;
+_top_of_stack = ORIGIN(bkram) + LENGTH(bkram) - 4;
 SECTIONS
 {
-	.ram ORIGIN(mem) : ALIGN(4) {
+	.ram ORIGIN(bkram) : ALIGN(4) {
 		_boot_address = .;
 		*(.start) *(.boot)
 		*(.kernel)
@@ -59,6 +59,6 @@ SECTIONS
 		_bss_image_start = .;
 		*(.bss)
 		_bss_image_end = . ;
-		} > mem
+		} > bkram
 	_top_of_heap = .;
 }

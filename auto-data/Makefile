@@ -1,10 +1,12 @@
 ################################################################################
 ##
-## Filename:	Makefile
+## Filename:	auto-data/Makefile
 ##
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	
+## Purpose:	To direct the build of the autofpga automatically generated
+##		files.  The various configuration files are the *.txt files
+##	found in this directory.
 ##
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
@@ -37,15 +39,20 @@
 ##
 ##
 .PHONY: all
-all:	data install
+all:	data
 #
 # Could also depend upon load, if desired, but not necessary
+#
+# This is the list of components that will form our project.  Each file consists
+# of parts and pieces of our project that autofpga will copy/paste into our
+# main project files.
+#
 DATA := global.txt bkram.txt buserr.txt clkcounter.txt clock.txt	\
-	dlyarbiter.txt flash.txt gpio.txt hdmi.txt icape.txt mdio.txt	\
+	dlyarbiter.txt flash.txt gpio.txt icape.txt mdio.txt	\
 	pic.txt pwrcount.txt rtcdate.txt rtcgps.txt spio.txt	\
 	version.txt wbmouse.txt wboledbw.txt wbpmic.txt busconsole.txt	\
-	zipmaster.txt gps.txt
-	# Not used: SDSPI
+	zipmaster.txt gps.txt sdspi.txt
+	# hdmi.txt
 
 AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
 
@@ -53,16 +60,11 @@ AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
 data: $(AUTOFPGA) $(DATA)
 	$(AUTOFPGA) -o . $(DATA)
 
-.PHONY: install
-install: data
-	$(call notify-on-change,toplevel.v,../rtl/)
-	$(call notify-on-change,main.v,../rtl/)
-	$(call notify-on-change,regdefs.h,../sw/host/)
-	$(call notify-on-change,regdefs.cpp,../sw/host/)
-	$(call notify-on-change,board.h,../sw/board/)
-	$(call notify-on-change,board.ld,../sw/board/)
-
 define	notify-on-change
 	@bash -c 'cmp $(1) $(2)/$(1); if [[ $$? != 0 ]]; then echo "Files $(1) and $(2)/$(1) differ"; fi'
 endef
 
+clean:
+	rm -f toplevel.v main.v regdefs.h regdefs.cpp board.h board.ld
+	rm -f rtl.make.inc main_tb.cpp
+	rm -f dump.txt

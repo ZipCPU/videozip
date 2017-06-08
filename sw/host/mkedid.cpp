@@ -355,6 +355,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
+#if	defined(R_EDID_IN) || defined(R_EDID_OUT)
 	if(1) {
 		fout = fopen("edid.sh", "w");
 		fprintf(fout, "#!/bin/bash\n##\nWBREGS=./wbregs\n\n");
@@ -374,5 +375,11 @@ int main(int argc, char **argv) {
 				((isprint(edid[base+2]))?edid[base+2]:'.'),
 				((isprint(edid[base+3]))?edid[base+3]:'.'));
 		}
+
+		fprintf(fout, "# And get the output\n");
+		fprintf(fout, "echo And the output\n");
+		for(int i=0; i<32; i++)
+			fprintf(fout, "$WBREGS 0x%x\n", R_EDID_OUT+(i<<2));
 	}
+#endif
 }

@@ -2,7 +2,7 @@
 //
 // Filename: 	zipload.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	To load a program for the ZipCPU into memory, whether flash
 //		or SDRAM.  This requires a working/running configuration
@@ -234,21 +234,11 @@ int main(int argc, char **argv) {
 		unsigned	startaddr = RESET_ADDRESS, codelen = 0;
 		for(int i=0; secpp[i]->m_len; i++) {
 			secp = secpp[i];
-			if (
+
 #ifdef	SDRAM_ACCESS
-			    ((secp->m_start >= RAMBASE)
+			if ((secp->m_start >= RAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= RAMBASE+RAMLEN))
-#ifdef	BLKRAM_ACCESS
-				||
-#endif
-#endif
-#ifdef	BLKRAM_ACCESS
-				((secp->m_start >= BKMEMBASE)
-				  &&(secp->m_start+secp->m_len
-						<= BKMEMBASE+BKMEMLEN))
-#endif
-			) {
+						<= RAMBASE+RAMLEN)) {
 				if (verbose)
 					printf("Writing to MEM: %08x-%08x\n",
 						secp->m_start,
@@ -260,7 +250,34 @@ int main(int argc, char **argv) {
 				memcpy(bswapd, secp->m_data,  ln);
 				byteswapbuf(ln>>2, bswapd);
 				m_fpga->writei(secp->m_start, ln>>2, bswapd);
-			} else {
+
+				continue;
+			}
+#endif
+
+#ifdef	BLKRAM_ACCESS
+			if ((secp->m_start >= BKMEMBASE)
+				  &&(secp->m_start+secp->m_len
+						<= BKMEMBASE+BKMEMLEN)) {
+				if (verbose)
+					printf("Writing to MEM: %08x-%08x\n",
+						secp->m_start,
+						secp->m_start+secp->m_len);
+				unsigned ln = (secp->m_len+3)&-4;
+				uint32_t	*bswapd = new uint32_t[ln>>2];
+				if (ln != (secp->m_len&-4))
+					memset(bswapd, 0, ln);
+				memcpy(bswapd, secp->m_data,  ln);
+				byteswapbuf(ln>>2, bswapd);
+				m_fpga->writei(secp->m_start, ln>>2, bswapd);
+				continue;
+			}
+#endif
+
+#ifdef	FLASH_ACCESS
+			if ((secp->m_start >= FLASHBASE)
+				  &&(secp->m_start+secp->m_len
+						<= FLASHBASE+FLASHLEN)) {
 				// Otherwise writing to flash
 				if (secp->m_start < startaddr) {
 					// Keep track of the first address in
@@ -280,6 +297,7 @@ int main(int argc, char **argv) {
 				memcpy(&fbuf[secp->m_start-FLASHBASE],
 					secp->m_data, secp->m_len);
 			}
+#endif
 		}
 
 #ifdef	FLASH_ACCESS

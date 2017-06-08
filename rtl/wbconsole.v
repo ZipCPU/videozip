@@ -2,7 +2,7 @@
 //
 // Filename: 	wbconsole.v
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	Unlilke wbuart-insert.v, this is a full blown wishbone core
 //		with integrated FIFO support to support the UART transmitter
@@ -243,8 +243,9 @@ module	wbconsole(i_clk, i_rst,
 	wire	[31:0]	wb_tx_data;
 	assign	wb_tx_data = { 16'h00, 
 				1'b0, txf_status[1:0], txf_err,
-				1'b0, o_uart_stb, 1'b0, (i_uart_busy|txf_status[0]),
-				1'b0,(i_uart_busy|txf_status[0])?txf_wb_data:7'h0};
+				1'b0, o_uart_stb, 1'b0,
+				(i_uart_busy|tx_empty_n),
+				1'b0,(i_uart_busy|tx_empty_n)?txf_wb_data:7'h0};
 
 	// Each of the FIFO's returns a 16 bit status value.  This value tells
 	// us both how big the FIFO is, as well as how much of the FIFO is in 

@@ -37,22 +37,24 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid
-SCOPES := edidrxscope edidtxscope
+PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid rdsync
+	# readframe
+SCOPES := edidrxscope edidtxscope rawdscope tmdscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
 BUSSRCS := ttybus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
 SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
-	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp # netsetup.cpp
-	# manping.cpp wbsettime.cpp
+	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
+	readframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp
+	# netsetup.cpp manping.cpp wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
 BUSOBJS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(BUSSRCS)))
 CFLAGS := -g -Wall -I. -I../../rtl
 LIBS :=
-SUBMAKE := $(MAKE) --no-print-directory
+SUBMAKE := $(MAKE) --no-print-directory -C
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.cpp
@@ -65,7 +67,7 @@ $(OBJDIR)/%.o: %.c
 .PHONY: gps
 gps:
 gps: $(BUSOBJS) # $(OBJDIR)/scopecls.o
-	@bash -c "if [[ -e gps/Makefile ]]; then $(SUBMAKE) --directory=gps; fi"
+	@bash -c "if [[ -e gps/Makefile ]]; then $(SUBMAKE) gps; fi"
 
 .PHONY: clean
 clean:
@@ -74,7 +76,9 @@ clean:
 $(OBJDIR)/scopecls.o: scopecls.cpp scopecls.h
 $(OBJDIR)/edidrxscope.o: edidrxscope.cpp scopecls.h
 $(OBJDIR)/edidtxscope.o: edidtxscope.cpp scopecls.h
-$(OBJDIR)/dumpflash.o: dumpflash.cpp regdefs.h
+$(OBJDIR)/rawdscope.o:   rawdscope.cpp scopecls.h
+$(OBJDIR)/tmdscope.o:    tmdscope.cpp scopecls.h
+$(OBJDIR)/dumpflash.o:   dumpflash.cpp regdefs.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
@@ -91,11 +95,17 @@ wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 rdclocks: $(OBJDIR)/rdclocks.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+rdsync: $(OBJDIR)/rdsync.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 dumpflash: $(OBJDIR)/dumpflash.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 mkedid: $(OBJDIR)/mkedid.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 cpedid: $(OBJDIR)/cpedid.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
+readhist: $(OBJDIR)/readhist.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
+readframe: $(OBJDIR)/readframe.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 
 #
@@ -113,6 +123,10 @@ zipload: $(OBJDIR)/zipload.o $(OBJDIR)/flashdrvr.o $(BUSOBJS) $(OBJDIR)/zipelf.o
 edidrxscope: $(OBJDIR)/edidrxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 edidtxscope: $(OBJDIR)/edidtxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+rawdscope: $(OBJDIR)/rawdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+tmdscope: $(OBJDIR)/tmdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 
 #

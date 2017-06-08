@@ -84,17 +84,6 @@ class	UARTSIM	{
 	// fdtick() if we are not.
 	int	fdtick(const int i_tx);
 
-	// We'll use the file descriptor for the listener socket to determine
-	// whether we are connected to the network or not.  If not connected
-	// to the network, then we assume m_conrd and m_conwr refer to 
-	// your more traditional file descriptors, and use them as such.
-	int	tick(const int i_tx) {
-		if (m_skt >= 0)
-			return nettick(i_tx);
-		else
-			return fdtick(i_tx);
-	}
-
 public:
 	//
 	// The UARTSIM constructor takes one argument: the port on the
@@ -110,6 +99,17 @@ public:
 	// parameters.  It is ideally only called between bits at appropriate
 	// transition intervals. 
 	void	setup(unsigned isetup);
+
+	// We'll use the file descriptor for the listener socket to determine
+	// whether we are connected to the network or not.  If not connected
+	// to the network, then we assume m_conrd and m_conwr refer to 
+	// your more traditional file descriptors, and use them as such.
+	int	tick(const int i_tx) {
+		if (m_skt >= 0)
+			return nettick(i_tx);
+		else
+			return fdtick(i_tx);
+	}
 
 	// The operator() function is called on every tick.  The input is the
 	// the output txuart transmit wire from the device.  The output is to

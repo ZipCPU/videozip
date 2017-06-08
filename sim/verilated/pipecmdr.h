@@ -2,7 +2,7 @@
 //
 // Filename: 	pipecmdr.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	This program attaches to a Verilated Verilog IP core.
 //		It will not work apart from such a core.  Once attached,

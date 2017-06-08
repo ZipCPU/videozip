@@ -2,7 +2,7 @@
 //
 // Filename: 	zipdbg.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	Provide a debugger to step through the ZipCPU assembler,
 //		evaluate the ZipCPU's current state, modify registers as(if)

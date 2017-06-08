@@ -2,7 +2,7 @@
 //
 // Filename:	llcomms.h
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	This is the C++ program on the command side that will interact
 //		with a UART on an FPGA, both sending and receiving characters.

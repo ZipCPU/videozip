@@ -2,7 +2,7 @@
 //
 // Filename: 	zopcodes.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	A structure defined to keep track of our various opcodes and
 //		some of their shortcut synonyms.

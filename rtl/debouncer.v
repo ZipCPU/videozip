@@ -4,7 +4,11 @@
 //
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	To "debounce" signals from within a group passed to this
+//		module.  It is assumed that each signal passed to this module
+//	is from a user push-button or some such that might "bounce" when
+//	pressed.  The goal of this module is to wait out whatever "bouncing"
+//	might take place before returning an answer.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC

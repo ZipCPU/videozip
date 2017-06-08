@@ -4,7 +4,11 @@
 ##
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:
+## Purpose:	To coordinate the build of a cycle accurate, Verilator based,
+##		simulation of the main module.  Access to the simulation is
+##	provided via the same software commands that will access the board, save
+##	that the parameters are a touch different.  (See the access software for
+##	more information ...)
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,77 +39,98 @@
 ################################################################################
 ##
 ##
+.PHONY: all
+# Make certain the "all" target is the first and therefore the default target
+all:
 CXX	:= g++
-OBJDIR  := obj-pc
+OBJDIR	:= obj-pc
 RTLD	:= ../../rtl
+VOBJDR	:= $(RTLD)/obj_dir
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
-VROOT   := $(VERILATOR_ROOT)
+VROOT	:= $(VERILATOR_ROOT)
+VINCD   := $(VROOT)/include
+VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR)
+INCS	:= -I../../sw/host -I$(RTLD) $(VINC)
 GFXFLAGS:= `pkg-config gtkmm-3.0 --cflags`
 GFXLIBS := `pkg-config gtkmm-3.0 --cflags --libs`
-FLAGS	:= -Wall -Og -g
-VINCD   := $(VROOT)/include
-INCS	:= -I$(RTLD) -I$(RTLD)/obj_dir/ -I$(RTLD) -I$(VINCD) -I$(VINCD)/vltstd
-SIMSRCS := main_tb.cpp enetctrlsim.cpp qspiflashsim.cpp zipelf.cpp \
-	i2csim.cpp	\
-	memsim.cpp sdspisim.cpp uartsim.cpp oledsim.cpp byteswap.cpp
-SOURCES := main_tb.cpp $(SIMSRCS)
+CFLAGS	:= -Og -g -Wall $(INCS)
+#
+# A list of our sources and headers
+#
+SIMSOURCES:= qspiflashsim.cpp zipelf.cpp i2csim.cpp	\
+	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp
+SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
+SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
+VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
+
+SOURCES := $(SIMSOURCES) main_tb.cpp automaster_tb.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \
 	dblpipecmdr.h pipecmdr.h port.h testb.h
-VOBJDR	:= $(RTLD)/obj_dir
-VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
-SIMOBJ := $(subst .cpp,.o,$(SIMSRCS))
-SIMOBJS:= $(addprefix $(OBJDIR)/,$(SIMOBJ))
+#
 PROGRAMS := main_tb
-all:	$(OBJDIR)/ $(PROGRAMS)
-
-$(OBJDIR)/:
-	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+# Now the return to the "all" target, and fill in some details
+all:	$(PROGRAMS)
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) $(FLAGS) $(INCS) -c $< -o $@
+	$(mk-objdir)
+	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
 $(OBJDIR)/%.o: $(VINCD)/%.cpp
-	$(CXX) $(FLAGS) $(INCS) -c $< -o $@
-
-.PHONY: oledsim.o
-oledsim.o: $(OBJDIR)/oledsim.o
-$(OBJDIR)/oledsim.o: oledsim.cpp
-	$(CXX) $(FLAGS) $(GFXFLAGS) -c $< -o $@
-
-$(OBJDIR)/main_tb.o: main_tb.cpp
-	$(CXX) -DFASTCLK $(FLAGS) $(GFXFLAGS) $(INCS) -c $< -o $@
+	$(mk-objdir)
+	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
 
+# .PHONY: oledsim.o
+# oledsim.o: $(OBJDIR)/oledsim.o
+# $(OBJDIR)/oledsim.o: oledsim.cpp
+#	$(CXX) $(CFLAGS) $(GFXFLAGS) $(INCS) -c $< -o $@
 
-main_tb: $(OBJDIR)/main_tb.o $(SIMOBJS)
+# $(OBJDIR)/main_tb.o: main_tb.cpp
+#	$(CXX) $(CFLAGS) $(GFXFLAGS) $(INCS) -c $< -o $@
+
+main_tb: $(OBJDIR)/automaster_tb.o $(SIMOBJECTS)
 main_tb: $(VOBJS) $(VOBJDR)/Vmain__ALL.a
 	$(CXX) $(GFXLIBS) $(INCS) $^ $(VOBJDR)/Vmain__ALL.a $(GFXLIBS) -lelf -o $@
 
-define build-depends
-	@echo "Building dependency file(s)"
-	@$(CXX) $(GFXFLAGS) $(INCS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
-	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt	\
-		| sed -e 's/fastmaster_tb.o/main_tb.o/g' 		\
-		> $(OBJDIR)/depends.txt
-	@rm $(OBJDIR)/xdepends.txt
-endef
-
-tags: $(SOURCES) $(HEADERS)
-	@echo "Generating tags"
-	@ctags $(SOURCES) $(HEADERS)
-
+#
+# The "clean" target, removing any and all remaining build products
+#
 .PHONY: clean
 clean:
 	rm -f *.vcd
-	rm -rf $(OBJDIR)/
 	rm -f $(PROGRAMS)
-	# rm -f ./fastmaster_tb
+	rm -rf $(OBJDIR)/
+
+#
+# The "depends" target, to know what files things depend upon.  The depends
+# file itself is kept in $(OBJDIR)/depends.txt
+#
+define build-depends
+	$(mk-objdir)
+	@echo "Building dependency file"
+	@$(CXX) $(GFXFLAGS) $(INCS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
+	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
+	@rm $(OBJDIR)/xdepends.txt
+endef
 
 .PHONY: depends
-depends:
+depends: tags
 	$(build-depends)
 
-$(OBJDIR)/depends.txt: $(OBJDIR)/ $(SOURCES) $(HEADERS)
-	$(build-depends)
+$(OBJDIR)/depends.txt: depends
+
+#
+define	mk-objdir
+	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+endef
+
+
+#
+# The "tags" target
+#
+tags:	$(SOURCES) $(HEADERS)
+	@echo "Generating tags"
+	@ctags $(SOURCES) $(HEADERS)
+
 
 -include $(OBJDIR)/depends.txt

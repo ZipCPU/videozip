@@ -44,9 +44,9 @@
 #endif
 
 #define	UARTTX		_uart->u_tx
-#define	PIC		zip->z_pic
-#define	TIMER		zip->z_tma
-#define	COUNTER		zip->z_m.ac_ck
+#define	PIC		_zip->z_pic
+#define	TIMER		_zip->z_tma
+#define	COUNTER		_zip->z_m.ac_ck
 
 // #define	HAVE_COUNTER
 // #define	HAVE_SCOPE

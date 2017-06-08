@@ -2,7 +2,7 @@
 //
 // Filename: 	zopcodes.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	A simple program to handle the disassembly and definition
 //		of the various Zip Assembly opcodes.  The primary function

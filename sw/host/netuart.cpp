@@ -2,7 +2,7 @@
 //
 // Filename:	netuart.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	
 //
@@ -434,7 +434,8 @@ int	main(int argc, char **argv) {
 		}
 	}
 
-	printf("Closing our socket\n");
+	printf("Closing our sockets\n");
+	close(console);
 	close(skt);
 }
 

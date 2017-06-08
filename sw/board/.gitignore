@@ -1,2 +1,6 @@
 cputest
 i2cdbg
+hdmistart
+readframe
+readhist
+framedata.32t

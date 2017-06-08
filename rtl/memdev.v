@@ -2,7 +2,7 @@
 //
 // Filename:	memdev.v
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	This file is really simple: it creates an on-chip memory,
 //		accessible via the wishbone bus, that can be used in this

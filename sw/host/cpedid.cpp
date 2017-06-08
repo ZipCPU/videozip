@@ -66,6 +66,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
+#ifdef	R_EDID_OUT
 	int	skp=0;
 
 	skp=1;
@@ -96,5 +97,8 @@ int main(int argc, char **argv) {
 	}
 
 	delete	m_fpga;
+#else
+	printf("Design has no sink EDID port\n");
+#endif
 }
 

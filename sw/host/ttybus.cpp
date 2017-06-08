@@ -2,7 +2,7 @@
 //
 // Filename:	ttybus.cpp
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	This is the C++ program on the command side that will interact
 //		with a UART on an FPGA, to command the WISHBONE on that same

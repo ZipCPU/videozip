@@ -1,4 +1,4 @@
-///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 // Filename: 	llqspi.v
 //
@@ -10,12 +10,12 @@
 //		When not in use, unlike our previous SPI work, no bits will
 //		toggle.
 //
-// Creator:	Dan Gisselquist
+// Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
-///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015, Gisselquist Technology, LLC
+// Copyright (C) 2015,2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -28,7 +28,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -36,7 +36,7 @@
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
-///////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //
 `default_nettype	none
@@ -193,6 +193,7 @@ module	llqspi(i_clk,
 	initial	o_valid = 1'b0;
 	initial	o_busy  = 1'b0;
 	initial	r_input = 31'h000;
+	initial o_mod   = `QSPI_MOD_SPI;
 	always @(posedge i_clk)
 		if ((state == `QSPI_IDLE)&&(o_sck))
 		begin
@@ -200,16 +201,16 @@ module	llqspi(i_clk,
 			o_valid <= 1'b0;
 			o_busy  <= 1'b0;
 			o_mod <= `QSPI_MOD_SPI;
+			r_word <= i_word;
+			r_spd <= i_spd;
+			r_dir <= i_dir;
 			if (i_wr)
 			begin
-				r_word <= i_word;
 				state <= `QSPI_START;
-				r_spd <= i_spd;
-				r_dir <= i_dir;
 				spi_len<= { 1'b0, i_len, 3'b000 } + 6'h8;
 				o_cs_n <= 1'b0;
+				// o_sck <= 1'b1;
 				o_busy <= 1'b1;
-				o_sck <= 1'b1;
 			end
 		end else if (state == `QSPI_START)
 		begin // We come in here with sck high, stay here 'til sck is low
@@ -228,13 +229,9 @@ module	llqspi(i_clk,
 			o_busy <= 1'b1;
 			o_valid <= 1'b0;
 			if (r_spd)
-			begin
 				o_dat <= r_word[31:28];
-				// r_word <= { r_word[27:0], 4'h0 };
-			end else begin
+			else
 				o_dat <= { 3'b110, r_word[31] };
-				// r_word <= { r_word[30:0], 1'b0 };
-			end
 		end else if (~o_sck)
 		begin
 			o_sck <= 1'b1;
@@ -276,6 +273,16 @@ module	llqspi(i_clk,
 			// this state.  Here we chose to either STOP or
 			// continue and transmit more.
 			o_sck <= (i_hold); // No clocks while holding
+			r_spd <= i_spd;
+			r_dir <= i_dir;
+			if (i_spd)
+			begin
+				r_word <= { i_word[27:0], 4'h0 };
+				spi_len<= { 1'b0, i_len, 3'b000 } + 6'h8 - 6'h4;
+			end else begin
+				r_word <= { i_word[30:0], 1'b0 };
+				spi_len<= { 1'b0, i_len, 3'b000 } + 6'h8 - 6'h1;
+			end
 			if((~o_busy)&&(i_wr))// Acknowledge a new request
 			begin
 				state <= `QSPI_BITS;
@@ -283,51 +290,29 @@ module	llqspi(i_clk,
 				o_sck <= 1'b0;
 
 				// Read the new request off the bus
-				r_spd <= i_spd;
-				r_dir <= i_dir;
 				// Set up the first bits on the bus
 				o_mod <= (i_spd) ? { 1'b1, i_dir } : `QSPI_MOD_SPI;
 				if (i_spd)
-				begin
 					o_dat <= i_word[31:28];
-					r_word <= { i_word[27:0], 4'h0 };
-					// spi_len <= spi_len - 4;
-					spi_len<= { 1'b0, i_len, 3'b000 } + 6'h8
-						- 6'h4;
-				end else begin
+				else
 					o_dat <= { 3'b110, i_word[31] };
-					r_word <= { i_word[30:0], 1'b0 };
-					spi_len<= { 1'b0, i_len, 3'b000 } + 6'h8
-						- 6'h1;
-				end
 
-				// Read a bit upon any transition
-				o_valid <= 1'b1;
-				if (~o_mod[1])
-				begin
-					r_input <= { r_input[29:0], i_miso };
-					o_word  <= { r_input[30:0], i_miso };
-				end else if (o_mod[1])
-				begin
-					r_input <= { r_input[26:0], i_dat };
-					o_word  <= { r_input[27:0], i_dat };
-				end
 			end else begin
 				o_sck <= 1'b1;
 				state <= (i_hold)?`QSPI_HOLDING : `QSPI_STOP;
 				o_busy <= (~i_hold);
+			end
 
-				// Read a bit upon any transition
-				o_valid <= 1'b1;
-				if (~o_mod[1])
-				begin
-					r_input <= { r_input[29:0], i_miso };
-					o_word  <= { r_input[30:0], i_miso };
-				end else if (o_mod[1])
-				begin
-					r_input <= { r_input[26:0], i_dat };
-					o_word  <= { r_input[27:0], i_dat };
-				end
+			// Read a bit upon any transition
+			o_valid <= 1'b1;
+			if (~o_mod[1])
+			begin
+				r_input <= { r_input[29:0], i_miso };
+				o_word  <= { r_input[30:0], i_miso };
+			end else if (o_mod[1])
+			begin
+				r_input <= { r_input[26:0], i_dat };
+				o_word  <= { r_input[27:0], i_dat };
 			end
 		end else if (state == `QSPI_HOLDING)
 		begin
@@ -342,6 +327,16 @@ module	llqspi(i_clk,
 			o_valid <= 1'b0;
 			o_cs_n <= 1'b0;
 			o_busy <= 1'b0;
+			r_spd <= i_spd;
+			r_dir <= i_dir;
+			if (i_spd)
+			begin
+				r_word <= { i_word[27:0], 4'h0 };
+				spi_len<= { 1'b0, i_len, 3'b100 };
+			end else begin
+				r_word <= { i_word[30:0], 1'b0 };
+				spi_len<= { 1'b0, i_len, 3'b111 };
+			end
 			if((~o_busy)&&(i_wr))// Acknowledge a new request
 			begin
 				state  <= `QSPI_BITS;
@@ -349,20 +344,12 @@ module	llqspi(i_clk,
 				o_sck  <= 1'b0;
 
 				// Read the new request off the bus
-				r_spd <= i_spd;
-				r_dir <= i_dir;
 				// Set up the first bits on the bus
 				o_mod<=(i_spd)?{ 1'b1, i_dir } : `QSPI_MOD_SPI;
 				if (i_spd)
-				begin
 					o_dat <= i_word[31:28];
-					r_word <= { i_word[27:0], 4'h0 };
-					spi_len<= { 1'b0, i_len, 3'b100 };
-				end else begin
+				else
 					o_dat <= { 3'b110, i_word[31] };
-					r_word <= { i_word[30:0], 1'b0 };
-					spi_len<= { 1'b0, i_len, 3'b111 };
-				end
 			end else begin
 				o_sck <= 1'b1;
 				state <= (i_hold)?`QSPI_HOLDING : `QSPI_STOP;

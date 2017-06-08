@@ -63,6 +63,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
+#if	defined(R_SYSCLK) || defined(R_HDMI_CLK) || defined(R_HDMI_OUTCLK)
 	FPGAOPEN(m_fpga);
 
 	if (argc != 1) {
@@ -70,10 +71,19 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
+#ifdef	R_SYSCLK
 	printclk(m_fpga, R_SYSCLK,      "System");
+#endif
+#ifdef	R_HDMI_INCLK
 	printclk(m_fpga, R_HDMI_INCLK,  "HCLKIN");
+#endif
+#ifdef	R_HDMI_OUTCLK
 	printclk(m_fpga, R_HDMI_OUTCLK, "HCLKOUT");
+#endif
 
 	delete	m_fpga;
+#else
+	printf("FPGA design was built without any clock support\n");
+#endif
 }
 

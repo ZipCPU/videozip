@@ -2,7 +2,7 @@
 //
 // Filename: 	memsim.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	This creates a memory like device to act on a WISHBONE bus.
 //		It doesn't exercise the bus thoroughly, but does give some

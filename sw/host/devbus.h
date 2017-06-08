@@ -2,7 +2,7 @@
 //
 // Filename:	devbus.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	ZBasic, a generic toplevel impl using the full ZipCPU
 //
 // Purpose:	The purpose of this file is to document an interface which
 //		any device with a bus, whether it be implemented over a UART,
