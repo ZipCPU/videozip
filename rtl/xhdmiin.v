@@ -41,7 +41,7 @@ module	xhdmiin(i_clk, i_hsclk, i_ce, i_delay, o_delay,
 			i_hs_wire, o_word);
 	parameter	DC = 0;
 	input	wire		i_clk;
-	input	wire	[1:0]	i_hsclk;
+	input	wire		i_hsclk;
 	//
 	input	wire		i_ce;
 	input	wire	[4:0]	i_delay;

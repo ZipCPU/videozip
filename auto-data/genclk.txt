@@ -1,0 +1,119 @@
+################################################################################
+##
+## Filename: 	genclk.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=genclk
+@ACCESS=ARBITRARY_CLOCK_GENERATOR_ACCESS
+@DEVID=GENCLK
+@NADDR=1
+@SLAVE.TYPE=SINGLE
+@SLAVE.BUS=wb
+@TOP.PORTLIST=
+		o_unused_fan_pwm
+@TOP.IODECL=
+	inout	wire	o_unused_fan_pwm;
+@TOP.DEFNS=
+	// Definitions for the clock generation circuit
+	wire		s_@$(PREFIX)_clk, w_@$(PREFIX)_pll_locked,
+			w_@$(PREFIX)_ce;
+	wire		s_clk4x, s_clk4x_unbuffered,
+			s_clksync, s_clksync_unbuffered;
+	wire	[7:0]	w_@$(PREFIX)_word;
+@TOP.INSERT=
+/*
+	PLLE2_BASE #(
+		.CLKFBOUT_MULT(8),
+		.CLKFBOUT_PHASE(0.0),
+		.CLKIN1_PERIOD(10),
+		.CLKOUT0_DIVIDE(4),
+		.CLKOUT1_DIVIDE(2)) gen_sysclk(
+			.CLKIN1(i_clk),
+			.CLKOUT0(s_clk_200mhz_unbuffered),
+			.CLKOUT1(s_clk4x_unbuffered),
+			.PWRDWN(1'b0), .RST(1'b0),
+			.CLKFBOUT(sysclk_feedback),
+			.CLKFBIN(sysclk_feedback),
+			.LOCKED(sysclk_locked));
+*/
+	BUFG	clksync_buf(.I(s_clksync_unbuffered), .O(s_clksync));
+	BUFG	clk4x_buf(.I(s_clk4x_unbuffered), .O(s_clk4x));
+
+	xgenclk x@$(PREFIX)i(s_clksync, s_clk4x, w_@$(PREFIX)_ce, w_@$(PREFIX)_word,
+			o_unused_fan_pwm,
+			s_@$(PREFIX)_clk, w_@$(PREFIX)_pll_locked);
+@TOP.MAIN=
+		// Clock Generator ports
+		s_@$(PREFIX)_clk,
+		w_@$(PREFIX)_pll_locked,
+		w_@$(PREFIX)_word,
+		w_@$(PREFIX)_ce
+@MAIN.PORTLIST=
+		// Clock generator ports
+		i_@$(PREFIX)_clk,
+		i_@$(PREFIX)_pll_locked,
+		o_@$(PREFIX)_word,
+		o_@$(PREFIX)_ce
+@MAIN.IODECL=
+	input	wire		i_@$(PREFIX)_clk;
+	input	wire		i_@$(PREFIX)_pll_locked;
+	output	wire	[7:0]	o_@$(PREFIX)_word;
+	output	wire		o_@$(PREFIX)_ce;
+@MAIN.DEFNS=
+	reg	[30:0]	r_@$(PREFIX)_data;
+	wire		w_@$(PREFIX)_stb;
+	reg		r_@$(PREFIX)_ack;
+@MAIN.INSERT=
+	initial	r_@$(PREFIX)_data = 31'd20;
+	always @(posedge @$(SLAVE.BUS.CLOCK.WIRE))
+		if ((wb_stb)&&(wb_we)&&(@$(PREFIX)_sel))
+			r_@$(PREFIX)_data <= wb_data[30:0];
+	always @(posedge @$(SLAVE.BUS.CLOCK.WIRE))
+		r_@$(PREFIX)_ack <= ((wb_stb)&&(wb_we)&&(@$(PREFIX)_sel));
+	assign	@$(PREFIX)_ack   = r_@$(PREFIX)_ack;
+	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(PREFIX)_data = { i_@$(PREFIX)_pll_locked, r_@$(PREFIX)_data };
+	assign	o_@$(PREFIX)_ce = r_@$(PREFIX)_data[30];
+
+	genclk	clock_generator(@$(SLAVE.BUS.CLOCK.WIRE),
+			{ 2'b00, r_@$(PREFIX)_data[29:0] },
+			o_@$(PREFIX)_word,
+			w_@$(PREFIX)_stb);
+@REGS.N=1
+@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@PREFIX=genclk_test
+@TSTCLOCK=i_genclk_clk
+@INCLUDEFILE=clkcounter.txt
+@REGS.0 = 0 R_GENCLKFB GENCLKFB

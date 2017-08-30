@@ -71,7 +71,7 @@ const	unsigned TTYBUS::MAXRDLEN = 1024;
 const	unsigned TTYBUS::MAXWRLEN = 32;
 
 // #define	DBGPRINTF	printf
-// #define	DBGPRINTF	filedump
+#define	DBGPRINTF	filedump
 #ifndef	DBGPRINTF
 #define	DBGPRINTF	null
 #else
@@ -85,8 +85,12 @@ void	filedump(const char *fmt, ...) {
 	static	FILE *dbgfp = NULL;
 	va_list	args;
 
-	if (!dbgfp)
+	if (!dbgfp) {
 		dbgfp = fopen("debug.txt", "w");
+		// fprintf(dbgfp, "\n\n\n-----------------------------\n");
+		// fprintf(dbgfp, "     NEW TRANSACTION \n");
+		// fprintf(dbgfp, "-----------------------------\n");
+	}
 	va_start(args, fmt);
 	vfprintf(dbgfp, fmt, args);
 	va_end(args);
@@ -355,7 +359,7 @@ char	*TTYBUS::encode_address(const TTYBUS::BUSW a) {
 			*ptr++ = charenc((diffaddr>> 6) & 0x03f);
 			*ptr++ = charenc( diffaddr      & 0x03f);
 		} else if ((diffaddr >= -(1<<23))&&(diffaddr < (1<<23))) {
-			*ptr++ = charenc(0x0d);
+			*ptr++ = charenc(0x0f);
 			*ptr++ = charenc((diffaddr>>18) & 0x03f);
 			*ptr++ = charenc((diffaddr>>12) & 0x03f);
 			*ptr++ = charenc((diffaddr>> 6) & 0x03f);
@@ -365,7 +369,7 @@ char	*TTYBUS::encode_address(const TTYBUS::BUSW a) {
 		DBGPRINTF("DIF-ADDR: (%ld) \'%s\' encodes last_addr(0x%08x) %c %d(0x%08x)\n",
 			ptr-m_buf, m_buf,
 			m_lastaddr, (diffaddr<0)?'-':'+',
-			diffaddr, diffaddr&0x0ffffffff);
+			(diffaddr<<2), (diffaddr<<2)&0x0fffffffc);
 	}
 
 	{
@@ -493,13 +497,15 @@ void	TTYBUS::readz(const TTYBUS::BUSW a, const int len, TTYBUS::BUSW *buf) {
 TTYBUS::BUSW	TTYBUS::readword(void) {
 	TTYBUS::BUSW	val = 0;
 	int		nr;
-	unsigned	sixbits;
+	unsigned	sixbits, idle_counts = 0;
 
 	DBGPRINTF("READ-WORD()\n");
 
-	bool	found_start = false;
+	bool	found_start = false, idle=false;
 	do {
 		// Blocking read (for now)
+		if ((!idle)&&(!m_dev->available()))
+			idle = true;
 		do {
 			nr = lclreadcode(&m_buf[0], 1);
 		} while (nr < 1);
@@ -513,7 +519,11 @@ TTYBUS::BUSW	TTYBUS::readword(void) {
 			;
 		} else if (sixbits < 6) {
 			switch(sixbits) {
-			case 0:	break; // Idle -- ignore
+			case 0:
+				idle_counts++;
+				if (idle_counts >= 2)
+					throw BUSERR(0);
+				break; // Idle -- ignore
 			case 1: break; // Idle, but the bus is busy
 			case 2: break; // Write acknowledgement, ignore it here
 			case 3:

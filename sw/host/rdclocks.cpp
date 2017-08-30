@@ -80,6 +80,38 @@ int main(int argc, char **argv) {
 #ifdef	R_HDMI_OUTCLK
 	printclk(m_fpga, R_HDMI_OUTCLK, "HCLKOUT");
 #endif
+#ifdef	R_GENCLK
+#ifdef	R_GENCLKFB
+	printclk(m_fpga, R_GENCLKFB, "GENCLK ");
+	{
+		unsigned req, rv;
+		double	ratio;
+		bool	locked, enabled;
+
+// True request is req<<2
+// A value of 0x0800_0000 Should yield the input back
+		rv   = m_fpga->readio(R_GENCLK);
+		req  = rv & 0x3fffffff;
+		ratio = (double)req * 1.0 / (double)(1<<29);
+		locked  = (rv & 0x80000000);
+		enabled = (rv & 0x40000000);
+		printf("RV    = 0x%08x  %s%s\n", rv, (locked)?"LOCKED ":"",
+			(enabled)?"":"(Disabled)");
+		if (enabled) {
+			printf("REQ   = 0x%08x\n", req);
+			printf("Ratio = %11.6f\n", ratio);
+			printf("Nominal request for 100 * 8 * 0x%08x / 2^28 = %11.6f\n", req,
+				100.0 * ratio);
+#ifdef	R_SYSCLK
+			unsigned	nc;
+			nc = m_fpga->readio(R_SYSCLK);
+			printf("After adjusting for SYSCLK                 = %11.6f\n",
+				nc * ratio / 1e6);
+#endif
+		}
+	}
+#endif
+#endif
 
 	delete	m_fpga;
 #else

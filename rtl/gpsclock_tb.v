@@ -35,6 +35,10 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
 module	gpsclock_tb(i_clk, i_lcl_pps, o_pps, 
 		i_wb_cyc_stb, i_wb_we, i_wb_addr, i_wb_data,
 			o_wb_ack, o_wb_stall, o_wb_data,
@@ -50,7 +54,7 @@ module	gpsclock_tb(i_clk, i_lcl_pps, o_pps,
 	output	wire			o_wb_stall;
 	output	reg	[(DW-1):0]	o_wb_data;
 	// Status and timing outputs
-	input	[(RW-1):0]	i_err, // Fraction of a second err
+	input	wire [(RW-1):0]	i_err, // Fraction of a second err
 				i_count, // Fraction of a second
 				i_step; // 2^RW / clock speed (in Hz)
 

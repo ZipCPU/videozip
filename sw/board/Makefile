@@ -50,8 +50,8 @@ RDELF	:= zip-readelf
 OBJDUMP := zip-objdump
 SOURCES := cputest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
-LSCRIPT := -Tboard.ld
-LFLAGS  := $(LSCRIPT)
+LDSCRIPT:= -Tboard.ld
+LFLAGS  := $(LDSCRIPT)
 INCS    := -I../zlib -I../../rtl -I.
 CFLAGS  := -O3 $(INCS)
 ZIPLIB	:= libvidzip.a
@@ -59,7 +59,7 @@ LIBS    := -lc -lvidzip
 INSTALLD:=/home/dan/work/rnd/zipcpu/sw/install
 NLIBD	:=$(INSTALLD)/cross-tools/zip/lib
 ZLIBD	:=../zlib
-LIB	:=$(ZLIBD)/libzbaic.a $(NLIBD)/libg.a $(NLIBD)/libc.a
+LIB	:= $(NLIBD)/libg.a $(NLIBD)/libc.a
 #
 # For source analysis, the following macros are defined:
 
@@ -72,7 +72,7 @@ $(OBJDIR)/%.s: %.c
 	$(CC) $(CFLAGS) $(DUMPRTL) -S $< -o $@
 $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 	$(mk-objdir)
-	bash -c "$(RDELF) -a $^ ; $(OBJDDUMP) -S -D $^ " | tee $@
+	bash -c "$(RDELF) -a $^ ; $(OBJDUMP) -S -D $^ " | tee $@
 %.txt: %
 	$(OBJDUMP) -S -D $^ > $@
 

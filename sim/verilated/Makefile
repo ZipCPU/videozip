@@ -49,7 +49,7 @@ VOBJDR	:= $(RTLD)/obj_dir
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
 VROOT	:= $(VERILATOR_ROOT)
 VINCD   := $(VROOT)/include
-VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR)
+VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR) -I.
 INCS	:= -I../../sw/host -I$(RTLD) $(VINC)
 GFXFLAGS:= `pkg-config gtkmm-3.0 --cflags`
 GFXLIBS := `pkg-config gtkmm-3.0 --cflags --libs`
@@ -58,14 +58,15 @@ CFLAGS	:= -Og -g -Wall $(INCS)
 # A list of our sources and headers
 #
 SIMSOURCES:= qspiflashsim.cpp zipelf.cpp i2csim.cpp	\
-	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp
+	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp dbluartsim.cpp	\
+	hdmiinsim.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
 SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
 VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
 
 SOURCES := $(SIMSOURCES) main_tb.cpp automaster_tb.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \
-	dblpipecmdr.h pipecmdr.h port.h testb.h
+	port.h testb.h
 #
 PROGRAMS := main_tb
 # Now the return to the "all" target, and fill in some details

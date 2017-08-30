@@ -39,12 +39,14 @@ ENTRY(_start)
 
 MEMORY
 {
-	   bkram(wx) : ORIGIN = 0x00100000, LENGTH = 0x00100000
-	   flash(rx) : ORIGIN = 0x01000000, LENGTH = 0x01000000
+	   bkram(wx) : ORIGIN = 0x1a000000, LENGTH = 0x00100000
+	   flash(rx) : ORIGIN = 0x1c000000, LENGTH = 0x01000000
+	   sdram(wx) : ORIGIN = 0x20000000, LENGTH = 0x20000000
 }
 
 _bkram    = ORIGIN(bkram);
 _flash    = ORIGIN(flash);
+_sdram    = ORIGIN(sdram);
 _top_of_stack = ORIGIN(bkram) + LENGTH(bkram) - 4;
 SECTIONS
 {

@@ -38,10 +38,17 @@
 //
 module	busexpander(i_clk,
 		i_s_cyc, i_s_stb, i_s_we, i_s_addr, i_s_data, i_s_sel,
-			o_s_ack, o_s_stall, o_s_data,
+			o_s_ack, o_s_stall, o_s_data, o_s_err,
 		o_m_cyc, o_m_stb, o_m_we, o_m_addr, o_m_data, o_m_sel,
-			i_m_ack, i_m_stall, i_m_data);
-	parameter	AWIN=30, DWIN=32, DWOUT=128, AWOUT=AWIN-2;
+			i_m_ack, i_m_stall, i_m_data, i_m_err);
+	parameter	AWIN=30, DWIN=32, DWOUT=128;
+	parameter	AWOUT=
+				(DWOUT == DWIN) ? AWIN
+				: ((DWOUT/DWIN==2) ? AWIN-1
+				: ((DWOUT/DWIN==4) ? AWIN-2
+				: ((DWOUT/DWIN==8) ? AWIN-3
+				: ((DWOUT/DWIN==16) ? AWIN-4
+				: AWIN-5))));
 	//
 	input	wire	i_clk;
 	//
@@ -57,6 +64,7 @@ module	busexpander(i_clk,
 	output	reg			o_s_ack;
 	output	reg			o_s_stall;
 	output	reg	[(DWIN-1):0]	o_s_data;
+	output	reg			o_s_err;
 	//
 	// First wishbone port:
 	//
@@ -70,6 +78,7 @@ module	busexpander(i_clk,
 	input	wire			i_m_ack;
 	input	wire			i_m_stall;
 	input	wire	[(DWOUT-1):0]	i_m_data;
+	input	wire			i_m_err;
 	//
 
 
@@ -108,7 +117,7 @@ module	busexpander(i_clk,
 
 			if (!i_s_we)
 				r_sel <= 0;
-			else case(i_s_data[1:0])
+			else case(i_s_addr[1:0])
 			2'b00:	r_sel <= {        i_s_sel, 12'h00 };
 			2'b01:	r_sel <= {  4'h0, i_s_sel,  8'h00 };
 			2'b10:	r_sel <= {  8'h0, i_s_sel,  4'h00 };
@@ -129,7 +138,7 @@ module	busexpander(i_clk,
 				o_m_stb  <= i_s_stb;
 				o_m_we   <= i_s_we;
 				o_m_addr <= i_s_addr[(AWIN-1):2];
-				case(i_s_data[1:0])
+				case(i_s_addr[1:0])
 				2'b00:o_m_data <= {        i_s_data, 96'h00 };
 				2'b01:o_m_data <= { 32'h0, i_s_data, 64'h00 };
 				2'b10:o_m_data <= { 64'h0, i_s_data, 32'h00 };
@@ -137,7 +146,7 @@ module	busexpander(i_clk,
 				endcase
 				if (!i_s_we)
 					r_sel <= 0;
-				else case(i_s_data[1:0])
+				else case(i_s_addr[1:0])
 				2'b00:o_m_sel <= {        i_s_sel, 12'h00 };
 				2'b01:o_m_sel <= {  4'h0, i_s_sel,  8'h00 };
 				2'b10:o_m_sel <= {  8'h0, i_s_sel,  4'h00 };
@@ -185,7 +194,7 @@ module	busexpander(i_clk,
 		2'b10: o_s_data <= i_m_data[ 63:32];
 		2'b11: o_s_data <= i_m_data[ 31: 0];
 		endcase
-		// o_s_err <= i_m_err;
+		o_s_err <= i_m_err;
 	end
 
 	always @(posedge i_clk)
@@ -205,6 +214,8 @@ module	busexpander(i_clk,
 
 	always @(posedge i_clk)
 		subaddr <= fifo[r_last];
+	always @(posedge i_clk)
+		o_s_ack <= i_m_ack;
 
 endmodule
 

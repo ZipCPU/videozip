@@ -63,7 +63,7 @@
 module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, o_wb_data,
 		i_gpio, o_gpio, o_int);
 	parameter		NIN=16, NOUT=16;
-	parameter [(NOUT-1):0]	DEFAULT=16'h00;
+	parameter [(NOUT-1):0]	DEFAULT=0;
 	input	wire		i_clk;
 	//
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
@@ -104,4 +104,9 @@ module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, o_wb_data,
 
 	assign	o_wb_data = { hi_bits, low_bits };
 
+	// Make Verilator happy
+	// verilator lint_off UNUSED
+	wire	[2:0]	unused;
+	assign	unused = { i_wb_cyc, i_wb_data[31], i_wb_data[15] };
+	// verilator lint_on  UNUSED
 endmodule

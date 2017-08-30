@@ -24,3 +24,15 @@ cpedid
 rawdscope
 readframe
 readhist
+getframe
+greentest.sh
+hintst.sh
+oldregdefs.h
+ramread.sh
+ramwrite.sh
+rawtmds.txt
+rdsynch.sh
+tstmem.sh
+scopdata.txt
+tstmem.sh
+

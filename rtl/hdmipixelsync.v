@@ -35,6 +35,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 	input	wire		i_clk, i_reset;
 	input	wire	[9:0]	i_px;

@@ -165,7 +165,6 @@ module	wbconsole(i_clk, i_rst,
 	//
 	/////////////////////////////////////////
 	wire		tx_empty_n, txf_err;
-	wire	[7:0]	tx_data;
 	wire	[15:0]	txf_status;
 	reg		txf_wb_write, tx_uart_reset;
 	reg	[6:0]	txf_wb_data;
@@ -286,4 +285,9 @@ module	wbconsole(i_clk, i_rst,
 	// set this value to zero.
 	assign	o_wb_stall = 1'b0;
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[1+19+5-1:0] unused;
+	assign	unused = { i_wb_cyc, i_wb_data[31:13], i_wb_data[11:7] };
+	// verilator lint_on  UNUSED
 endmodule

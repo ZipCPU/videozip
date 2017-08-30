@@ -39,47 +39,78 @@
 #define	TBCLOCK_H
 
 class	TBCLOCK	{
-	unsigned long	m_increment, m_now, m_last_edge;
+	unsigned long	m_increment_ps, m_now_ps, m_last_edge_ps;
 
 public:
-	TBCLOCK(unsigned long increment) {
-		m_increment = (increment>>1)&-2l;
-		assert(m_increment > 0);
+	TBCLOCK(void) {
+		m_increment_ps = 10000; // 10 ns;
+
+		m_now_ps = m_increment_ps+1;
+		m_last_edge_ps = m_increment_ps;
+	}
+
+	TBCLOCK(unsigned long increment_ps) {
+		init(increment_ps);
+	}
+
+	void	init(unsigned long increment_ps) {
+		set_interval_ps(increment_ps);
 
 		// Start with the clock low, waiting on a positive edge
-		m_now = m_increment+1;
-		m_last_edge = 0;
+		m_now_ps = m_increment_ps+1;
+		m_last_edge_ps = m_increment_ps;
 	}
 
 	unsigned long	time_to_tick(void) {
-		if (m_last_edge + m_increment < m_now)
-			return (m_last_edge + 2*m_increment - m_now);
-		else
-			return (m_last_edge +   m_increment - m_now);
+		unsigned long	ul;
+		if (m_last_edge_ps > m_now_ps) {
+			// Should never happen
+			ul = m_last_edge_ps - m_now_ps;
+			ul /= m_increment_ps;
+			ul = m_now_ps + ul * m_increment_ps;
+		} else if (m_last_edge_ps == m_now_ps) {
+			ul = m_increment_ps;
+		} else if (m_last_edge_ps + m_increment_ps == m_now_ps) {
+			ul = m_increment_ps;
+		} else if (m_last_edge_ps + m_increment_ps > m_now_ps) {
+			ul = m_last_edge_ps + m_increment_ps - m_now_ps;
+		} else // if (m_last_edge + m_interval_ps > m_now) {
+			ul = (m_last_edge_ps + 2*m_increment_ps - m_now_ps);
+
+		return ul;
 	}
 
-	int	advance(unsigned long itime) {
-		m_now += itime;
-		if (m_now >= m_last_edge + 2*m_increment) {
-			m_last_edge += 2*m_increment;
-			return 1;
-		} else if (m_now >= m_last_edge + m_increment)
-			return 0;
+	void	set_interval_ps(unsigned long interval_ps) {
+		// Divide the clocks interval by two, so we can have a
+		// period for raising the clock, and another for lowering
+		// the clock.
+		m_increment_ps = (interval_ps>>1)&-2l;
+		assert(m_increment_ps > 0);
+	}
+
+	int	advance(unsigned long itime)  {
+		int	clk = 0;
+		m_now_ps += itime;
+		if (m_now_ps >= m_last_edge_ps + 2*m_increment_ps) {
+			m_last_edge_ps += 2*m_increment_ps;
+			clk = 1;
+		} else if (m_now_ps >= m_last_edge_ps + m_increment_ps)
+			clk = 0;
 		else
-			return 1;
+			clk = 1;
+		return clk;
 	}
 
 	bool	rising_edge(void) {
-		if (m_now == m_last_edge)
+		if (m_now_ps == m_last_edge_ps) {
 			return true;
-		return false;
+		} return false;
 	}
 
 	bool	falling_edge(void) {
-		if (m_now == m_last_edge + m_increment)
+		if (m_now_ps == m_last_edge_ps + m_increment_ps) {
 			return true;
-		return false;
+		} return false;
 	}
-
 };
 #endif

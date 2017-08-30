@@ -202,10 +202,10 @@ int main(int argc, char **argv) {
 			secp=  secpp[i];
 
 			// Make sure our section is either within block RAM
-#ifdef	BLKRAM_ACCESS
-			if ((secp->m_start >= BKMEMBASE)
+#ifdef	BKRAM_ACCESS
+			if ((secp->m_start >= BKRAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= BKMEMBASE+BKMEMLEN))
+						<= BKRAMBASE+BKRAMLEN))
 				valid = true;
 #endif
 
@@ -219,9 +219,9 @@ int main(int argc, char **argv) {
 
 #ifdef	SDRAM_ACCESS
 			// Or SDRAM
-			if ((secp->m_start >= RAMBASE)
+			if ((secp->m_start >= SDRAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= RAMBASE+RAMLEN))
+						<= SDRAMBASE+SDRAMLEN))
 				valid = true;
 #endif
 			if (!valid) {
@@ -236,9 +236,9 @@ int main(int argc, char **argv) {
 			secp = secpp[i];
 
 #ifdef	SDRAM_ACCESS
-			if ((secp->m_start >= RAMBASE)
+			if ((secp->m_start >= SDRAMBASE)
 				&&(secp->m_start+secp->m_len
-						<= RAMBASE+RAMLEN)) {
+						<= SDRAMBASE+SDRAMLEN)) {
 				if (verbose)
 					printf("Writing to MEM: %08x-%08x\n",
 						secp->m_start,
@@ -255,10 +255,10 @@ int main(int argc, char **argv) {
 			}
 #endif
 
-#ifdef	BLKRAM_ACCESS
-			if ((secp->m_start >= BKMEMBASE)
+#ifdef	BKRAM_ACCESS
+			if ((secp->m_start >= BKRAMBASE)
 				  &&(secp->m_start+secp->m_len
-						<= BKMEMBASE+BKMEMLEN)) {
+						<= BKRAMBASE+BKRAMLEN)) {
 				if (verbose)
 					printf("Writing to MEM: %08x-%08x\n",
 						secp->m_start,
@@ -314,18 +314,18 @@ int main(int argc, char **argv) {
 		if (m_fpga) m_fpga->readio(R_VERSION); // Check for bus errors
 
 		// Now ... how shall we start this CPU?
+		printf("Clearing the CPUs registers\n");
+		for(int i=0; i<32; i++) {
+			m_fpga->writeio(R_ZIPCTRL, CPU_HALT|i);
+			m_fpga->writeio(R_ZIPDATA, 0);
+		}
+
+		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
+		printf("Setting PC to %08x\n", entry);
+		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
+		m_fpga->writeio(R_ZIPDATA, entry);
+
 		if (start_when_finished) {
-			printf("Clearing the CPUs registers\n");
-			for(int i=0; i<32; i++) {
-				m_fpga->writeio(R_ZIPCTRL, CPU_HALT|i);
-				m_fpga->writeio(R_ZIPDATA, 0);
-			}
-
-			m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
-			printf("Setting PC to %08x\n", entry);
-			m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
-			m_fpga->writeio(R_ZIPDATA, entry);
-
 			printf("Starting the CPU\n");
 			m_fpga->writeio(R_ZIPCTRL, CPU_GO|CPU_sPC);
 		} else {

@@ -86,11 +86,12 @@ void entry(void) {
 	int		sync_mask = 0;
 
 	txstr("\n\nHDMI-SYNC-TEST\n\n");
-	while(_hin->hin_pixclk < 10000000)
+	while(_hin->hin_pixclk < 2000000)
 		wait_ms(10);
 	for(int i=0; i<32; i++) {
 		_hin->hin_ctrl = i | 0x80000000;
-		wait_ms(150);	// 4 frames at 60 Hz / 1000/15
+		// wait_ms(150);	// 4 frames at 60 Hz / 1000/15
+		wait_ms(1500);	// 4 frames at 60 Hz / 1000/15
 		txstr("DLY: "); txhex(i);
 		txstr(" ");     txhex(_hin->hin_ctrl);
 		txstr(" ");     txhex(_hin->hin_syncdata);

@@ -104,13 +104,13 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 	output	reg	[31:0]	o_wb_data;
 	//
 	output	wire		o_vsync_int;
-	output	wire	[29:0]	o_copy_pixels;
+	output	reg	[29:0]	o_copy_pixels;
 	output	wire	[31:0]	o_dbg_scope;
 
 	assign	o_vsync_int = 1'b0;
 
 	reg		r_auto_sync_reset;
-	reg		r_use_autosync;
+	reg		r_use_autosync, r_copy_decoded;
 	reg	[31:0]	r_frame_address;
 	reg	[4:0]	r_logic_bitslip_r,
 			r_logic_bitslip_g,
@@ -139,6 +139,7 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 			begin
 				r_auto_sync_reset <=  i_wb_data[31];
 				r_use_autosync    <= !i_wb_data[30];
+				r_copy_decoded    <=  i_wb_data[29];
 			end
 			if (i_wb_sel[0])
 				o_delay <= i_wb_data[4:0];
@@ -383,7 +384,7 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 		else case(i_wb_addr)
 		4'h0:	o_wb_data <= r_frame_address;
 		4'h4:	o_wb_data <= {
-				1'b0, !r_use_autosync, 1'b0,
+				1'b0, !r_use_autosync, r_copy_decoded,
 						i_delay_actual_r,
 				3'h0, i_delay_actual_g,
 				3'h0, i_delay_actual_b,
@@ -409,10 +410,13 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 			dpix_r, dpix_g, dpix_b };
 	*/
 
-	/*
-	assign	o_dbg_scope = { hsync, vsync, syncd_r, syncd_g, syncd_b };
-	*/
+	// assign	o_dbg_scope = { hsync, vsync, syncd_r, syncd_g, syncd_b };
+	reg	[31:0] dbg_word;
+	always @(posedge i_pix_clk)
+		dbg_word <= { hsync, vsync, i_r, i_g, i_b };
+	assign	o_dbg_scope = dbg_word;
 
+	/*
 	assign	o_dbg_scope = {
 		hsync, vsync, pixvalid, w_pvr,	//  4
 		state,
@@ -421,10 +425,15 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 		apix_r[0], apix_g[5], apix_g[0], w_pvb,	// 4
 		pixel_now[7:0]			// 8
 		};
+	*/
 
 	// Eventually, this will be
 	//	vsync, hsync, ispixel, (!ispixel)?8'h0:8'bred, 8'bgrn, 8'bblue
 	//	o_copy_pixels = { vsync, hsync, w_pvr, w_pvg, w_pvb, 3'h0,
 	//			dpix_r, dpix_g, dpix_b };
-	assign	o_copy_pixels = { syncd_r, syncd_g, syncd_b };
+	always @(posedge i_pix_clk)
+		if (r_copy_decoded)
+			o_copy_pixels <= { i_r, i_g, i_b };
+		else
+			o_copy_pixels <= { syncd_r, syncd_g, syncd_b };
 endmodule

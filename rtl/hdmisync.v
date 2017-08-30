@@ -69,28 +69,32 @@ module	hdmisync(i_pix_clk, i_reset,
 			auto_r,   auto_g,   auto_b;
 	wire	[4:0]	auto_bitslip_r, auto_bitslip_g, auto_bitslip_b;
 
-//
-//
+	//
+	//
 	hdmipixelsync	rasync(i_pix_clk, i_reset, i_r, auto_bitslip_r, auto_r);
 	hdmipixelsync	gasync(i_pix_clk, i_reset, i_g, auto_bitslip_g, auto_g);
 	hdmipixelsync	basync(i_pix_clk, i_reset, i_b, auto_bitslip_b, auto_b);
 
-//
+	//
+	//
+	// Apply a fixed bit synchronization, slipping bits until they look
+	// "right" by hand.
+	//
 	hdmipxslip	rslip(i_pix_clk, i_logic_bitslip_r, i_r, manual_r);
 	hdmipxslip	gslip(i_pix_clk, i_logic_bitslip_g, i_g, manual_g);
 	hdmipxslip	bslip(i_pix_clk, i_logic_bitslip_b, i_b, manual_b);
 //
 
-//
+	//
 	reg	all_locked;
 	always @(posedge i_pix_clk)
 		all_locked <= ((auto_bitslip_r[4])
 				&&(auto_bitslip_g[4])&&(auto_bitslip_b[4]));
-//
-	assign	o_automatic_sync_word = { 7'h0, all_locked,
+	//
+	assign	o_automatic_sync_word = { !i_automatic_sync, 6'h0, all_locked,
 				3'h0, auto_bitslip_r, 3'h0, auto_bitslip_g,
 				3'h0, auto_bitslip_b };
-	assign	o_manual_sync_word = { 8'h0,
+	assign	o_manual_sync_word = { i_automatic_sync, 7'h0,
 			3'h0, i_logic_bitslip_r,
 			3'h0, i_logic_bitslip_g,
 			3'h0, i_logic_bitslip_b };

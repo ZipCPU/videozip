@@ -36,17 +36,17 @@
 //
 //
 module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
-		o_hdmi_logic_clk);
+		o_hdmi_logic_clk, o_locked);
 	parameter	PHASE_BIAS = 0;
 	input	wire		i_sys_clk, i_hdmi_raw_input_clk;
 	input	wire		i_ce;
-	output	wire	[1:0]	o_hs_clk;
+	output	wire		o_hs_clk;
 	output	wire		o_hdmi_logic_clk;
-	// output	wire		o_locked;
+	output	wire		o_locked;
 
 	wire		clock_feedback, clock_feedback_buffered;
-	wire	[2:0]	ignored_clk;
-	wire	[1:0]	hs_clk_unbuffered;
+	wire	[3:0]	ignored_clk;
+	wire		hs_clk_unbuffered;
 	wire		logic_clk_unbuffered;
 
 	reg	reset;
@@ -65,30 +65,26 @@ module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
 		// is still faster than the maximum clock I'm using, so ...we'll
 		// use that as a maximum
 		.CLKIN1_PERIOD(7),	// in ns, thus max pixel clk of 200MHz
-		//
+		// Clock zero is the high speed clock
 		.CLKOUT0_DIVIDE(2),
 		.CLKOUT0_PHASE(0.0),
 		.CLKOUT0_DUTY_CYCLE(0.5),
 		//
-		.CLKOUT1_DIVIDE(2),
-		.CLKOUT1_PHASE(0.0),
-		.CLKOUT1_DUTY_CYCLE(0.5),
-		//
-		.CLKOUT2_DIVIDE(10),
-		.CLKOUT2_PHASE(0.0)
+		.CLKOUT1_DIVIDE(10),
+		.CLKOUT1_PHASE(0.0)
 		) genclki(
 		.CLKIN1(i_hdmi_raw_input_clk),	// Variable rate, from HDMI input
-		.CLKOUT0(hs_clk_unbuffered[1]),
-		.CLKOUT1(hs_clk_unbuffered[0]),
-		.CLKOUT2(logic_clk_unbuffered),
-		.CLKOUT3(ignored_clk[0]),
-		.CLKOUT4(ignored_clk[1]),
-		.CLKOUT5(ignored_clk[2]),
+		.CLKOUT0(hs_clk_unbuffered),
+		.CLKOUT1(logic_clk_unbuffered),	// REMOVE THIS CLOCK:UNUSED
+		.CLKOUT2(ignored_clk[0]),
+		.CLKOUT3(ignored_clk[1]),
+		.CLKOUT4(ignored_clk[2]),
+		.CLKOUT5(ignored_clk[3]),
 		.PWRDWN(!i_ce),
 		.RST(reset),
 		.CLKFBOUT(clock_feedback),
 		.CLKFBIN(clock_feedback_buffered),
-		.LOCKED()
+		.LOCKED(o_locked)
 		);
 
 	// The buffer is necessary so that the output then compensates for the
@@ -96,10 +92,12 @@ module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
 	BUFG	hdmi_feedback_buffer(.I(clock_feedback),
 			.O(clock_feedback_buffered));
 
-	BUFG	hdmi_hsclk_buffer_p(.I(hs_clk_unbuffered[1]),
-				.O(o_hs_clk[1]));
-	BUFG	hdmi_hsclk_buffer_n(.I(hs_clk_unbuffered[0]),
-				.O(o_hs_clk[0]));
+	// The ISERDESE2 for the pixels requires two clock inputs, 180
+	// degrees out of phase with each other.
+	BUFG	hdmi_hsclk_buffer_p(.I(hs_clk_unbuffered),
+				.O(o_hs_clk));
+
+	// Also need a pixel clock, at a 0-degree phase shift
 	BUFG	hdmi_hsclk_logic_buffer(.I(logic_clk_unbuffered),
 				.O(o_hdmi_logic_clk));
 endmodule

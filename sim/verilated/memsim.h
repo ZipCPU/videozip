@@ -46,10 +46,13 @@
 #ifndef	MEMSIM_H
 #define	MEMSIM_H
 
+#include <stdint.h>
+
 class	MEMSIM {
 public:	
 	typedef	unsigned int	BUSW;
 	typedef	unsigned char	uchar;
+	static const int	NWRDWIDTH;
 
 	BUSW	*m_mem, m_len, m_mask, m_head, m_tail, m_delay_mask, m_delay;
 	int	*m_fifo_ack;
@@ -62,14 +65,14 @@ public:
 	void	load(const unsigned int addr, const char *buf,const size_t len);
 	void	apply(const uchar wb_cyc, const uchar wb_stb,
 				const uchar wb_we,
-			const BUSW wb_addr, const BUSW wb_data,
-				const uchar wb_sel,
-			uchar &o_ack, uchar &o_stall, BUSW &o_data);
+			const BUSW wb_addr, const uint32_t *wb_data,
+				const short wb_sel,
+			uchar &o_ack, uchar &o_stall, uint32_t *o_data);
 	void	operator()(const uchar wb_cyc, const uchar wb_stb,
 				const uchar wb_we,
-			const BUSW wb_addr, const BUSW wb_data,
-				const uchar wb_sel,
-			uchar &o_ack, uchar &o_stall, BUSW &o_data) {
+			const BUSW wb_addr, const uint32_t *wb_data,
+				const short wb_sel,
+			uchar &o_ack, uchar &o_stall, uint32_t *o_data) {
 		apply(wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel, o_ack, o_stall, o_data);
 	}
 	BUSW &operator[](const BUSW addr) { return m_mem[addr&m_mask]; }

@@ -172,7 +172,7 @@ int	main(int argc, char **argv) {
 			tb->tick();
 
 	tb->close();
-	tb->kill();
+	// tb->kill();
 	delete tb;
 
 	return	EXIT_SUCCESS;

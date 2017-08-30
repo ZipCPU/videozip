@@ -37,8 +37,8 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid rdsync
-	# readframe
+PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid \
+	rdsync getframe
 SCOPES := edidrxscope edidtxscope rawdscope tmdscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
@@ -47,7 +47,7 @@ BUSSRCS := ttybus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
 SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
 	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
-	readframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp
+	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp
 	# netsetup.cpp manping.cpp wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
@@ -105,7 +105,7 @@ cpedid: $(OBJDIR)/cpedid.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 readhist: $(OBJDIR)/readhist.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
-readframe: $(OBJDIR)/readframe.o $(BUSOBJS)
+getframe: $(OBJDIR)/getframe.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 
 #

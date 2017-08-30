@@ -36,7 +36,7 @@ set_property -dict {PACKAGE_PIN D22 IOSTANDARD LVCMOS12} [get_ports i_btnd]
 set_property -dict {PACKAGE_PIN C22 IOSTANDARD LVCMOS12} [get_ports i_btnl]
 set_property -dict {PACKAGE_PIN D14 IOSTANDARD LVCMOS12} [get_ports i_btnr]
 set_property -dict {PACKAGE_PIN F15 IOSTANDARD LVCMOS12} [get_ports i_btnu]
-set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS12} [get_ports i_cpu_resetn]
+set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS15} [get_ports i_cpu_resetn]
 
 
 ## Switches
@@ -118,6 +118,7 @@ set_property -dict {PACKAGE_PIN AA18 IOSTANDARD LVCMOS33} [get_ports i_gps_pps]
 
 
 ## Pmod header JB --- Reserved for the Differential PMod Challenge
+set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { io_genclk }]; #IO_L19P_T3_34 Sch=jb_p[2]
 #set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { jb[0] }]; #IO_L21P_T3_DQS_34 Sch=jb_p[1]
 #set_property -dict { PACKAGE_PIN V8    IOSTANDARD LVCMOS33 } [get_ports { jb[1] }]; #IO_L21N_T3_DQS_34 Sch=jb_n[1]
 #set_property -dict { PACKAGE_PIN V7    IOSTANDARD LVCMOS33 } [get_ports { jb[2] }]; #IO_L19P_T3_34 Sch=jb_p[2]
@@ -151,8 +152,8 @@ set_property -dict { PACKAGE_PIN AB6   IOSTANDARD LVCMOS33 } [get_ports { o_mic_
 
 
 ## UART
-set_property -dict {PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports o_host_uart_tx ]
-set_property -dict {PACKAGE_PIN V18  IOSTANDARD LVCMOS33 } [get_ports i_host_uart_rx ]
+set_property -dict {PACKAGE_PIN AA19 IOSTANDARD LVCMOS33 } [get_ports o_wbu_uart_tx ]
+set_property -dict {PACKAGE_PIN V18  IOSTANDARD LVCMOS33 } [get_ports i_wbu_uart_rx ]
 
 
 ## Ethernet
@@ -176,7 +177,7 @@ set_property -dict {PACKAGE_PIN Y16 IOSTANDARD LVCMOS25} [get_ports io_eth_mdio]
 
 
 ## Fan PWM
-#set_property -dict { PACKAGE_PIN U15   IOSTANDARD LVCMOS25 } [get_ports { fan_pwm }]; #IO_L14P_T2_SRCC_13 Sch=fan_pwm
+#set_property -dict { PACKAGE_PIN U15   IOSTANDARD LVCMOS25 } [get_ports { o_unused_fan_pwm }]; #IO_L14P_T2_SRCC_13 Sch=fan_pwm
 
 
 ## DPTI/DSPI
@@ -305,7 +306,8 @@ set_property -dict {PACKAGE_PIN V20 IOSTANDARD LVCMOS33} [get_ports o_sd_reset]
 #set_property -dict { PACKAGE_PIN F13   IOSTANDARD LVCMOS12 } [get_ports { fmc_la_p[33] }]; #IO_L1P_T0_16 Sch=fmc_la_p[33]
 
 
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *avgs*}]    -to [get_cells -hier -filter {NAME =~ *q_v*}] 10.0;
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *avgs_reg*}]    -to [get_cells -hier -filter {NAME =~ *clkgenclk_testctr*q_v*}] 10.0;
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *r_ce_reg[1]*}]    -to [get_cells -hier -filter {NAME =~ *lowserdes*}] 10.0;
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 set_property BITSTREAM.CONFIG.CONFIGRATE 50 [current_design]

@@ -38,7 +38,7 @@
 ##
 ##
 .PHONY: all
-all:	check-install archive datestamp autodata rtl sim sw
+all:	check-install datestamp autodata rtl sim sw
 #
 # Could also depend upon load, if desired, but not necessary
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
@@ -109,7 +109,7 @@ datestamp: check-perl
 ARCHIVEFILES := $(BENCH) $(SW) $(RTL) $(SIM) $(NOTES) $(PROJ) $(BIN) $(CONSTRAINTS) $(AUTODATA) README.md
 .PHONY: archive
 archive:
-	tar --transform s,^,$(YYMMDD)-video/, -chjf $(YYMMDD)-video.tjz $(ARCHIVEFILES)
+	tar --transform s,^,$(YYMMDD)-video/, --exclude=dump.txt --exclude=trace.vcd -chjf $(YYMMDD)-video.tjz $(ARCHIVEFILES)
 
 #
 #
@@ -120,9 +120,11 @@ autodata: check-autofpga
 	$(MAKE) --no-print-directory --directory=auto-data
 	$(call copyif-changed,auto-data/toplevel.v,rtl/toplevel.v)
 	$(call copyif-changed,auto-data/main.v,rtl/main.v)
+	$(call copyif-changed,auto-data/build.xdc,rtl/board.xdc)
 	$(call copyif-changed,auto-data/regdefs.h,sw/host/regdefs.h)
 	$(call copyif-changed,auto-data/regdefs.cpp,sw/host/regdefs.cpp)
 	$(call copyif-changed,auto-data/board.h,sw/zlib/board.h)
+	$(call copyif-changed,auto-data/board.h,sw/board/board.h)
 	$(call copyif-changed,auto-data/board.ld,sw/board/board.ld)
 	$(call copyif-changed,auto-data/rtl.make.inc,rtl/make.inc)
 	$(call copyif-changed,auto-data/testb.h,sim/verilated/testb.h)

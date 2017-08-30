@@ -186,7 +186,7 @@ module	wbuart(i_clk, i_rst,
 	wire	[(LCLLGFLEN-1):0]	check_cutoff;
 	assign	check_cutoff = -3;
 	always @(posedge i_clk)
-		o_rts_n = ((HARDWARE_FLOW_CONTROL_PRESENT)
+		o_rts_n <= ((HARDWARE_FLOW_CONTROL_PRESENT)
 			&&(!uart_setup[30])
 			&&(rxf_status[(LCLLGFLEN+1):2] > check_cutoff));
 
@@ -421,5 +421,11 @@ module	wbuart(i_clk, i_rst,
 	// perhaps, but doesn't stall the pipeline.)  Hence, we can just
 	// set this value to zero.
 	assign	o_wb_stall = 1'b0;
+
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[33:0] unused;
+	assign	unused = { i_rst, i_wb_cyc, i_wb_data };
+	// verilator lint_on UNUSED
 
 endmodule

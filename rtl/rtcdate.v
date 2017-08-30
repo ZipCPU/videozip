@@ -50,6 +50,10 @@
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
+//
+//
+`default_nettype	none
+//
 module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data,
 		o_wb_ack, o_wb_stall, o_wb_data);
 	input	wire	i_clk;

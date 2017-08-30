@@ -35,6 +35,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 		i_pix_eof, i_pix_eol, i_pix_newframe, i_pix_newline,
 			i_pix_valid, i_pix_r, i_pix_g, i_pix_b,
@@ -44,8 +46,32 @@ module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 		i_pix_npix, i_pix_nlines,
 		o_wb_cyc, o_wb_stb, o_wb_addr, o_wb_data,
 			i_wb_ack, i_wb_stall);
+	parameter	XBITS=13, YBITS=11, FRAMEBITS=(XBITS+YBITS+1);
+	input	wire	i_wb_clk, i_pix_clk, i_reset;
+	//
+	input	wire	i_pix_eof, i_pix_eol, i_pix_newframe, i_pix_newline,
+			i_pix_valid;
+	input	wire	[7:0]	i_pix_r, i_pix_g, i_pix_b;
+	input	wire	i_wb_en;
+	input	wire	[(AW-1):0]	i_wb_first_address;
+	input	wire	[(AW-1):0]	i_wb_bytes_per_line;
+	input	wire	[(XBITS-1):0]	i_wb_first_xpos, i_wb_pix_line;
+	input	wire	[(YBITS-1):0]	i_wb_first_ypos, i_wb_nlines;
+	input	wire	[(FRAMEBITS-1):0] i_pix_npix;
+	//
+	//
+	output	wire			o_wb_cyc, o_wb_stb;
+	output	wire	[(AW-1):0]	o_wb_addr;
+	output	wire	[(128-1):0]	o_wb_data;
+	input	wire			i_wb_ack, i_wb_stall;
 
 
+	reg	[(XBITS-1):0]	pix_raw_line_len, pix_per_line, xloc;
+	reg	[(YBITS-1):0]	pix_last_ypos, yloc,
+				pix_raw_nlines, pix_nlines;
+
+	wire	[(AW-1):0]	w_wb_words_per_line;
+	assign	w_wb_words_per_line = i_wb_bytes_per_line+31;
 	// Horizontal control
 	always @(posedge i_pix_clk)
 	begin
@@ -60,10 +86,11 @@ module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 		else
 			pix_per_line <= i_wb_pix_line;
 		pix_last_xpos <= pix_per_line - i_wb_first_xpos;
+		//
 		if (i_wb_words_per_line == 0)
 			pix_words_per_line <= pix_per_line;
 		else
-			pix_words_per_line <= i_wb_words_per_line;
+			pix_words_per_line <= w_wb_words_per_line[(AW-1):4];
 	end
 
 	// Synchronized our X position to the incoming data
@@ -127,7 +154,11 @@ module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 		last_pix_valid <= (i_pix_valid)&&(xvalid)&&(yvalid);
 	end
 
+	//
+	//
 	// Pack our pixels to the width of the bus, currently four words
+	//
+	//
 	reg		long_address_word;
 	reg	[1:0]	pixcnt;
 	reg	[3:0]	long_pixel_phase;

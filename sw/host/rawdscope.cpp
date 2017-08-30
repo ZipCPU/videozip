@@ -89,8 +89,8 @@ public:
 	~RAWDSCOPE(void) {}
 
 	virtual	void	define_traces(void) {
-		register_trace("p_and",  1, 31);
-		register_trace("p_or",   1, 30);
+		register_trace("hsync",  1, 31);
+		register_trace("vsync",  1, 30);
 		register_trace("red",   10, 20);
 		register_trace("green", 10, 10);
 		register_trace("blue",  10,  0);
@@ -161,10 +161,10 @@ public:
 	}
 
 	virtual	void	decode(DEVBUS::BUSW val) const {
-		int	r, g, b, band, bor;
+		int	r, g, b, hsync, vsync;
 
-		band = (val>>31)&1;
-		bor  = (val>>30)&1;
+		hsync = (val>>31)&1;
+		vsync  = (val>>30)&1;
 		r = (val>>20)&0x03ff;
 		g = (val>>10)&0x03ff;
 		b = (val    )&0x03ff;
@@ -176,7 +176,9 @@ public:
 #endif
 
 		printf("%s%s %03x : %03x : %03x -- >",
-			(band)?"@":" ", (bor)?"+":" ", r, g, b);
+			(vsync)?"V":" ",
+			(hsync)?"H":" ",
+			r, g, b);
 
 		if ((b==0x2cc)&&(g == 0x0133)&&(r == 0x2cc))
 			printf("Video Guard Band");
@@ -223,23 +225,21 @@ int main(int argc, char **argv) {
 		scope->print();
 		// If we want, we can also write out a VCD file with the data
 		// we just read.
-		scope->writevcd("rawgreen.vcd");
+		scope->writevcd("rawtmds.vcd");
 
 
 		for(int i=0; i<hlength; i++) {
 			bool	is_match;
 			unsigned	r, g, b, v, match_r, match_g, match_b,
-				band, bor, vand, vor;
+				hsync, vsync;
 
-			vand = 1; vor = 0;
 			printf("%4d: ", i);
 			for(int j=0; (j*hlength+i)<scope->scoplen(); j++) {
 
 				v = (*scope)[j*hlength+i];
 
-				band = (v>>31)&1;
-				bor  = (v>>30)&1;
-
+				hsync = (v>>31)&1;
+				vsync = (v>>30)&1;
 				r = (v>>20)&0x03ff;
 				g = (v>>10)&0x03ff;
 				b = (v    )&0x03ff;
@@ -255,8 +255,6 @@ int main(int argc, char **argv) {
 					match_r = r;
 					match_g = g;
 					match_b = b;
-					vand = band;
-					vor  = bor;
 				} else if (is_match) {
 					if (r != match_r)
 						is_match = false;
@@ -264,10 +262,11 @@ int main(int argc, char **argv) {
 						is_match = false;
 					else if (b != match_b)
 						is_match = false;
-					vand = vand & band;
-					vor  = vor  | bor;
 				}
-				printf("%03x:%03x:%03x  ", r, g, b);
+				printf("%s%s%03x:%03x:%03x  ",
+					(vsync)?"V":" ",
+					(hsync)?"H":" ",
+					r, g, b);
 			}
 
 			if (is_match) {
@@ -306,11 +305,6 @@ int main(int argc, char **argv) {
 				else if ((r == 0x0133)&&(g == 0x0133))
 					printf("DI.G");
 				printf(" MATCH");
-
-				if (vand)
-					printf(" ALL ");
-				else if (vor)
-					printf(" SOME");
 			}
 			printf("\n");
 		}

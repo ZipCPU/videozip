@@ -1,0 +1,130 @@
+################################################################################
+##
+## Filename: 	sdramxclk.txt
+##
+## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+##
+## Purpose:	To describe how to provide access to an SDRAM controller
+##		from the Wishbone bus, where such SDRAM controller uses a
+##	different clock from the Wishbone bus itself.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+##
+## Copyright (C) 2017, Gisselquist Technology, LLC
+##
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of  the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+##
+## License:	GPL, v3, as defined and found on www.gnu.org,
+##		http://www.gnu.org/licenses/gpl.html
+##
+##
+################################################################################
+##
+##
+@PREFIX=sdram
+@DEVID=SDRAM
+@$LGMEMSZ=20
+@$BUS.NAME=wb
+# SDRAM bus transactions are 128 bits wide
+@$BUS.DW=128
+# Hence we need 4 fewer bus wires than would be necessary for
+# 8-bit byte accesses
+@$BUS.AW=@$(LGMEMSZ-4)
+@LGMEMSZ.FORMAT=%d
+@$NADDR=(1<<(@$THIS.LGMEMSZ-2))
+@$NBYTES=(1<<(@$THIS.LGMEMSZ))
+@NBYTES.FORMAT=0x%08x
+@ACCESS=SDRAM_ACCESS
+@PTYPE=MEMORY
+@LD.PERM=wx
+@MAIN.IODECL=
+	output	wire	o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we;
+	output	wire	[(@$(BUS.AW)-1:0]	o_@$(PREFIX)_addr;
+	output	wire	[(@$(BUS.DW)-1:0]	o_@$(PREFIX)_data;
+	output	wire	[(@$(BUS.DW/8)-1:0]	o_@$(PREFIX)_sel;
+	//
+	input	wire	[(@$(BUS.DW/8)-1:0]	o_@$(PREFIX)_ack;
+	input	wire	[(@$(BUS.DW/8)-1:0]	o_@$(PREFIX)_stall;
+	input	wire	[(@$(BUS.DW)-1:0]	i_@$(PREFIX)_data;
+@MAIN.DEFNS=
+	wire	@$(PREFIX)_err;
+@MAIN.INSERT=
+	assign	ram_clk = i_clk_200mhz;
+
+	wbcrossclk #(.AW(@$THIS.LGMEMSZ-2), .LGFIFO(5))
+		@$(PREFIX)i(i_clk,
+			(@$(BUS.NAME)_cyc),
+			(@$(BUS.NAME)_stb)&&(@$(PREFIX)_sel), @$(BUS.NAME)_we,
+				@$(BUS.NAME)_addr[(@$THIS.LGMEMSZ-3):0],
+				@$(BUS.NAME)_data, @$(BUS.NAME)_sel,
+				@$(PREFIX)_ack, @$(PREFIX)_stall,
+				@$(PREFIX)_data, @$(PREFIX)_err,
+			xram_clk,
+			xram_cyc, xram_stb, xram_we, xram_addr, xram_data,
+					xram_sel,
+				xram_ack, xram_stall, xram_idata, xram_err);
+
+	assign	o_@$(PREFIX)_cyc  = xram_cyc;
+	assign	o_@$(PREFIX)_stb  = xram_stb;
+	assign	o_@$(PREFIX)_we   = xram_we;
+	assign	o_@$(PREFIX)_addr = xram_addr;
+	assign	o_@$(PREFIX)_data = xram_data;
+	assign	o_@$(PREFIX)_sel  = xram_sel;
+	assign	xram_ack   = i_@$(PREFIX)_ack;
+	assign	xram_stall = i_@$(PREFIX)_stall;
+	assign	xram_idata = i_@$(PREFIX)_data;
+	assign	xram_err   = 1'b0; // i_@$(PREFIX)_err;
+
+@REGS.N=1
+@REGS.0= 0 R_@$(SDRAM) @$(DEVID)
+@REGDEFS.H.DEFNS=
+#define	@$(DEVID)BASE	@$THIS.BASE
+#define	@$(DEVID)LEN	@$THIS.NBYTES
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=extern int	_@$(PREFIX)[1];
+@LDSCRIPT.PSTR=	wx
+@LDSCRIPT.PTR=	@$(PREFIX)
+@LDSCRIPT.DEF=
+_@$(PREFIX) = ORIGIN(@$(PREFIX));
+@SIM.INCLUDE=
+#include "byteswap.h"
+#include "memsim.h"
+@SIM.DEFNS=
+	MEMSIM	*m_sdram;
+@SIM.INIT=
+		m_sdram = new MEMSIM(@$NADDR);
+@SIM.CLOCK=clk_200mhz
+@SIM.TICK=
+		// Simulate the SDRAM
+		m_sdram->apply(
+			o_@$(PREFIX)_cyc,
+			o_@$(PREFIX)_stb,
+			o_@$(PREFIX)_we,
+			o_@$(PREFIX)_addr,
+			o_@$(PREFIX)_data,
+			o_@$(PREFIX)_sel,
+			i_@$(PREFIX)_ack,
+			i_@$(PREFIX)_stall,
+			i_@$(PREFIX)_data);
+			start = start & (-4);
+			wlen = (wlen+3)&(-4);
+
+@SIM.LOAD=
+			// Need to byte swap data to get it into the memory
+			m_sdram->load(&m_core->block_ram[start], &buf[offset], len >>2);

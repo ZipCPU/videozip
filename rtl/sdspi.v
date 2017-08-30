@@ -35,6 +35,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 `define	SDSPI_CMD_ADDRESS	2'h0
 `define	SDSPI_DAT_ADDRESS	2'h1
 `define	SDSPI_FIFO_A_ADDR	2'h2
@@ -194,8 +196,6 @@ module	sdspi(i_clk,
 			fifo_b_mem_2[0:((1<<LGFIFOLN)-1)],
 			fifo_b_mem_3[0:((1<<LGFIFOLN)-1)];
 	reg	[(LGFIFOLN-1):0]	fifo_wb_addr;
-	reg	[(LGFIFOLN+1):0]	rd_fifo_sd_addr;
-	reg	[(LGFIFOLN+1):0]	wr_fifo_sd_addr;
 	//
 	reg	[(LGFIFOLN+1):0]	ll_fifo_addr;
 	//
@@ -221,6 +221,8 @@ module	sdspi(i_clk,
 	reg	[25:0]	r_watchdog;
 	reg		r_watchdog_err;
 	reg	pre_cmd_state;
+
+	// Relieve some stress from the WB bus timing
 
 	initial	r_cmd_busy = 1'b0;
 	initial	r_data_reg = 32'h00;
@@ -431,7 +433,6 @@ module	sdspi(i_clk,
 		end else if (new_data) // Data write
 			r_data_reg <= wb_data;
 	end
-
 
 	always @(posedge i_clk)
 		pre_cmd_state <= (ll_cmd_stb)&&(ll_idle);
@@ -784,7 +785,7 @@ module	sdspi(i_clk,
 	reg	[(LGFIFOLN-1):0]	r_blklimit;
 	wire	[(LGFIFOLN+1):0]	w_blklimit;
 	always @(posedge i_clk)
-		r_blklimit[(LGFIFOLN-1):0] = (1<<r_lgblklen)-1;
+		r_blklimit[(LGFIFOLN-1):0] <= (1<<r_lgblklen)-1;
 	assign	w_blklimit = { r_blklimit, 2'b11 };
 
 	// Package the FIFO reads up into a packet
@@ -944,5 +945,11 @@ module	sdspi(i_clk,
 			r_rsp_state, r_cmd_busy,	// 4'h
 			ll_cmd_dat,		// 8'b
 			ll_out_dat };		// 8'b
+
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	unused;
+	assign	unused = i_wb_cyc;
+	// verilator lint_on  UNUSED
 endmodule
 
