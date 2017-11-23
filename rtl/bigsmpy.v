@@ -2,7 +2,7 @@
 //
 // Filename: 	bigsmpy.v
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To multiply two 32-bit numbers into a 64-bit number.  We try
 //		to use the hardware multiply to do this, but just what kind of
@@ -19,7 +19,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -32,7 +32,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //

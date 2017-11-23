@@ -231,7 +231,7 @@ module	rtcgps(i_clk,
 	reg	new_timer, new_timer_set, new_timer_last, tm_pending_start;
 	reg	[23:0]	new_timer_val;
 
-	reg	tm_pps, tm_ppm, tm_int;
+	reg	tm_pps, tm_int;
 	wire	tm_stopped, tm_running, tm_alarm;
 	assign	tm_stopped = ~timer[24];
 	assign	tm_running =  timer[24];
@@ -465,4 +465,9 @@ module	rtcgps(i_clk,
 		2'b11: o_data <= { 6'h00, al_tripped, al_enabled, 2'b00, alarm_time };
 		endcase
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[7:0] unused;
+	assign	unused = { i_wb_cyc, i_wb_data[31:26], tm_pending_start };
+	// verilator lint_on  UNUSED
 endmodule
