@@ -66,8 +66,8 @@
 	wire		@$(PREFIX)i_cyc, @$(PREFIX)i_stb, @$(PREFIX)i_we,
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_err;
 	wire	[(@$(AWID)-1):0]	@$(PREFIX)i_addr;
-	wire	[31:0]	@$(PREFIX)i_odata, @$(PREFIX)i_idata;
-	wire	[3:0]	@$(PREFIX)i_sel;
+	wire	[(@$(MASTER.BUS.WIDTH)-1):0]	@$(PREFIX)i_odata, @$(PREFIX)i_idata;
+	wire	[(@$(MASTER.BUS.NSELECT)-1):0]	@$(PREFIX)i_sel;
 @MAIN.INSERT=
 `ifdef	INCLUDE_ZIPCPU
 	//

@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	busconsole.txt
+## Filename: 	wbuconsole.txt
 ##
 ## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
 ##
@@ -52,7 +52,7 @@
 @CLOCK.NAME=clk
 @$SETUP=@$(CLOCK.FREQUENCY) / @$BAUDRATE
 @SETUP.FORMAT=24'h%x
-@$BUS_ADDRESS_WIDTH= @$(MASTER.BUS.AWID)
+@$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 @MAIN.PORTLIST=
 		// UART/host to wishbone interface
 		i_@$(PREFIX)_uart_rx, o_@$(PREFIX)_uart_tx
@@ -189,6 +189,6 @@ typedef struct  CONSOLE_S {
 @BDEF.IONAME= io_console
 @BDEF.IOTYPE= CONSOLE
 @BDEF.OSDEF=	_BOARD_HAS_BUSCONSOLE
-@BDEF.OSVAL=static volatile CONSOLE *const _uart = ((CONSOLE *)@$.BASE);
+@BDEF.OSVAL=static volatile CONSOLE *const _uart = ((CONSOLE *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP= CONSOLE
 @RTL.MAKE.FILES= wbconsole.v txuartlite.v rxuartlite.v ufifo.v

@@ -37,17 +37,18 @@
 ##
 ##
 @PREFIX=xpand
+@$NADDR=(1<<@$(AWID))
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @SLAVE.CLOCK=clk
 # @MASTER.BUS=wbsdr
-@MASTER.BUS=sdr
-@MASTER.TYPE=XPANDR
+@MASTER.BUS=xpand_bus
 @MASTER.BUS.CLOCK=clk
-# SDRAM bus transactions are 128 bits wide
+@MASTER.TYPE=SUBBUS
+# XPand bus transactions are 128 bits wide
 # Hence we need 4 fewer bus wires than would be necessary for
-@BUS.NAME=sdr
-@$BUS.WIDTH=128
+@BUS.NAME=xpand_bus
+@BUS.WIDTH=128
 @BUS.CLOCK=clk
 @$AWID=@$(MASTER.BUS.AWID)+2
 @ERROR.WIRE=@$(PREFIX)_err
