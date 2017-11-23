@@ -88,9 +88,6 @@ module	llps2(i_clk, i_ps2, o_ps2, o_rx_stb, o_rx_data,
 	assign	ck_clk = ck_ps2[1];
 	assign	ck_dat = ck_ps2[0];
 	assign	falling_edge = (~ck_clk)&&(qq_ps2[1]);
-	wire	o_clk, o_dat;
-	assign	o_clk = o_ps2[1];
-	assign	o_dat = o_ps2[0];
 
 	reg	[16:0]	idle_count;	// about 1.3 ms, or 13 bits at 10 kHz
 	initial	idle_count = 17'h1ffff;

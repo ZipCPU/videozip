@@ -134,4 +134,9 @@ module	wbmouse(i_clk,
 	always @(posedge i_clk)
 		o_interrupt <= ((m_stb)&&(|( {lftbtn,rhtbtn} & (~btnstate) )));
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[42:0]	unused;
+	assign	unused = { i_wb_cyc, m_errs, ll_dbg, i_wb_data[31:28], i_wb_data[15:12] };
+	// verilator lint_on  UNUSED
 endmodule
