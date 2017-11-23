@@ -118,7 +118,7 @@ set_property -dict {PACKAGE_PIN AA18 IOSTANDARD LVCMOS33} [get_ports i_gps_pps]
 
 
 ## Pmod header JB --- Reserved for the Differential PMod Challenge
-set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { io_genclk }]; #IO_L19P_T3_34 Sch=jb_p[2]
+#set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { io_genclk }]; #IO_L19P_T3_34 Sch=jb_p[2]
 #set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { jb[0] }]; #IO_L21P_T3_DQS_34 Sch=jb_p[1]
 #set_property -dict { PACKAGE_PIN V8    IOSTANDARD LVCMOS33 } [get_ports { jb[1] }]; #IO_L21N_T3_DQS_34 Sch=jb_n[1]
 #set_property -dict { PACKAGE_PIN V7    IOSTANDARD LVCMOS33 } [get_ports { jb[2] }]; #IO_L19P_T3_34 Sch=jb_p[2]
@@ -135,7 +135,7 @@ set_property -dict { PACKAGE_PIN V9    IOSTANDARD LVCMOS33 } [get_ports { io_gen
 #set_property -dict { PACKAGE_PIN AA8   IOSTANDARD LVCMOS33 } [get_ports { jc[2] }]; #IO_L22P_T3_34 Sch=jc_p[2]
 #set_property -dict { PACKAGE_PIN AB8   IOSTANDARD LVCMOS33 } [get_ports { jc[3] }]; #IO_L22N_T3_34 Sch=jc_n[2]
 set_property -dict { PACKAGE_PIN R6    IOSTANDARD LVCMOS33 } [get_ports { o_mic_csn }]; #IO_L17P_T2_34 Sch=jc_p[3]
-# set_property -dict { PACKAGE_PIN T6    IOSTANDARD LVCMOS33 } [get_ports { jc[5] }]; #IO_L17N_T2_34 Sch=jc_n[3]
+## set_property -dict { PACKAGE_PIN T6    IOSTANDARD LVCMOS33 } [get_ports { jc[5] }]; #IO_L17N_T2_34 Sch=jc_n[3]
 set_property -dict { PACKAGE_PIN AB7   IOSTANDARD LVCMOS33 } [get_ports { i_mic_din }]; #IO_L20P_T3_34 Sch=jc_p[4]
 set_property -dict { PACKAGE_PIN AB6   IOSTANDARD LVCMOS33 } [get_ports { o_mic_sck }]; #IO_L20N_T3_34 Sch=jc_n[4]
 
