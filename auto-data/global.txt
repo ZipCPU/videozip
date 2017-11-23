@@ -46,6 +46,7 @@
 @$RESET_ADDRESS=@$flash.BASE+(@$flash.NADDR)
 @RESET_ADDRESS.FORMAT=32'h%08x
 @VERILATOR_PREFIX=v
+@XDC.FILE=../nexysv.xdc
 @REGDEFS.H.INSERT=
 typedef	struct {
 	unsigned	m_addr;
