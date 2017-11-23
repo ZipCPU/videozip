@@ -49,6 +49,7 @@
 	reg	r_cfg_ack;
 	always @(posedge i_clk)
 		r_cfg_ack <= (wb_stb)&&(cfg_sel);
+	assign	cfg_ack   = r_cfg_ack;
 	assign	cfg_stall = 1'b0;
 	assign	cfg_data  = 32'h00;
 `else
