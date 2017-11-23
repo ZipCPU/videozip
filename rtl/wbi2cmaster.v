@@ -98,7 +98,7 @@
 `define	I2MCLEANUP	3'h6
 //
 //
-module	wbi2cmaster(i_clk, i_rst,
+module	wbi2cmaster(i_clk,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
 			o_wb_ack, o_wb_stall, o_wb_data,
 		i_i2c_scl, i_i2c_sda, o_i2c_scl, o_i2c_sda, o_int,
@@ -107,7 +107,7 @@ module	wbi2cmaster(i_clk, i_rst,
 	parameter [5:0]		TICKBITS = 6'd20;
 	parameter [(TICKBITS-1):0]	CLOCKS_PER_TICK = 20'd1000;
 	parameter 		MEM_ADDR_BITS = 7;
-	input	wire		i_clk, i_rst;
+	input	wire		i_clk;
 	// Input bus wires
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
 	input	wire	[(MEM_ADDR_BITS-2):0]	i_wb_addr;
@@ -172,7 +172,6 @@ module	wbi2cmaster(i_clk, i_rst,
 	reg	[7:1]	newdev;
 	reg		newrx_txn;
 	reg	[(MEM_ADDR_BITS-1):0]	newadr;
-	reg	[(MEM_ADDR_BITS-1):0]	newcnt;
 	//
 	reg		r_busy;
 	//
@@ -180,7 +179,6 @@ module	wbi2cmaster(i_clk, i_rst,
 	initial	newdev    = 7'h0;
 	initial	newrx_txn = 1'b0;
 	initial	newadr    = 0;
-	initial	newcnt    = 0;
 	initial	r_speed   = CLOCKS_PER_TICK;
 	initial	zero_speed_err = 1'b0;
 	always @(posedge i_clk)
@@ -193,7 +191,6 @@ module	wbi2cmaster(i_clk, i_rst,
 				newdev     <= i_wb_data[23:17];
 				newrx_txn  <= i_wb_data[16];
 				newadr     <= i_wb_data[(8+MEM_ADDR_BITS-1): 8];
-				newcnt     <= i_wb_data[(MEM_ADDR_BITS-1): 0];
 
 				start_request <= (i_wb_data[(MEM_ADDR_BITS-1):0] != 0)
 					&&((!READ_ONLY)||(i_wb_data[16]));
@@ -202,7 +199,6 @@ module	wbi2cmaster(i_clk, i_rst,
 			//	newdev     <= i_wb_data[27:21];
 			//	newrx_txn  <= i_wb_data[20];
 			//	newadr    <= i_wb_data[(12+MEM_ADDR_BITS-1):12];
-			//	newcnt    <= i_wb_data[(MEM_ADDR_BITS-1): 0];
 
 			//	start_request <= (i_wb_data[(MEM_ADDR_BITS-1):0] != 0)
 			//		&&((!READ_ONLY)||(i_wb_data[20]));
@@ -497,5 +493,11 @@ module	wbi2cmaster(i_clk, i_rst,
 	assign	o_dbg = { ll_dbg[31:29],
 		last_adr[6:0], wr_inc, count_left[5:0],
 		ll_dbg[14:0] };
+
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[14:0]	unused;
+	assign	unused = { i_wb_cyc, ll_dbg[28:15] };
+	// verilator lint_on  UNUSED
 endmodule
 
