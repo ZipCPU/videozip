@@ -52,7 +52,7 @@ DATA := global.txt bkram.txt buserr.txt clkcounter.txt	\
 	pic.txt pwrcount.txt rtcdate.txt rtcgps.txt spio.txt	\
 	version.txt wbmouse.txt wboledbw.txt wbpmic.txt wbuconsole.txt	\
 	zipmaster.txt gps.txt sdspi.txt hdmi.txt xdc.txt		\
-	xpander.txt sdvidram.txt genclk.txt
+	xpander.txt sdvidram.txt genclk.txt vidarbiter.txt
 
 AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
 
