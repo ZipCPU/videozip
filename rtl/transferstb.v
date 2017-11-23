@@ -62,6 +62,7 @@ module	transferstb(i_src_clk, i_dest_clk, i_stb, o_stb);
 	initial	tfr_ack = 2'h0;
 	always @(posedge i_src_clk)
 		tfr_ack <= { tfr_ack[0], (tfr_stb[2]) };
+	initial	lcl_ack = 1'b0;
 	always @(posedge i_src_clk)
 		lcl_ack <= tfr_ack[1];
 
