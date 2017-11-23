@@ -1,21 +1,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	xoddr.v
+// Filename: 	crossclkparam.v
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	For the DDR3 SDRAM, this handles the Xilinx specific portions
-//		of the output necessary to make this happen for one pin only.
-//	For the QSPI, this helps to make certain that as much of the logic
-//	delay as possible has been removed from the path--to get the full
-//	100MHz speed.
+// Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2017, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -28,7 +24,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -41,28 +37,40 @@
 //
 `default_nettype	none
 //
-module	xoddr(i_clk, i_v, o_pin);
-	input	wire		i_clk;
-	input	wire	[1:0]	i_v;
-	output	wire		o_pin;
+module	crossclkparam(i_a_clk, i_b_clk, i_params, o_params);
+	parameter			PW=32;
+	input	wire			i_a_clk, i_b_clk;
+	input	wire	[(PW-1):0]	i_params;
+	output	reg	[(PW-1):0]	o_params;
 
-	wire	w_internal;
-	reg	last;
+	reg	[1:0]	a_send, b_send, a_ack;
+	reg	[(PW-1):0]	r_params;
+	reg		b_ack;
 
-	always @(posedge i_clk)
-		last <= i_v[1];
+	initial	a_send = 2'b00;
+	initial	r_params = 0;
+	always @(posedge i_a_clk)
+		if ((a_send==2'b00)&&(!a_ack[1]))
+		begin
+			r_params <= i_params;
+			a_send <= 2'b01;
+		end else if (|a_send)
+			a_send <= { a_send[0], !(|a_ack) };
 
-	ODDR #(
-		.DDR_CLK_EDGE("SAME_EDGE"),
-		.INIT(1'b0),
-		.SRTYPE("SYNC")
-	) ODDRi(
-		.Q(o_pin),
-		.C(i_clk),
-		.CE(1'b1),
-		.D1(last),	// Negative clock edge (goes first)
-		.D2(i_v[0]),	// Positive clock edge
-		.R(1'b0),
-		.S(1'b0));
+	initial	b_send = 2'b00;
+	always @(posedge i_b_clk)
+		b_send <= { b_send[0], a_send[1] };
 
+	initial	b_ack = 1'b0;
+	always @(posedge i_b_clk)
+		b_ack <= b_send[1];
+
+	initial	a_ack = 2'b00;
+	always @(posedge i_a_clk)
+		a_ack <= { a_ack[0], b_ack };
+
+	initial	o_params = 0;
+	always @(posedge i_b_clk)
+		if ((b_send[1])&&(!b_ack))
+			o_params <= r_params;
 endmodule
