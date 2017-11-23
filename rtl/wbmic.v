@@ -19,7 +19,7 @@
 //
 //	1	Sample rate control register
 //	 Bits
-//	  31-28	LOG FIFO size minus two (2^2 ... 2^17)
+//	  31-28	(READ-ONLY) LOG FIFO size minus two (2^2 ... 2^17)
 //	  27-25	Unused
 //	     24	True on FIFO overflow, set to reset the FIFO and overflow
 //		  condition
@@ -149,7 +149,7 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 	always @(posedge i_clk)
 		pre_ack <= (i_wb_stb)&&(!i_rst);
 	always @(posedge i_clk)
-		o_wb_ack <= (pre_ack)&&(!i_rst);
+		o_wb_ack <= (pre_ack)&&(i_wb_cyc)&&(!i_rst);
 	assign	o_wb_stall = 1'b0;
 
 	smpladc	#(CKPCK)
@@ -175,16 +175,22 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 
 	initial	adc_req = 1'b0;
 	always @(posedge i_clk)
-		adc_req <= (zclk)||((no_timer)&&(i_wb_stb)&&(i_wb_we));
+		adc_req <= (zclk)||((no_timer)&&(i_wb_stb)&&(i_wb_we)&&(!i_wb_addr));
 
 
 	smplfifo #(.BW(12), .LGFLEN(LCLLGFLEN)) thefifo(i_clk,
 		fifo_reset, w_adc_data[12], w_adc_data[11:0],
 		w_fifo_empty_n,
-		(i_wb_stb)&&(!i_wb_we)&&(!i_wb_addr), w_fifo_data,w_fifo_status,
-		w_fifo_err);
+		(i_wb_stb)&&(!i_wb_we)&&(!i_wb_addr), w_fifo_data,
+		w_fifo_status, w_fifo_err);
 	assign	w_fifo_half_full = w_fifo_status[1];
 
 	assign	o_int = (r_halfint) ? w_fifo_half_full : w_fifo_empty_n;
+
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[9:0]	unused;
+	assign	unused = { i_wb_cyc, i_wb_data[31:25], i_wb_data[23], i_wb_data[21] };
+	// verilator lint_on  UNUSED
 endmodule
 
