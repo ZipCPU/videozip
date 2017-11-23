@@ -38,7 +38,12 @@
 // `define	BYPASS_TEST
 //
 module	validatecount(i_clk, i_reset, i_v, i_val, o_val);
-	parameter	NBITS=16;
+	//
+	parameter		NBITS=16;
+	parameter [(NBITS-1):0]	INITIAL_VALUE = 0;
+	parameter [0:0]		INITIAL_GOOD = 1'b0;
+	parameter [2:0]		INITIAL_COUNT = 3'b000;
+	//
 	input	wire	i_clk, i_reset, i_v;
 	input	wire	[(NBITS-1):0]	i_val;
 	output	reg	[(NBITS-1):0]	o_val;
@@ -54,19 +59,22 @@ module	validatecount(i_clk, i_reset, i_v, i_val, o_val);
 
 	reg	r_eq, no_val, r_v;
 
+	initial	r_v = 1'b0;
 	always @(posedge i_clk)
 		r_v <= i_v;
 
+	initial	r_eq = 1'b0;
 	always @(posedge i_clk)
 		r_eq <= (i_val == r_val);
 
+	initial	no_val = (!INITIAL_GOOD);
 	always @(posedge i_clk)
 		no_val <= (ngood == 0);
 
+	initial	r_val = INITIAL_VALUE;
 	always @(posedge i_clk)
 		if ((r_v)&&(no_val))
 			r_val <= i_val;
-
 
 	initial	inc = 1'b0;
 	initial	dec = 1'b0;
@@ -76,7 +84,7 @@ module	validatecount(i_clk, i_reset, i_v, i_val, o_val);
 		dec  <= (!i_reset)&&(r_v)&&(!r_eq);
 	end
 
-	initial	ngood = 0;
+	initial	ngood = INITIAL_COUNT;
 	always @(posedge i_clk)
 		if (i_reset)
 			ngood <= 0;
@@ -84,6 +92,8 @@ module	validatecount(i_clk, i_reset, i_v, i_val, o_val);
 			ngood <= ngood + 1'b1;
 		else if ((dec)&&(ngood != 0))
 			ngood <= ngood - 1'b1;
+
+	initial	o_val = INITIAL_VALUE;
 	always @(posedge i_clk)
 		if (&ngood)
 			o_val <= r_val;

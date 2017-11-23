@@ -69,18 +69,13 @@ module	spio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 		end
 	end
 
-	wire	[(8-1):0]	w_btn, o_btn;
+	wire	[(8-1):1]	w_btn;
+	wire	[(8-1):0]	o_btn;
 	debouncer #(NBTN) thedebouncer(i_clk, i_btn, o_btn[(NBTN-1):0]);
-	assign	w_btn[(NBTN-1):0] = i_btn;
+	assign	w_btn[(NBTN-1):1] = i_btn[(NBTN-1):1];
 	generate if (NBTN < 8)
 		assign	w_btn[7:NBTN] = 0;
 		assign	o_btn[7:NBTN] = 0;
-	endgenerate
-
-	wire	[(8-1):0]		w_led;
-	assign	w_led[(NLEDS-1):0] = r_led;
-	generate if (NLEDS < 8)
-		assign	w_led[7:NLEDS] = 0;
 	endgenerate
 
 	wire	[(8-1):0]		w_sw;
@@ -119,4 +114,9 @@ module	spio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 	always @(posedge i_clk)
 		o_wb_ack <= (i_wb_stb);
 
+	// Make Verilator happy
+	// verilator lint_on  UNUSED
+	wire	[33:0]	unused;
+	assign	unused = { i_wb_cyc, i_wb_data, i_wb_sel[2] };
+	// verilator lint_off UNUSED
 endmodule
