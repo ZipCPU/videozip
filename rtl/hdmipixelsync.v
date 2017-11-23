@@ -45,11 +45,10 @@ module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 
 	reg	[18:0]	pre_match_win;
 	wire	[18:0]	pre_pix;
-	reg		lost_count, no_match;
 	reg	[9:0]	pre_test, nxt_match;
 	//
-	reg		valid_match, last_valid, nxt_valid;
-	reg	[3:0]	match_loc,   last_loc, r_match;
+	reg		valid_match, nxt_valid;
+	reg	[3:0]	match_loc;
 
 	always @(posedge i_clk)
 		pre_match_win <= { pre_match_win[8:0], i_px };
@@ -109,9 +108,6 @@ module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 			endcase
 		end else
 			nxt_valid <= 1'b0;
-
-		last_valid <= valid_match;
-		last_loc   <= match_loc;
 	end
 
 	// Look for a string of 12 control characters, followed by a guard
@@ -126,22 +122,38 @@ module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 			match_count <= 0;
 		else if ((valid_match)&&(match_count < 4'hc))
 			match_count <= match_count + 1'b1;
+	initial	found_valid = 1'b0;
 	always @(posedge i_clk)
 		found_valid <= (!i_reset)&&(match_count == 4'hc)&&(nxt_valid);
 	always @(posedge i_clk)
 		if(nxt_valid)
 			found_loc <= match_loc;
 
+	reg		match_string;
+	reg	[3:0]	match_string_len;
+	initial	match_string_len = 0;
+	always @(posedge i_clk)
+		if ((valid_match)&&(match_loc == chosen_match_loc))
+		begin
+			if (!(&match_string_len[3:0]))
+				match_string_len <= match_string_len + 1'b1;
+		end else
+			match_string_len <= 4'h0;
+	initial	match_string = 1'b0;
+	always @(posedge i_clk)
+		match_string <= (&match_string_len);
 
 	// Declare no synch when ... we don't see anything for a long time
+	initial	lost_sync_counter = 16'hffff; // Start with a lost synch
 	always @(posedge i_clk)
 		if (i_reset)
 			lost_sync_counter <= 16'hffff;
-		else if (found_valid)
+		else if ((found_valid)||(match_string))
 			lost_sync_counter <= 0;
 		else if (!(&lost_sync_counter))
 			lost_sync_counter <= lost_sync_counter + 1'b1;
 
+	initial	sync_valid = 1'b0;
 	always @(posedge i_clk)
 		if (&lost_sync_counter)
 			sync_valid <= 1'b0;
@@ -157,4 +169,8 @@ module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 	always @(posedge i_clk)
 		o_pix <= pre_pix[9:0];
 
+	// verilog lint_off UNUSED
+	wire	[8:0]	unused;
+	assign	unused = { pre_pix[18:10] };
+	// verilog lint_on  UNUSED
 endmodule

@@ -51,4 +51,9 @@ module	hdmipxslip(i_clk, i_slip, i_pixel, o_pixel);
 
 	always @(posedge i_clk)
 		o_pixel <= w_this[9:0];
+
+	// verilator lint_off UNUSED
+	wire	[19:0]	unused;
+	assign	unused = w_this[29:10];
+	// verilator lint_on  UNUSED
 endmodule

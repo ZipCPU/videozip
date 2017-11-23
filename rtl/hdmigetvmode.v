@@ -37,6 +37,10 @@
 //
 module	hdmigetvmode(i_clk, i_reset, i_vsync, i_hsync, i_pv,
 			o_nlines, o_sstart, o_ssend, o_vtotal);
+	parameter	[63:0]	INITIAL_VMODE = 0;
+	parameter	[0:0]	INITIAL_GOOD  = (INITIAL_VMODE == 0)? 1'b0:1'b1;
+	parameter	[2:0]	INITIAL_COUNT = (INITIAL_GOOD)? 3'b111:3'b000;
+	parameter	[0:0]	KNOWN = (INITIAL_VMODE != 0);
 	input	wire		i_clk, i_reset;
 	input	wire		i_vsync, i_hsync, i_pv;
 	output	wire	[15:0]	o_nlines;
@@ -49,8 +53,13 @@ module	hdmigetvmode(i_clk, i_reset, i_vsync, i_hsync, i_pv,
 			this_line_had_pixels, last_line_had_pixels, newframe,
 			this_line_had_vsync;
 
+	initial	last_hs = 1'b0;
 	always @(posedge i_clk)
 		last_hs <= i_hsync;
+	initial	linestart  = 1'b0;
+	initial	has_pixels = 1'b0;
+	initial	has_vsync  = 1'b0;
+	initial	newframe   = 1'b0;
 	always @(posedge i_clk)
 		if ((!last_hs)&&(i_hsync))
 		begin
@@ -71,6 +80,10 @@ module	hdmigetvmode(i_clk, i_reset, i_vsync, i_hsync, i_pv,
 		end
 
 
+	initial	count_lines = 0;
+	initial	count_shelf = 0;
+	initial	count_sync  = 0;
+	initial	count_tot   = 0;
 	always @(posedge i_clk)
 		if (linestart)
 		begin
@@ -99,6 +112,10 @@ module	hdmigetvmode(i_clk, i_reset, i_vsync, i_hsync, i_pv,
 	reg	[15:0]	test_pixcount, test_totcount, test_shelf, test_nsync;
 	wire	[15:0]	w_shelf, w_nsync;
 	reg		test_valid;
+	initial	test_pixcount = 0;
+	initial	test_totcount = 0;
+	initial	test_nsync    = 0;
+	initial	test_valid    = 1'b0;
 	always @(posedge i_clk)
 		if (newframe)
 		begin
@@ -106,18 +123,38 @@ module	hdmigetvmode(i_clk, i_reset, i_vsync, i_hsync, i_pv,
 			test_totcount <= count_tot + 1'b1;
 			test_shelf    <= count_shelf;
 			test_nsync    <= count_sync;
-			test_valid <= 1'b1;
+			test_valid <= (!KNOWN);
 		end else
 			test_valid <= 1'b0;
 
-	validatecount vvpix(  i_clk,i_reset,test_valid,test_pixcount, o_nlines);
-	validatecount vvtot(  i_clk,i_reset,test_valid,test_totcount, o_vtotal);
-	validatecount vvshelf(i_clk,i_reset,test_valid,test_shelf,    w_shelf);
-	validatecount vvsync( i_clk,i_reset,test_valid,test_nsync,    w_nsync);
+	wire	v_reset;
+	assign	v_reset = (!KNOWN)&&(i_reset);
 
+	validatecount
+		#(.INITIAL_VALUE(INITIAL_VMODE[63:48]),
+			.INITIAL_GOOD(INITIAL_GOOD),
+			.INITIAL_COUNT(INITIAL_COUNT))
+		vvpix(  i_clk,v_reset,test_valid,test_pixcount, o_nlines);
+	validatecount
+		#(.INITIAL_VALUE(INITIAL_VMODE[15:0]),
+			.INITIAL_GOOD(INITIAL_GOOD),
+			.INITIAL_COUNT(INITIAL_COUNT))
+		vvtot(  i_clk,v_reset,test_valid,test_totcount, o_vtotal);
+	validatecount
+		#(.INITIAL_VALUE(INITIAL_VMODE[47:32]-INITIAL_VMODE[63:48]),
+			.INITIAL_GOOD(INITIAL_GOOD),
+			.INITIAL_COUNT(INITIAL_COUNT))
+		vvshelf(i_clk,v_reset,test_valid,test_shelf,    w_shelf);
+	validatecount
+		#(.INITIAL_VALUE(INITIAL_VMODE[31:16]-INITIAL_VMODE[47:32]),
+			.INITIAL_GOOD(INITIAL_GOOD),
+			.INITIAL_COUNT(INITIAL_COUNT))
+		vvsync( i_clk,v_reset,test_valid,test_nsync,    w_nsync);
 
+	initial	o_sstart = INITIAL_VMODE[47:32];
 	always @(posedge i_clk)
 		o_sstart <= o_nlines + w_shelf;
+	initial	o_ssend = INITIAL_VMODE[31:16];
 	always @(posedge i_clk)
 		o_ssend  <= o_sstart + w_nsync;
 

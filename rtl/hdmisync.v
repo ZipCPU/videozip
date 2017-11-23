@@ -63,7 +63,6 @@ module	hdmisync(i_pix_clk, i_reset,
 
 	//
 	//
-	reg	[4:0]	lb_r, lb_g, lb_b;
 	reg		dbg_and, dbg_or;
 	wire	[9:0]	manual_r, manual_g, manual_b,
 			auto_r,   auto_g,   auto_b;

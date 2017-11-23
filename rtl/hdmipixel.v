@@ -2,7 +2,7 @@
 //
 // Filename:	hdmipixel.v
 //
-// Project:	WBI2C ... a set of Wishbone controlled I2C controller(s)
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To find one particular pixel among a frame of pixels.
 //
