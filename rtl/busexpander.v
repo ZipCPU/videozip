@@ -104,7 +104,6 @@ module	busexpander(i_clk,
 
 		if (!i_m_stall)
 		begin
-			r_stb <= i_s_stb;
 			r_we  <= i_s_we;
 			//
 			r_addr <= i_s_addr[(AWIN-1):2];
@@ -156,9 +155,31 @@ module	busexpander(i_clk,
 				o_s_stall <= 1'b0;
 				r_stb     <= 1'b0;
 			end
+		end else if (!o_m_stb)
+		begin
+			o_m_stb  <= i_s_stb;
+			o_m_we   <= i_s_we;
+			o_m_addr <= i_s_addr[(AWIN-1):2];
+			case(i_s_addr[1:0])
+			2'b00:o_m_data <= {        i_s_data, 96'h00 };
+			2'b01:o_m_data <= { 32'h0, i_s_data, 64'h00 };
+			2'b10:o_m_data <= { 64'h0, i_s_data, 32'h00 };
+			2'b11:o_m_data <= { 96'h0, i_s_data };
+			endcase
+			if (!i_s_we)
+				r_sel <= 0;
+			else case(i_s_addr[1:0])
+			2'b00:o_m_sel <= {        i_s_sel, 12'h00 };
+			2'b01:o_m_sel <= {  4'h0, i_s_sel,  8'h00 };
+			2'b10:o_m_sel <= {  8'h0, i_s_sel,  4'h00 };
+			2'b11:o_m_sel <= { 12'h0, i_s_sel         };
+			endcase
+			//
+			o_s_stall <= 1'b0;
+			r_stb     <= 1'b0;
 		end else if ((!r_stb)&&(!o_s_stall))
 		begin
-			r_stb <= i_s_stb;
+			r_stb <= (i_s_stb);
 			r_we  <= i_s_we;
 			//
 			r_addr <= i_s_addr[(AWIN-1):2];
