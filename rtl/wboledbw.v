@@ -392,4 +392,9 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 	//
 	assign	o_int = (~r_busy)&&(!r_pre_busy);
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	unused;
+	assign	unused = i_cyc;
+	// verilator lint_on UNUSED
 endmodule

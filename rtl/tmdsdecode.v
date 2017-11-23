@@ -123,4 +123,9 @@ module	tmdsdecode(i_clk, i_word, o_pv, o_pix, o_sync);
 	assign	o_pix  = { apix, r_pix };
 	assign	o_sync = r_sync;
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	unused;
+	assign	unused = first_midp[0];
+	// verilator lint_on  UNUSED
 endmodule
