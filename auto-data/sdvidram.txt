@@ -58,7 +58,7 @@
 # Hence we need 4 fewer bus wires than would be necessary for
 @BUS.NAME=sdr
 @$BUS.WIDTH=128
-@BUS.CLOCK=clk_200mhz
+@BUS.CLOCK=clk
 @ERROR.WIRE=@$(PREFIX)_err;
 # 8-bit byte accesses
 @LD.PERM=wx
