@@ -35,11 +35,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 module smplfifo(i_clk, i_rst, i_wr, i_data,
 		o_empty_n, i_rd, o_data, o_status, o_err);
 	parameter	BW=12;	// Byte/data width
 	parameter [4:0]	LGFLEN=9;	// 512 samples
-	parameter 	RXFIFO=1'b1;
 	input	wire		i_clk, i_rst;
 	input	wire		i_wr;
 	input	wire [(BW-1):0]	i_data;
@@ -110,7 +111,7 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 		if (i_rst)
 			will_underflow <= 1'b1;
 		else if (i_wr)
-			will_underflow <= (will_underflow)&&(i_rd);
+			will_underflow <= 1'b0;
 		else if (i_rd)
 			will_underflow <= (will_underflow)||(w_last_plus_one == r_first);
 		else
@@ -124,6 +125,7 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 	// reg		r_unfl;
 	// initial	r_unfl = 1'b0;
 	initial	r_last = 0;
+	initial	r_next = { {(LGFLEN-1){1'b0}}, 1'b1 };
 	always @(posedge i_clk)
 		if (i_rst)
 		begin
@@ -132,7 +134,7 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 			// r_unfl <= 1'b0;
 		end else if (i_rd)
 		begin
-			if ((i_wr)||(!will_underflow)) // (r_first != r_last)
+			if (!will_underflow) // (r_first != r_last)
 			begin
 				r_last <= r_next;
 				r_next <= r_last +{{(LGFLEN-2){1'b0}},2'b10};
@@ -175,10 +177,10 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 			r_empty_n <= 1'b0;
 		else casez({i_wr, i_rd, will_underflow})
 			3'b00?: r_empty_n <= (r_first != r_last);
-			3'b11?: r_empty_n <= (r_first != r_last);
-			3'b10?: r_empty_n <= 1'b1;
 			3'b010: r_empty_n <= (r_first != w_last_plus_one);
-			// 3'b001: r_empty_n <= 1'b0;
+			3'b10?: r_empty_n <= 1'b1;
+			3'b110: r_empty_n <= (r_first != r_last);
+			3'b111: r_empty_n <= 1'b1;
 			default: begin end
 		endcase
 
@@ -202,10 +204,11 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 			// another context.
 			if (i_rst)
 				r_fill <= 0;
-			else case({(i_wr)&&(!will_overflow), (i_rd)&&(!will_underflow)})
-			2'b01:   r_fill <= r_first - r_next;
-			2'b10:   r_fill <= r_first - r_last + 1'b1;
-			default: r_fill <= r_first - r_last;
+			else casez({(i_wr), (!will_overflow), (i_rd)&&(!will_underflow)})
+			3'b0?1:   r_fill <= r_first - r_next;
+			3'b110:   r_fill <= r_first - r_last + 1'b1;
+			3'b1?1:   r_fill <= r_first - r_last;
+			default: r_fill  <= r_first - r_last;
 			endcase
 		end
 
@@ -215,6 +218,7 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 	wire	[4:0]	lglen;
 	assign lglen = LGFLEN;
 
+	wire	w_half_full;
 	wire	[13:0]	w_fill;
 	generate
 		if (LGFLEN > 14)
@@ -228,7 +232,6 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 		end
 	endgenerate
 
-	wire	w_half_full;
 	assign	w_half_full = r_fill[(LGFLEN-1)];
 
 	assign	o_status = {
