@@ -34,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -66,12 +66,13 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 			i_wb_ack, i_wb_stall, i_wb_err, i_wb_data,
 		o_illegal);
 	parameter		ADDRESS_WIDTH=32, AUX_WIDTH = 1;
+	parameter	[0:0]	F_OPT_CLK2FFLOGIC=1'b0;
 	localparam		AW=ADDRESS_WIDTH, DW = 32;
 	input	wire			i_clk, i_reset, i_new_pc, i_clear_cache,
 						i_stall_n;
-	input	wire	[(AW-1):0]	i_pc;
+	input	wire	[(AW+1):0]	i_pc;
 	output	reg	[(DW-1):0]	o_insn;
-	output	reg	[(AW-1):0]	o_pc;
+	output	reg	[(AW+1):0]	o_pc;
 	output	wire			o_valid;
 	// Wishbone outputs
 	output	reg			o_wb_cyc, o_wb_stb;
@@ -154,7 +155,7 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 	initial	o_wb_addr = {(AW){1'b1}};
 	always @(posedge i_clk)
 		if (i_new_pc)
-			o_wb_addr <= i_pc;
+			o_wb_addr <= i_pc[AW+1:2];
 		else if (o_wb_stb)
 		begin
 			if ((!i_wb_stall)&&(!invalid_bus_cycle))
@@ -187,7 +188,7 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 		else begin
 			if ((o_valid)&&(i_stall_n))
 				cache_valid[cache_read_addr] <= 1'b0;
-			if ((o_wb_cyc)&&(i_wb_ack))
+			if ((o_wb_cyc)&&((i_wb_ack)||(i_wb_err)))
 				cache_valid[cache_write_addr] <= 1'b1;
 		end
 
@@ -205,16 +206,16 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 		if (i_new_pc)
 			o_pc <= i_pc;
 		else if ((o_valid)&&(i_stall_n))
-			o_pc <= o_pc + 1'b1;
+			o_pc[AW+1:2] <= o_pc[AW+1:2] + 1'b1;
 
 	assign	o_valid = cache_valid[cache_read_addr];
 
 	initial	o_illegal = 1'b0;
 	always @(posedge i_clk)
-		if ((o_wb_cyc)&&(i_wb_err))
-			o_illegal <= 1'b1;
-		else if ((!o_wb_cyc)&&((i_new_pc)||(invalid_bus_cycle)))
+		if ((invalid_bus_cycle)||(i_new_pc))
 			o_illegal <= 1'b0;
+		else if ((o_wb_cyc)&&(i_wb_err))
+			o_illegal <= 1'b1;
 
 `ifdef	FORMAL
 //
@@ -230,16 +231,20 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 `define	STEP_CLOCK
 `endif
 
-	// Assume a clock
-	reg	f_last_clk, f_past_valid;
-	always @($global_clock)
+	generate if (F_OPT_CLK2FFLOGIC)
 	begin
-		`STEP_CLOCK
-		f_last_clk <= i_clk;
-	end
+		// Assume a clock
+		reg	f_last_clk;
+		always @($global_clock)
+		begin
+			`STEP_CLOCK
+			f_last_clk <= i_clk;
+		end
+	end endgenerate
 
 	// Keep track of a flag telling us whether or not $past()
 	// will return valid results
+ 	reg	f_past_valid;
 	initial	f_past_valid = 1'b0;
 	always @(posedge i_clk)
 		f_past_valid = 1'b1;
@@ -252,24 +257,31 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 	//
 	/////////////////////////////////////////////////
 
+	always @(*)
+		if (!f_past_valid)
+			`ASSUME(i_reset);
+
 	//
 	// Nothing changes, but on the positive edge of a clock
 	//
-	always @($global_clock)
-	if (!$rose(i_clk))
+	generate if (F_OPT_CLK2FFLOGIC)
 	begin
-		// Control inputs from the CPU
-		`ASSUME($stable(i_reset));
-		`ASSUME($stable(i_new_pc));
-		`ASSUME($stable(i_clear_cache));
-		`ASSUME($stable(i_stall_n));
-		`ASSUME($stable(i_pc));
-		// Wishbone inputs
-		`ASSUME($stable(i_wb_ack));
-		`ASSUME($stable(i_wb_stall));
-		`ASSUME($stable(i_wb_err));
-		`ASSUME($stable(i_wb_data));
-	end
+		always @($global_clock)
+		if (!$rose(i_clk))
+		begin
+			// Control inputs from the CPU
+			`ASSUME($stable(i_reset));
+			`ASSUME($stable(i_new_pc));
+			`ASSUME($stable(i_clear_cache));
+			`ASSUME($stable(i_stall_n));
+			`ASSUME($stable(i_pc));
+			// Wishbone inputs
+			`ASSUME($stable(i_wb_ack));
+			`ASSUME($stable(i_wb_stall));
+			`ASSUME($stable(i_wb_err));
+			`ASSUME($stable(i_wb_data));
+		end
+	end endgenerate
 
 
 `ifdef	DBLFETCH
@@ -299,8 +311,9 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 	wire	[(F_LGDEPTH-1):0]	f_nreqs, f_nacks, f_outstanding;
 
 	// Add a bunch of wishbone-based asserts
-	formal_master #(.AW(AW), .DW(DW), .F_LGDEPTH(F_LGDEPTH),
+	fwb_master #(.AW(AW), .DW(DW), .F_LGDEPTH(F_LGDEPTH),
 				.F_MAX_REQUESTS(2), .F_OPT_SOURCE(1),
+				.F_OPT_CLK2FFLOGIC(F_OPT_CLK2FFLOGIC),
 				.F_OPT_RMW_BUS_OPTION(0),
 				.F_OPT_DISCONTINUOUS(0))
 		f_wbm(i_clk, i_reset,
@@ -427,11 +440,16 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 		if (o_valid)
 			assert(o_insn == cache[cache_read_addr]);
 
+	always @(*)
+		assume(i_pc[1:0] == 2'b00);
+	always @(*)
+		assert(o_pc[1:0] == 2'b00);
 	reg	[(AW-1):0]	f_req_addr;
+
 	initial	f_req_addr = {(AW){1'b1}};
 	always @(posedge i_clk)
 		if (i_new_pc)
-			f_req_addr <= i_pc;
+			f_req_addr <= i_pc[AW+1:2];
 		else if ((o_wb_stb)&&(!i_wb_stall)&&(!invalid_bus_cycle))
 			f_req_addr <= f_req_addr + 1'b1;
 
@@ -467,15 +485,30 @@ module	dblfetch(i_clk, i_reset, i_new_pc, i_clear_cache,
 	always @(*)
 		if (o_wb_cyc)
 			assert(!o_valid);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset))
+			&&(!$past(invalid_bus_cycle))&&(!$past(i_new_pc))
+			&&($past(o_wb_cyc))&&($past(i_wb_err)))
+		assert((!o_wb_cyc)&&(o_valid)&&(o_illegal));
+
+	always @(posedge i_clk)
+	if (o_illegal)
+		assert(o_valid);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(i_new_pc))
+		assert(!o_valid);
+
 `endif	// FORMAL
 endmodule
 //
 // Usage:		(this)	(old)  (S6)
-//    Cells		385	585	459
-//	FDRE		106	203	171
+//    Cells		387	585	459
+//	FDRE		108	203	171
 //	LUT1		  2	  3	  2
 //	LUT2		  3	  4	  5
-//	LUT3		 75	104	 71
+//	LUT3		 76	104	 71
 //	LUT4		  0	  2	  2
 //	LUT5		 35	 35	  3
 //	LUT6		  5	 10	 43

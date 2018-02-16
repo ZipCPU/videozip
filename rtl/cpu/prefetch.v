@@ -30,7 +30,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015,2017, Gisselquist Technology, LLC
+// Copyright (C) 2015,2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -62,15 +62,16 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
 			i_wb_ack, i_wb_stall, i_wb_err, i_wb_data);
 	parameter		ADDRESS_WIDTH=30, DATA_WIDTH=32;
+	parameter	[0:0]	F_OPT_CLK2FFLOGIC = 1'b0;
 	localparam		AW=ADDRESS_WIDTH,
 				DW=DATA_WIDTH;
 	input	wire			i_clk, i_reset;
 	// CPU interaction wires
 	input	wire			i_new_pc, i_clear_cache, i_stalled_n;
 	// We ignore i_pc unless i_new_pc is true as well
-	input	wire	[(AW-1):0]	i_pc;
+	input	wire	[(AW+1):0]	i_pc;
 	output	reg	[(DW-1):0]	o_insn;	// Instruction read from WB
-	output	wire	[(AW-1):0]	o_pc;	// Address of that instruction
+	output	wire	[(AW+1):0]	o_pc;	// Address of that instruction
 	output	reg			o_valid; // If the output is valid
 	output	reg			o_illegal; // Result is from a bus err
 	// Wishbone outputs
@@ -161,7 +162,7 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	initial	o_wb_addr= 0;
 	always @(posedge i_clk)
 		if (i_new_pc)
-			o_wb_addr  <= i_pc;
+			o_wb_addr  <= i_pc[AW+1:2];
 		else if ((o_valid)&&(i_stalled_n)&&(!o_illegal))
 			o_wb_addr  <= o_wb_addr + 1'b1;
 
@@ -216,8 +217,13 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 		end
 
 	// The o_pc output shares its value with the (last) wishbone address
-	assign	o_pc = o_wb_addr;
+	assign	o_pc = { o_wb_addr, 2'b00 };
 
+	// Make verilator happy
+	// verilator lint_off UNUSED
+	wire	[1:0]	unused;
+	assign	unused = i_pc[1:0];
+	// verilator lint_on  UNUSED
 `ifdef	FORMAL
 	localparam	F_LGDEPTH=2;
 	reg	f_past_valid;
@@ -264,19 +270,25 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	//
 	// Nothing changes, but on the positive edge of a clock
 	//
-	always @($global_clock)
-	if (!$rose(i_clk))
+	generate if (F_OPT_CLK2FFLOGIC)
 	begin
-		// Control inputs from the CPU
-		`ASSUME($stable(i_reset));
-		`ASSUME($stable(i_new_pc));
-		`ASSUME($stable(i_clear_cache));
-		`ASSUME($stable(i_stalled_n));
-		`ASSUME($stable(i_pc));
-	end
+		always @($global_clock)
+		if (!$rose(i_clk))
+		begin
+			// Control inputs from the CPU
+			`ASSUME($stable(i_reset));
+			`ASSUME($stable(i_new_pc));
+			`ASSUME($stable(i_clear_cache));
+			`ASSUME($stable(i_stalled_n));
+			`ASSUME($stable(i_pc));
+		end
+	end endgenerate
 
 	// Assume we start from a reset condition
 	initial	`ASSUME(i_reset);
+	always @(*)
+		if (!f_past_valid)
+			`ASSUME(i_reset);
 	// Some things to know from the CPU ... there will always be a
 	// i_new_pc request following any reset
 	always @(posedge i_clk)
@@ -342,8 +354,9 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 		assume(f_cpu_delay < F_CPU_DELAY);
 `endif
 
-	formal_master #(.AW(AW), .DW(DW),.F_LGDEPTH(F_LGDEPTH),
+	fwb_master #(.AW(AW), .DW(DW),.F_LGDEPTH(F_LGDEPTH),
 			.F_MAX_REQUESTS(1), .F_OPT_SOURCE(1),
+			.F_OPT_CLK2FFLOGIC(F_OPT_CLK2FFLOGIC),
 			.F_OPT_RMW_BUS_OPTION(0),
 			.F_OPT_DISCONTINUOUS(0))
 		f_wbm(i_clk, i_reset,
@@ -375,7 +388,7 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 
 	always @(posedge i_clk)
 		if ((f_past_valid)&&($past(o_valid))&&(o_valid))
-			assert($stable(o_wb_addr));
+			assert(o_wb_addr == $past(o_wb_addr));
 
 	always @(posedge i_clk)
 		if ((f_past_valid)&&($past(!i_reset))&&($past(invalid)))
@@ -430,7 +443,7 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	if ((f_past_valid)&&(!$past(i_reset))
 			&&(!$past(i_new_pc))&&(!$past(i_clear_cache))
 			&&($past(o_valid))&&(!$past(i_stalled_n)))
-		assert($stable(o_valid));
+		assert(o_valid == $past(o_valid));
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(o_valid))&&(o_valid))
@@ -449,7 +462,7 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	if ((f_past_valid)&&(!$past(i_reset))
 			&&(!$past(i_new_pc))&&(!$past(i_clear_cache))
 			&&($past(!o_wb_cyc)))
-		assert($stable(o_illegal));
+		assert(o_illegal == $past(o_illegal));
 
 
 	//
@@ -467,9 +480,12 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	// initial	f_last_pc = 0;
 	always @(posedge i_clk)
 		if (o_valid)
-			f_last_pc  <= o_pc;
+			f_last_pc  <= o_pc[AW+1:2];
 		else if (f_last_pc_valid)
-			assert(o_pc == f_last_pc + 1'b1);
+			assert(o_pc[AW+1:2] == f_last_pc + 1'b1);
+
+	always @(*)
+		assert(o_pc[1:0] == 2'b00);
 
 	// If we are producing a new result, and no new-pc or clear cache
 	// has come through (i.e. f_last_pc_valid is true), then the resulting
@@ -480,7 +496,7 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	always @(posedge i_clk)
 		if ((f_past_valid)&&(o_valid)
 				&&(!$past(o_valid))&&(f_last_pc_valid))
-			assert(o_pc == (f_last_pc + 1'b1));
+			assert(o_pc[AW+1:2] == (f_last_pc + 1'b1));
 
 	// Let's also keep track of the address the CPU wants us to return.
 	// Any time the CPU branches to a new_pc, we'll record that request.
@@ -488,10 +504,12 @@ module	prefetch(i_clk, i_reset, i_new_pc, i_clear_cache, i_stalled_n, i_pc,
 	// we'll increment this address so as to automatically walk through
 	// memory.
 	//
+	always @(*)
+		assume(i_pc[1:0] == 2'b00);
 	initial	f_req_addr = 0;
 	always @(posedge i_clk)
 		if (i_new_pc)
-			f_req_addr <= i_pc;
+			f_req_addr <= i_pc[AW+1:2];
 		else if ((!invalid)&&(o_wb_cyc)&&(i_wb_ack)&&(!i_wb_err))
 			f_req_addr <= f_req_addr + 1'b1;
 
@@ -519,8 +537,8 @@ endmodule
 //	FDRE	 67	 97	 69
 //	LUT1	  1	  1	  1
 //	LUT2	  1	  3	  3
-//	LUT3	 32	 63	 33
-//	LUT4	  4	  3	  3
+//	LUT3	 31	 63	 33
+//	LUT4	  5	  3	  3
 //	LUT5	  1	  3	  3
 //	LUT6	  2	  1	  3
 //	MUXCY	 29	 29	 31
