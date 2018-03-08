@@ -21,6 +21,7 @@ edidtxscope
 edidsrc.bin
 qspidump-original.bin
 cpedid
+chktmds
 rawdscope
 readframe
 readhist
@@ -35,4 +36,4 @@ rdsynch.sh
 tstmem.sh
 scopdata.txt
 tstmem.sh
-
+zipscope
