@@ -885,9 +885,10 @@ module	zipcpu(i_clk, i_rst, i_interrupt,
 
 	initial	r_op_break = 1'b0;
 	always @(posedge i_clk)
-		if ((i_rst)||(clear_pipeline))	r_op_break <= 1'b0;
+		if ((i_rst)||(clear_pipeline))
+			r_op_break <= 1'b0;
 		else if (op_ce)
-			r_op_break <= (dcd_break);
+			r_op_break <= (dcd_valid)&&(dcd_break);
 		else if (!op_valid)
 			r_op_break <= 1'b0;
 	assign	op_break = r_op_break;
@@ -1987,6 +1988,7 @@ module	zipcpu(i_clk, i_rst, i_interrupt,
 
 `ifdef	DEBUG_SCOPE
 	//{{{
+	/*
 	wire	this_write;
 	assign	this_write = ((mem_valid)||((!clear_pipeline)&&(!alu_illegal)
 				&&(((alu_wR)&&(alu_valid))
@@ -2029,11 +2031,12 @@ module	zipcpu(i_clk, i_rst, i_interrupt,
 	always @(posedge i_clk)
 		long_trigger[0] <= ((last_write)&&(last_wreg == wr_reg_id))
 				||(&halt_count)||(&mem_counter);
+	*/
 
 	reg		debug_trigger;
 	initial	debug_trigger = 1'b0;
 	always @(posedge i_clk)
-		debug_trigger <= (!i_halt)&&(o_break)||(long_trigger == 16'hffff);
+		debug_trigger <= (!i_halt)&&(o_break);
 
 	wire	[31:0]	debug_flags;
 	assign debug_flags = { debug_trigger, 3'b101,
