@@ -92,7 +92,7 @@
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_err);
 
 	busdelay #(@$(AWID),@$(MASTER.BUS.WIDTH)) @$(PREFIX)i_delay(
-		@$(MASTER.BUS.CLOCK.WIRE),
+		@$(MASTER.BUS.CLOCK.WIRE), i_reset,
 		@$(PREFIX)i_cyc, @$(PREFIX)i_stb, @$(PREFIX)i_we, @$(PREFIX)i_addr, @$(PREFIX)i_odata, @$(PREFIX)i_sel,
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_idata, @$(PREFIX)i_err,
 		@$(MBUS)_cyc, @$(MBUS)_stb, @$(MBUS)_we, @$(MBUS)_addr, @$(MBUS)_data, @$(MBUS)_sel,

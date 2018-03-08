@@ -39,7 +39,7 @@
 .PHONY: all
 PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid \
 	rdsync getframe
-SCOPES := edidrxscope edidtxscope rawdscope tmdscope
+SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
@@ -127,6 +127,8 @@ edidtxscope: $(OBJDIR)/edidtxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 rawdscope: $(OBJDIR)/rawdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 tmdscope: $(OBJDIR)/tmdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+zipscope: $(OBJDIR)/zipscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 
 #

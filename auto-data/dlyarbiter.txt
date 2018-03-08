@@ -113,7 +113,7 @@
 `endif
 `endif
 `ifdef	BUS_DELAY_NEEDED
-	busdelay #(@$(AWID))	@$(PREFIX)i_delay(i_clk,
+	busdelay #(@$(AWID))	@$(PREFIX)i_delay(i_clk, i_reset,
 		@$(PREFIX)i_cyc, @$(PREFIX)i_stb, @$(PREFIX)i_we, @$(PREFIX)i_addr, @$(PREFIX)i_odata, @$(PREFIX)i_sel,
 			@$(PREFIX)i_ack, @$(PREFIX)i_stall, @$(PREFIX)i_idata, @$(PREFIX)i_err,
 		wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,

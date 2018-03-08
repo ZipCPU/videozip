@@ -47,18 +47,18 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-DATA := global.txt bkram.txt buserr.txt clkcounter.txt	\
-	dlyarbiter.txt flash.txt gpio.txt icape.txt mdio.txt	\
-	pic.txt pwrcount.txt rtcdate.txt rtcgps.txt spio.txt	\
+DATA := global.txt bkram.txt buserr.txt clkcounter.txt			\
+	dlyarbiter.txt flash.txt gpio.txt icape.txt mdio.txt enet.txt	\
+	pic.txt pwrcount.txt rtcdate.txt rtcgps.txt spio.txt		\
 	version.txt wbmouse.txt wboledbw.txt wbpmic.txt wbuconsole.txt	\
 	zipmaster.txt gps.txt sdspi.txt hdmi.txt xdc.txt		\
-	xpander.txt sdvidram.txt genclk.txt vidarbiter.txt
+	xpander.txt sdvidram.txt genclk.txt vidarbiter.txt zipscope.txt
 
 AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
 
 .PHONY: data
 data: $(AUTOFPGA) $(DATA)
-	$(AUTOFPGA) -o . $(DATA)
+	$(AUTOFPGA) -d -o . $(DATA)
 
 define	notify-on-change
 	@bash -c 'cmp $(1) $(2)/$(1); if [[ $$? != 0 ]]; then echo "Files $(1) and $(2)/$(1) differ"; fi'
