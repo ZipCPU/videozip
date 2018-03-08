@@ -6,3 +6,5 @@ readhist
 framedata.32t
 hdmistest
 memtest
+cputest.txt
+memtest.txt

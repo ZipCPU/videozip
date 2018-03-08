@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := cputest i2cdbg hdmistart hdmistest # readhist readframe # helloworld
+PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest # readhist readframe # helloworld
 all:	$(PROGRAMS)
 #
 #
@@ -48,7 +48,7 @@ NM	:=zip-nm
 OBJDIR	:= obj-zip
 RDELF	:= zip-readelf
 OBJDUMP := zip-objdump
-SOURCES := cputest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
+SOURCES := cputest.c memtest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 LDSCRIPT:= -Tboard.ld
 LFLAGS  := $(LDSCRIPT)
@@ -85,6 +85,8 @@ $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 #
 $(OBJDIR)/cputest.o: cputest.c
 	$(CC) $(CFLAGS) -c -Wa,-nocis -fno-builtin $< -o $@
+$(OBJDIR)/memtest.o: memtest.c
+	$(CC) $(CFLAGS) -c -fno-inline -fno-builtin $< -o $@
 $(OBJDIR)/cputestcis.o: cputest.c
 	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
 $(OBJDIR)/cputest.s: cputest.c
@@ -92,6 +94,9 @@ $(OBJDIR)/cputest.s: cputest.c
 
 cputest: $(OBJDIR)/cputest.o boardram.ld
 	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
+
+memtest: $(OBJDIR)/memtest.o boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@
 
 I2CDBGOBJS := $(addprefix $(OBJDIR)/,i2cdbg.o txfns.o)
 $(OBJDIR)/i2cdbg.o: i2cdbg.c
