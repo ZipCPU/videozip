@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -53,6 +53,7 @@
 #include <errno.h>
 
 #include "port.h"
+#include "regdefs.h"
 
 #define	NO_WAITING	0
 #define	FOREVER		-1
@@ -287,7 +288,7 @@ int	main(int argc, char **argv) {
 	} else if (isatty(tty)) {
 		struct	termios	tb;
 
-		printf("Setting up TTY\n");
+		printf("Setting up TTY for %d Baud\n", BAUDRATE);
 		if (tcgetattr(tty, &tb) < 0) {
 			printf("Could not get TTY attributes\n");
 			perror("O/S Err:");
@@ -298,9 +299,61 @@ int	main(int argc, char **argv) {
 		tb.c_cflag &= (~(CRTSCTS)); // Sets no parity, 8 bit
 		tb.c_cflag &= (~(CSTOPB)); // One stop bit
 
-		// Set the speed to 1MBaud (device can't handle 4MBaud)
-		cfsetispeed(&tb, B1000000);
-		cfsetospeed(&tb, B1000000);
+		// 8-bit
+		tb.c_cflag &= ~(CSIZE);
+		tb.c_cflag |= CS8;
+		if (BAUDRATE == 2400) {
+			// 2400 Baud
+			cfsetispeed(&tb, B2400);
+			cfsetospeed(&tb, B2400);
+		} else if (BAUDRATE == 9600) {
+			// 9.6 kBaud
+			cfsetispeed(&tb, B9600);
+			cfsetospeed(&tb, B9600);
+		} else if (BAUDRATE == 19200) {
+			// 19.2 kBaud
+			cfsetispeed(&tb, B19200);
+			cfsetospeed(&tb, B19200);
+		} else if (BAUDRATE == 38400) {
+			// 38.4 kBaud
+			cfsetispeed(&tb, B38400);
+			cfsetospeed(&tb, B38400);
+		} else if (BAUDRATE == 57600) {
+			// 57.6 kBaud
+			cfsetispeed(&tb, B57600);
+			cfsetospeed(&tb, B57600);
+		} else if (BAUDRATE == 115200) {
+			// 115.2kBaud
+			cfsetispeed(&tb, B115200);
+			cfsetospeed(&tb, B115200);
+		} else if (BAUDRATE == 1000000) {
+			// 1 MBaud
+			cfsetispeed(&tb, B1000000);
+			cfsetospeed(&tb, B1000000);
+		} else if (BAUDRATE == 2000000) {
+			// 2 MBaud
+			cfsetispeed(&tb, B2000000);
+			cfsetospeed(&tb, B2000000);
+		} else if (BAUDRATE == 2500000) {
+			// 2.5 MBaud
+			cfsetispeed(&tb, B2500000);
+			cfsetospeed(&tb, B2500000);
+		} else if (BAUDRATE == 3000000) {
+			// 2 MBaud
+			cfsetispeed(&tb, B3000000);
+			cfsetospeed(&tb, B3000000);
+		} else if (BAUDRATE == 3000000) {
+			// 3.5 MBaud
+			cfsetispeed(&tb, B3500000);
+			cfsetospeed(&tb, B3500000);
+		} else if (BAUDRATE == 4000000) {
+			// 4 MBaud
+			cfsetispeed(&tb, B4000000);
+			cfsetospeed(&tb, B4000000);
+		} else {
+			fprintf(stderr, "Unsupported baud rate: %d Hz\n", BAUDRATE);
+			exit(EXIT_FAILURE);
+		}
 
 		if (tcsetattr(tty, TCSANOW, &tb) < 0) {
 			printf("Could not set any TTY attributes\n");
