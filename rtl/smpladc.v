@@ -79,7 +79,7 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	reg	[8:0]	r_clk;
 	reg		active, last_en, valid_stb, zclk, r_valid, hclk;
 	reg	[4:0]	m_clk;
-	reg	[15:0]	r_data;
+	reg	[14:0]	r_data;
 	reg	[11:0]	r_output;
 
 	initial	active    = 1'b0;
@@ -137,7 +137,7 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	// Grab the value on the rise
 	always @(posedge i_clk)
 		if ((hclk)&&(!zclk))
-			r_data <= { r_data[14:0], i_miso };
+			r_data <= { r_data[13:0], i_miso };
 
 	initial	r_output = 0;
 	always @(posedge i_clk)
@@ -146,5 +146,114 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 
 	assign	o_data = { !last_en, r_valid, r_output };
 
+`ifdef	FORMAL
+`ifdef	SMPLADC
+`define	ASSUME	assume
+`else
+`define	ASSUME	assert
+`endif
+
+	reg	f_past_valid;
+	reg	f_last_clk;
+	reg	[11:0]	f_sreg;
+
+	initial	f_past_valid = 0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+	initial	f_sreg = 0;
+	always @($global_clock)
+	begin
+		f_last_clk <= i_clk;
+		restrict(i_clk == !f_last_clk);
+	end
+
+	// Constrain the inputs
+	always @(*)
+	begin
+		restrict(i_request);
+		restrict(i_en);
+		if (!r_valid)
+			`ASSUME(!i_rd);
+		if (r_valid)
+			assume(s_eventually (i_rd));
+	end
+
+	always @($global_clock)
+	if (!$rose(i_clk))
+	begin
+		`ASSUME($stable(i_request));
+		`ASSUME($stable(i_rd));
+		`ASSUME($stable(i_en));
+	end
+
+	always @($global_clock)
+	if (!$fell(o_sck))
+		restrict($stable(i_miso));
+	/*
+	if (f_past_valid)
+	begin
+		// i_miso only changes when o_sck changes
+		if ($past(o_sck) == o_sck)
+			`ASSUME($past(i_miso) == i_miso);
+		if (!$past(o_sck))
+			`ASSUME($past(i_miso) == i_miso);
+	end
+	*/
+
+	// Constrain the outputs
+	reg	[5:0]	f_nck;
+	reg	[9:0]	f_zcount;
+	initial		f_nck    = 0;
+	initial		f_zcount = 0;
+	always @(posedge i_clk)
+	begin
+		assert(s_eventually active);
+		if ((zclk)&&(active))
+			assert(r_clk == 0);
+		if ((hclk)&&(active))
+			assert(r_clk == 0);
+		if (o_csn)
+			assert(o_sck);
+
+		if (!active)
+			f_zcount <= CKPCK-1;
+		else if (!zclk)
+			f_zcount <= f_zcount + 1'b1;
+		else // if (zclk)
+			f_zcount <= 0;
+		assert(f_zcount <= CKPCK*2+1);
+
+		if (hclk) assert((f_zcount == CKPCK)||(f_zcount == CKPCK*2+1));
+		if (hclk)
+			assert(r_clk == 0);
+		if (!o_csn)
+			assert(r_clk <= CKPCK);
+		if ((f_past_valid)&&(f_zcount < CKPCK))
+			assert($past(o_sck) == o_sck);
+
+		if (!active)
+			f_nck <= 0;
+		else if ((f_past_valid)&&($past(o_sck))&&(!o_sck))
+			f_nck <= f_nck + 1'b1;
+
+		if (active)
+			assert(f_nck == m_clk);
+
+		if ((f_past_valid)&&(!$past(o_sck))&&(o_sck)&&(f_nck <= 12))
+			f_sreg[11:0] <= {f_sreg[10:0], i_miso };
+
+		if ((f_past_valid)&&(!valid_stb))
+			assert(o_data[11:0] == $past(o_data[11:0]));
+		if (valid_stb)
+			assert(o_data[11:0] == f_sreg[11:0]);
+
+		if ((f_past_valid)&&(!$past(o_csn))&&(o_csn))
+			assert( (f_nck == 5'ha) || (f_nck == 6'h10));
+		if ((f_past_valid)&&($past(i_request))&&($past(i_en))&&($past(o_csn)))
+			assert(!o_csn);
+	end
+
+`endif
 endmodule
 

@@ -184,9 +184,6 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 			default: begin end
 		endcase
 
-	wire	w_full_n;
-	assign	w_full_n = will_overflow;
-
 	//
 	// If this is a receive FIFO, the FIFO count that matters is the number
 	// of values yet to be read.  If instead this is a transmit FIFO, then 
@@ -195,6 +192,7 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 	//
 	// Adjust for these differences here.
 	reg	[(LGFLEN-1):0]	r_fill;
+	initial	r_fill = 0;
 	always @(posedge i_clk)
 		begin
 			// Calculate the number of elements in our FIFO
@@ -214,9 +212,6 @@ module smplfifo(i_clk, i_rst, i_wr, i_data,
 
 	// We don't report underflow errors.  These
 	assign o_err = (r_ovfl); //  || (r_unfl);
-
-	wire	[4:0]	lglen;
-	assign lglen = LGFLEN;
 
 	wire	w_half_full;
 	wire	[13:0]	w_fill;

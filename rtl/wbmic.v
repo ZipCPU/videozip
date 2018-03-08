@@ -92,7 +92,7 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 	//
 	//
 	//
-	reg		no_timer, r_enabled, r_halfint, fifo_reset, last_addr,
+	reg		no_timer, r_enabled, r_halfint, fifo_reset,
 			zclk, pre_ack, adc_req;
 	reg	[(LCLTIMING_BITS-1):0]	r_timer_val, r_max_timer;
 	wire		w_fifo_err, w_fifo_empty_n, w_fifo_half_full;
@@ -133,8 +133,6 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 		assign	w_max_timer[19:TIMING_BITS] = 0;
 	endgenerate
 
-	always @(posedge i_clk)
-		last_addr <= i_wb_addr;
 	always @(posedge i_clk)
 		case(i_wb_addr)
 		1'b0: o_wb_data <= { w_fifo_status, w_fifo_data, 4'h0 };
