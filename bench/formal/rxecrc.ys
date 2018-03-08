@@ -1,0 +1,3 @@
+read_verilog -D RXECRC -formal ../../rtl/ethernet/rxecrc.v
+prep -top rxecrc -nordff
+write_smt2 -wires rxecrc.smt2
