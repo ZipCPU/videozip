@@ -14,7 +14,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -25,6 +25,11 @@
 // ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
 // FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 // for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
 //
 // License:	GPL, v3, as defined and found on www.gnu.org,
 //		http://www.gnu.org/licenses/gpl.html
@@ -1272,7 +1277,7 @@ void entry(void) {
 	// Check whether or not this CPU correctly identifies SIM instructions
 	// as illegal instructions
 	testid("SIM Instructions"); MARKSTART;
-	cc_fail = CC_MMUERR|CC_FPUERR|CC_DIVERR|CC_BUSERR|CC_TRAP|CC_STEP|CC_SLEEP;
+	cc_fail = CC_MMUERR|CC_FPUERR|CC_DIVERR|CC_BUSERR|CC_STEP|CC_SLEEP;
 	if ((run_test(sim_test, user_stack_ptr))||(zip_ucc()&cc_fail))
 		test_fails(start_time, &testlist[tnum]);
 	else if (zip_ucc() & CC_ILL) {
@@ -1480,6 +1485,8 @@ void entry(void) {
 	txstr("\r\n");
 	txstr("-----------------------------------\r\n");
 	txstr("All tests passed.  Halting CPU.\r\n");
+	wait_for_uart_idle();
+	txstr("\r\n");
 	wait_for_uart_idle();
 	for(int k=0; k<50000; k++)
 		asm("NOOP");
