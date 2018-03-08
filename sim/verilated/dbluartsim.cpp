@@ -4,14 +4,18 @@
 //
 // Project:	wbuart32, a full featured UART with simulator
 //
-// Purpose:	To forward a Verilator simulated UART link over a TCP/IP pipe.
+// Purpose:	To forward a Verilator simulated UART link over a pair of
+//		TCP/IP pipes.  This version goes beyond the capabilities of
+//	the original UARTSIM by forwarding (control) bytes with the high bit
+//	set to one TCP/IP port, and the (console) bytes with the high bit clear
+//	to another TCP/IP port.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -111,10 +115,39 @@ DBLUARTSIM::DBLUARTSIM(const int port, const bool copy_to_stdout)
 
 void	DBLUARTSIM::kill(void) {
 	// Close any active connection
-	if (m_con >= 0)	    close(m_con);
+	if (m_con >= 0)	    {
+		const	char	*SIM_CLOSED = "\n[SIM] Connection-Closed\n";
+		int	nr, nw;
+		if (m_conpos > 0) {
+			nw = send(m_con,m_conbuf, m_conpos, 0);
+		}
+		nw = write(m_con, SIM_CLOSED, strlen(SIM_CLOSED));
+		if (nw > 0) {
+			shutdown(m_con, SHUT_WR);
+			while(1) {
+				char	buf[512];
+
+				nr = ::read(m_con, buf, sizeof(buf));
+				if (nr <= 0)
+					break;
+			} // close(m_con);
+		}
+	}
 	if (m_skt >= 0)     close(m_skt);
 	if (m_console >= 0) close(m_console);
-	if (m_cmd >= 0)     close(m_cmd);
+	if (m_cmd >= 0) {
+		int	nr = 0;
+		if (m_cmdpos > 0)
+			nr = send(m_cmd,m_cmdbuf, m_cmdpos, 0);
+		shutdown(m_cmd, SHUT_WR);
+		do {
+			char	buf[512];
+
+			nr = ::read(m_cmd, buf, sizeof(buf));
+		} while(nr > 0);
+
+		// close(m_cmd);
+	}
 
 	m_con     = -1;
 	m_skt     = -1;
@@ -203,14 +236,14 @@ void	DBLUARTSIM::poll_read(void) {
 	else if (r == 0)
 		return;
 
-	printf("POLL = %d\n", r);
+	// printf("POLL = %d\n", r);
 	for(int i=0; i<npb; i++) {
 		if (pb[i].revents & POLLIN) {
 			int	nr;
 			nr =recv(pb[i].fd, &m_rxbuf[m_ilen],
 					sizeof(m_rxbuf)-m_ilen,
 					MSG_DONTWAIT);
-printf("RCVD: %d bytes\n", nr);
+
 			if (pb[i].fd == m_cmd) {
 				for(int j=0; j<nr; j++) {
 					m_cmdline[m_cllen] = m_rxbuf[j+m_ilen];
@@ -274,25 +307,24 @@ void	DBLUARTSIM::received(const char ch) {
 				snt, m_cmdpos);
 		}
 		m_cmdpos = 0;
+	}
+
+	if (m_con >= 0) {
+		int	snt = 0;
+		snt = send(m_con, &m_conbuf[m_conpos-1], 1, 0);
+		if (snt < 0) {
+			printf("Closing CONsole socket\n");
+			close(m_con);
+			m_con = -1;
+			snt = 0;
+		} if (snt < 1) {
+			fprintf(stderr, "CON: no bytes sent!\n");
+		}
 	} if ((m_conpos>0)&&((m_conbuf[m_conpos-1] == '\n')
 				||(m_conpos >= DBLPIPEBUFLEN-2))) {
-			int	snt = 0;
-			if (m_con >= 0) {
-				snt = send(m_con,m_conbuf, m_conpos, 0);
-				if (snt < 0) {
-					printf("Closing CONsole socket\n");
-					close(m_con);
-					m_con = -1;
-					snt = 0;
-				}
-				if (snt < m_conpos) {
-					fprintf(stderr, "CON: Only sent %d bytes of %d!\n",
-						snt, m_conpos);
-				}
-			}
-			m_conbuf[m_conpos] = '\0';
-			printf("%s", m_conbuf);
-			m_conpos = 0;
+		m_conbuf[m_conpos] = '\0';
+		printf("%s", m_conbuf);
+		m_conpos = 0;
 	}
 }
 
@@ -357,7 +389,7 @@ int	DBLUARTSIM::tick(int i_tx) {
 		int	ch;
 		ch = next();
 		if (ch >= 0) {
-			printf("NEXTV: ch = %x\n", ch);
+			// printf("NEXTV: ch = %x\n", ch);
 			m_tx_data = (-1<<(m_nbits+m_nparity+1))
 				// << nstart_bits
 				|((ch<<1)&0x01fe);
