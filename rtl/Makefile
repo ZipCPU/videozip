@@ -47,7 +47,7 @@ VERILATOR := verilator
 
 -include make.inc
 
-VFLAGS     = -Wall -O3 -trace -cc $(AUTOVDIRS)
+VFLAGS     = -MMD -Wall -O3 -trace -cc $(AUTOVDIRS)
 
 .PHONY: test
 test: $(VDIRFB)/Vmain__ALL.a
