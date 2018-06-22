@@ -40,7 +40,7 @@
 ##
 ##
 TESTS := addecrc addemac addepad addepreambl
-TESTS += rxecrc rxehwmac rxeipchk rxemin rxepreambl
+TESTS += rxecrc rxehwmac rxeipchk rxemin rxepreambl rxewrite
 .PHONY: $(TESTS)
 all: $(TESTS)
 RTL    := ../../rtl
@@ -62,6 +62,7 @@ RXMAC  := rxehwmac
 RXPAD  := rxemin
 RXPRE  := rxepreambl
 RXIPK  := rxeipchk
+RXWRT  := rxewrite
 
 $(TXCRC).smt2: $(NETRTL)/$(TXCRC).v $(TXCRC).ys
 	yosys -ql $(TXCRC).yslog -s $(TXCRC).ys
@@ -89,6 +90,9 @@ $(RXPAD).smt2: $(NETRTL)/$(RXPAD).v $(RXPAD).ys
 
 $(RXIPK).smt2: $(NETRTL)/$(RXIPK).v $(RXIPK).ys
 	yosys -ql $(RXIPK).yslog -s $(RXIPK).ys
+
+$(RXWRT).smt2: $(NETRTL)/$(RXWRT).v $(RXWRT).ys
+	yosys -ql $(RXWRT).yslog -s $(RXWRT).ys
 
 
 $(TXCRC) : $(TXCRC).check
@@ -162,7 +166,15 @@ $(RXIPK).check: $(RXIPK).smt2
 	@rm -f $@
 	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXIPK).vcd $(RXIPK).smt2
 	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXIPK).vcd $(RXIPK).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 40 --dump-vcd $(RXIPK).vcd $(RXIPK).smt2
+	$(SMTBMC) -c $(BMCARGS) -t 40 --dump-vcd $(RXIPK)%.vcd $(RXIPK).smt2
+	touch $@
+
+$(RXWRT) : $(RXWRT).check
+$(RXWRT).check: $(RXWRT).smt2
+	@rm -f $@
+	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXWRT).vcd $(RXWRT).smt2
+	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXWRT).vcd $(RXWRT).smt2
+	$(SMTBMC) -c $(BMCARGS) -t 40 --dump-vcd $(RXWRT)%.vcd $(RXWRT).smt2
 	touch $@
 
 .PHONY: clean
@@ -175,4 +187,6 @@ clean:
 	rm -f $(RXPRE).smt2 $(RXPRE)*.vcd $(RXPRE).yslog
 	rm -f $(RXPAD).smt2 $(RXPAD)*.vcd $(RXPAD).yslog
 	rm -f $(RXMAC).smt2 $(RXMAC)*.vcd $(RXMAC).yslog
+	rm -f $(RXIPK).smt2 $(RXIPK)*.vcd $(RXIPK).yslog
+	rm -f $(RXWRT).smt2 $(RXWRT)*.vcd $(RXWRT).yslog
 	rm -f *.check

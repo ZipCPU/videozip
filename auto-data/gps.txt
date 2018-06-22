@@ -146,7 +146,7 @@ typedef	struct	GPSTB_S	{
 @INT.GPSTXF.WIRE= gpsutxf_int
 @INT.GPSRX.PIC=  altpic
 @INT.GPSTX.PIC=  altpic
-@INT.GPSRXF.PIC= syspic
+@INT.GPSRXF.PIC= altpic
 @INT.GPSTXF.PIC= altpic
 # Clear the other inherited wires, as we don't need them any more.
 @INT.UARTRX.WIRE=
@@ -184,5 +184,5 @@ typedef	struct	GPSTB_S	{
 #ifdef	@$(ACCESS)
 		m_@$(PREFIX) = new UARTSIM(FPGAPORT+@$(SIM.PORTOFFSET));
 		m_@$(PREFIX)->setup(@$(SIM.UARTSETUP));
-#endif
+#endif // @$(ACCESS)
 #

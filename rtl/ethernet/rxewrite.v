@@ -60,6 +60,10 @@ module	rxewrite(i_clk, i_reset, i_v, i_d, o_v, o_addr, o_data, o_len);
 
 	reg	[(AW+2):0]	lcl_addr;
 
+	initial	o_v      = 0;
+	initial	lcl_addr = 0;
+	initial	o_data   = 0;
+	initial	o_addr   = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -87,5 +91,59 @@ module	rxewrite(i_clk, i_reset, i_v, i_d, o_v, o_addr, o_data, o_len);
 
 	assign	o_len  = lcl_addr[(AW+1):0];
 
+
+`ifdef	FORMAL
+
+	reg	f_past_valid;
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+	initial	assume(i_reset);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(f_past_valid))
+		&&(!$past(i_v))&&($past(i_v,1)))
+		assume(!$past(i_v));
+
+
+	always @(*)
+	if (!f_past_valid)
+		assume(!i_v);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(i_reset)))
+		assume(!i_v);
+
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset))
+		||((!$past(i_v)) && (!$past(o_v)) ))
+	begin
+		assert(o_v      == 0);
+		assert(lcl_addr == 0);
+		assert(o_data   == 0);
+		assert(o_addr   == 0);
+	end
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset)))
+		assert(o_v == $past(i_v));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(i_v))&&(!$past(i_reset)))
+	begin
+		assert(o_v);
+		case(lcl_addr[1:0])
+		2'b01: assert((o_data[31:24]==$past(i_d))&&(o_data[23:0]==0));
+		2'b10: assert((o_data[23:16]==$past(i_d))&&(o_data[15:0]==0));
+		2'b11: assert((o_data[15: 8]==$past(i_d))&&(o_data[ 7:0]==0));
+		2'b00: assert( o_data[ 7: 0]==$past(i_d));
+		endcase
+	end
+
+	always @(posedge i_clk)
+		cover(o_v&&(!i_v));
+`endif
 endmodule
 

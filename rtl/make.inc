@@ -15,7 +15,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -39,6 +39,8 @@
 ################################################################################
 ##
 ##
+ZIPCPUD := cpu
+ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v)
 FLASH := wbqspiflash.v llqspi.v flashconfig.v
 
 WBUART := wbuart.v ufifo.v rxuart.v txuart.v
@@ -55,8 +57,6 @@ BUSDLYD := cpu
 BUSDLY  := $(addprefix $(BUSDLYD)/,busdelay.v)
 BUSDLYD := cpu
 BUSDLY  := $(addprefix $(BUSDLYD)/,busdelay.v)
-ZIPCPUD := cpu
-ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v)
 ENETD := ethernet
 ENET  := $(addprefix $(ENETD)/,enetpackets.v addecrc.v addemac.v addepad.v addepreamble.v rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v xiddr.v xoddr.v)
 RTCDATE := rtcdate.v
@@ -65,5 +65,5 @@ WBMOUSE := wbmouse.v llps2.v
 
 CONSOLE := wbconsole.v txuartlite.v rxuartlite.v ufifo.v
 
-VFLIST := main.v  $(FLASH) $(WBUART) $(BUSPIC) $(BKRAM) $(SDSPI) $(WBUBUS) $(BUSDLY) $(BUSDLY) $(ZIPCPU) $(ENET) $(RTCDATE) $(WBMOUSE) $(CONSOLE)
+VFLIST := main.v  $(ZIPCPU) $(FLASH) $(WBUART) $(BUSPIC) $(BKRAM) $(SDSPI) $(WBUBUS) $(BUSDLY) $(BUSDLY) $(ENET) $(RTCDATE) $(WBMOUSE) $(CONSOLE)
 AUTOVDIRS :=  -y cpu -y cpu -y cpu -y cpu -y ethernet

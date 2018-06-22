@@ -38,7 +38,7 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid \
-	rdsync getframe
+	rdsync getframe manping readmdio
 SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
@@ -47,8 +47,9 @@ BUSSRCS := ttybus.cpp llcomms.cpp regdefs.cpp byteswap.cpp
 SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
 	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
-	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp
-	# netsetup.cpp manping.cpp wbsettime.cpp
+	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp manping.cpp	\
+	readmdio.cpp
+	# wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
 BUSOBJS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(BUSSRCS)))
@@ -79,6 +80,7 @@ $(OBJDIR)/edidtxscope.o: edidtxscope.cpp scopecls.h
 $(OBJDIR)/rawdscope.o:   rawdscope.cpp scopecls.h
 $(OBJDIR)/tmdscope.o:    tmdscope.cpp scopecls.h
 $(OBJDIR)/dumpflash.o:   dumpflash.cpp regdefs.h
+$(OBJDIR)/readmdio.o:    readmdio.cpp regdefs.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
@@ -106,6 +108,10 @@ cpedid: $(OBJDIR)/cpedid.o $(BUSOBJS)
 readhist: $(OBJDIR)/readhist.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 getframe: $(OBJDIR)/getframe.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
+manping: $(OBJDIR)/manping.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
+readmdio: $(OBJDIR)/readmdio.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 
 #

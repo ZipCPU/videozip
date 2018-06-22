@@ -238,11 +238,11 @@ typedef	struct	HDMI_IN_S {
 @SIM.DEFNS=
 #ifdef	@$(ACCESS)
 	HDMIINSIM	*m_@$(PREFIX);
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
-	m_@$(PREFIX) = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
-#endif
+		m_@$(PREFIX) = new HDMIINSIM("frames/hdmidata.32t", 2200*1125);
+#endif // @$(ACCESS)
 @SIM.TICK=
 		// HDMI input simulation
 		{ unsigned	r, g, b;
@@ -497,7 +497,7 @@ typedef	struct	HDMI_IN_S {
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb
 @INT.EDID.WIRE=	edid_out_int
-@INT.EDID.PIC=	syspic
+@INT.EDID.PIC=	altpic
 @ACCESS=HDMI_OUT_EDID_ACCESS
 @TOP.PORTLIST=
 		// HDMI output EDID I2C ports

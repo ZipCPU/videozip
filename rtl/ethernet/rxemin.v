@@ -6,7 +6,7 @@
 //
 // Purpose:	To force the minimum received packet size of an ethernet frame
 //		to be a minimum of 64 bytes.  Packets less than 64-bytes
-//		(including CRC) need to be dropped.  This module handles that
+//		(including CRC) will be dropped here.  This module handles that
 //	logic.
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -14,7 +14,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2017, Gisselquist Technology, LLC
+// Copyright (C) 2016-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -40,14 +40,13 @@
 //
 `default_nettype	none
 //
-module rxemin(i_clk, i_reset, i_en, i_v, i_d, o_err);
+module rxemin(i_clk, i_reset, i_en, i_v, o_err);
 	parameter	MINBYTES=60;
 	localparam	LGNCOUNT=  (MINBYTES< 63) ? 6
 				: ((MINBYTES<127) ? 7
 				: ((MINBYTES<255) ? 8:9));
 	input	wire		i_clk, i_reset, i_en;
 	input	wire		i_v;	// Valid
-	input	wire	[7:0]	i_d;	// Data nibble
 	output	reg		o_err;
 
 	reg	last_v;
@@ -59,6 +58,8 @@ module rxemin(i_clk, i_reset, i_en, i_v, i_d, o_err);
 	else
 		last_v <= i_v;
 
+	initial	o_err  = 0;
+	initial	r_ncnt = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
@@ -73,8 +74,64 @@ module rxemin(i_clk, i_reset, i_en, i_v, i_d, o_err);
 		r_ncnt <= 0;
 		o_err <= 0;
 	end else if (i_v)
-		r_ncnt <= (r_ncnt<MINBYTES) ? r_ncnt+1'b1 : r_ncnt;
-	else //  if ((!i_reset)&&(!i_v)&&(last_v))
+	begin
+		if (! (&r_ncnt))
+			r_ncnt <= r_ncnt + 1'b1;
+		o_err <= 0;
+	end else //  if ((!i_reset)&&(!i_v)&&(last_v))
 		o_err <= (i_en)&&(r_ncnt < MINBYTES);
 
+`ifdef	FORMAL
+	reg	f_past_valid;
+
+	initial	f_past_valid = 1'b0;
+	always @(posedge i_clk)
+		f_past_valid <= 1'b1;
+
+	always @(*)
+	if (!f_past_valid)
+		assume(i_reset);
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
+		assume(!i_v);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(f_past_valid))
+		&&($past(i_v)!=$past(i_v,2)))
+		assume($stable(i_v));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(i_v))
+		assume(i_en == $past(i_en));
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(o_err)))
+	begin
+		assume(!i_v);
+		assert(!o_err);
+	end
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset)))
+		assert($past(i_v)==last_v);
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset))
+			||((!$past(i_v))&&(!$past(i_v,2))))
+	begin
+		assert(r_ncnt == 0);
+		assert(o_err  == 0);
+	end
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset))
+			&&($past(r_ncnt) > MINBYTES)&&($past(i_v)))
+		assert(r_ncnt > MINBYTES);
+
+	always @(posedge i_clk)
+		cover(r_ncnt > MINBYTES);
+	always @(posedge i_clk)
+		cover(o_err);
+`endif
 endmodule

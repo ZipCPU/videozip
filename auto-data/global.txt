@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -45,6 +45,7 @@
 @DEFAULT.BUS=wb
 @$RESET_ADDRESS=@$flash.REGBASE+(@$flash.NADDR)
 @RESET_ADDRESS.FORMAT=32'h%08x
+@REGISTER.BUS=wbu
 @VERILATOR_PREFIX=v
 @XDC.FILE=../nexysv.xdc
 @REGDEFS.H.INSERT=

@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -212,6 +212,59 @@ typedef	struct OLEDBW_S {
 
 
 
+//
+// GPIO input wires
+//
+#define	GPIO_HDMI_IN_CEC	0x000010000
+#define	GPIO_HDMI_OUT_CEC	0x000020000
+#define	GPIO_SD_DETECTED	0x000040000
+#define	GPIO_HDMI_OUT_DETECT	0x000080000
+#define	GPIO_GPS_3DF		0x000100000
+#define	GPIO_SYSCLK_LOCKED	0x000200000
+//
+// GPIO output wires
+//
+#define	GPIO_SET(WIRE)	(((WIRE)<<16)|(WIRE))
+#define	GPIO_CLR(WIRE)	 ((WIRE)<<16)
+//
+#define	GPIO_HDMI_IN_CEC_SET	0x000010001
+#define	GPIO_HDMI_IN_CEC_CLR	0x000010000
+#define	GPIO_HDMI_OUT_CEC_SET	0x000020002
+#define	GPIO_HDMI_OUT_CEC_CLR	0x000020000
+#define	GPIO_EDID_SCL		0x000000004
+#define	GPIO_EDID_SDA		0x000000008
+//
+#define	GPIO_HDMI_IN_ENB	0x000000010
+#define	GPIO_HDMI_IN_HPA	0x000000020
+#define	GPIO_SD_RESET		0x000000040
+#define	GPIO_HDMI_OUT_EN	0x000000080
+//
+#define	GPIO_EDID_SCL_SET	GPIO_SET(GPIO_EDID_SCL)
+#define	GPIO_EDID_SCL_CLR	GPIO_CLR(GPIO_EDID_SCL)
+#define	GPIO_EDID_SDA_SET	GPIO_SET(GPIO_EDID_SDA)
+#define	GPIO_EDID_SDA_CLR	GPIO_CLR(GPIO_EDID_SDA)
+#define	GPIO_HDMI_IN_ENB_SET	GPIO_SET(GPIO_HDMI_IN_ENB)
+#define	GPIO_HDMI_IN_ENB_CLR	GPIO_CLR(GPIO_HDMI_IN_ENB)
+#define	GPIO_HDMI_IN_HPA_SET	GPIO_SET(GPIO_HDMI_IN_HPA)
+#define	GPIO_HDMI_IN_HPA_CLR	GPIO_CLR(GPIO_HDMI_IN_HPA)
+#define	GPIO_SD_RESET_SET	GPIO_SET(GPIO_SD_RESET)
+#define	GPIO_SD_RESET_CLR	GPIO_CLR(GPIO_SD_RESET)
+#define	GPIO_HDMI_OUT_EN_SET	GPIO_SET(GPIO_HDMI_OUT_EN)
+#define	GPIO_HDMI_OUT_EN_CLR	GPIO_CLR(GPIO_HDMI_OUT_EN)
+
+
+#define WBMIC_ENABLE	0
+#define WBMIC_DISABLE	(1<<20)
+#define WBMIC_NONEMPTY	0
+#define WBMIC_HALFINT	(1<<22)
+#define WBMIC_RESET	(1<<24)
+
+typedef struct  WBMIC_S {
+	unsigned	m_data;
+	unsigned	m_setup;
+} WBMIC;
+
+
 // Network packet interface
 #define	ENET_TXGO		0x004000
 #define	ENET_TXBUSY		0x004000
@@ -285,59 +338,6 @@ typedef struct  CONSOLE_S {
 
 
 //
-// GPIO input wires
-//
-#define	GPIO_HDMI_IN_CEC	0x000010000
-#define	GPIO_HDMI_OUT_CEC	0x000020000
-#define	GPIO_SD_DETECTED	0x000040000
-#define	GPIO_HDMI_OUT_DETECT	0x000080000
-#define	GPIO_GPS_3DF		0x000100000
-#define	GPIO_SYSCLK_LOCKED	0x000200000
-//
-// GPIO output wires
-//
-#define	GPIO_SET(WIRE)	(((WIRE)<<16)|(WIRE))
-#define	GPIO_CLR(WIRE)	 ((WIRE)<<16)
-//
-#define	GPIO_HDMI_IN_CEC_SET	0x000010001
-#define	GPIO_HDMI_IN_CEC_CLR	0x000010000
-#define	GPIO_HDMI_OUT_CEC_SET	0x000020002
-#define	GPIO_HDMI_OUT_CEC_CLR	0x000020000
-#define	GPIO_EDID_SCL		0x000000004
-#define	GPIO_EDID_SDA		0x000000008
-//
-#define	GPIO_HDMI_IN_ENB	0x000000010
-#define	GPIO_HDMI_IN_HPA	0x000000020
-#define	GPIO_SD_RESET		0x000000040
-#define	GPIO_HDMI_OUT_EN	0x000000080
-//
-#define	GPIO_EDID_SCL_SET	GPIO_SET(GPIO_EDID_SCL)
-#define	GPIO_EDID_SCL_CLR	GPIO_CLR(GPIO_EDID_SCL)
-#define	GPIO_EDID_SDA_SET	GPIO_SET(GPIO_EDID_SDA)
-#define	GPIO_EDID_SDA_CLR	GPIO_CLR(GPIO_EDID_SDA)
-#define	GPIO_HDMI_IN_ENB_SET	GPIO_SET(GPIO_HDMI_IN_ENB)
-#define	GPIO_HDMI_IN_ENB_CLR	GPIO_CLR(GPIO_HDMI_IN_ENB)
-#define	GPIO_HDMI_IN_HPA_SET	GPIO_SET(GPIO_HDMI_IN_HPA)
-#define	GPIO_HDMI_IN_HPA_CLR	GPIO_CLR(GPIO_HDMI_IN_HPA)
-#define	GPIO_SD_RESET_SET	GPIO_SET(GPIO_SD_RESET)
-#define	GPIO_SD_RESET_CLR	GPIO_CLR(GPIO_SD_RESET)
-#define	GPIO_HDMI_OUT_EN_SET	GPIO_SET(GPIO_HDMI_OUT_EN)
-#define	GPIO_HDMI_OUT_EN_CLR	GPIO_CLR(GPIO_HDMI_OUT_EN)
-
-
-#define WBMIC_ENABLE	0
-#define WBMIC_DISABLE	(1<<20)
-#define WBMIC_NONEMPTY	0
-#define WBMIC_HALFINT	(1<<22)
-#define WBMIC_RESET	(1<<24)
-
-typedef struct  WBMIC_S {
-	unsigned	m_data;
-	unsigned	m_setup;
-} WBMIC;
-
-
-//
 // The Ethernet MDIO interface
 //
 #define MDIO_BMCR	0x00
@@ -378,19 +378,19 @@ extern char	_sdram[0x20000000];
 #endif	// SDRAM_ACCESS
 #ifdef	HDMI_OUT_EDID_ACCESS
 #define	_BOARD_HAS_HDMI_SRC_EDID
-static volatile EDID_SRC *const _edout = ((EDID_SRC *)218104320);
+static volatile EDID_SRC *const _edout = ((EDID_SRC *)234881536);
 #endif	// HDMI_OUT_EDID_ACCESS
 #ifdef	SDSPI_ACCESS
 #define	_BOARD_HAS_SDSPI
-static volatile SDSPI *const _sdcard = ((SDSPI *)134217728);
+static volatile SDSPI *const _sdcard = ((SDSPI *)0x08000000);
 #endif	// SDSPI_ACCESS
 #ifdef	GPSUART_ACCESS
 #define	_BOARD_HAS_GPS_UART
-static volatile WBUART *const gpsu = ((WBUART *)117440512);
+static volatile WBUART *const gpsu = ((WBUART *)0x07000000);
 #endif	// GPSUART_ACCESS
 #ifdef	BUSPIC_ACCESS
 #define	_BOARD_HAS_BUSPIC
-static volatile unsigned *const _buspic = ((unsigned *)167772164);
+static volatile unsigned *const _buspic = ((unsigned *)0x0b000004);
 #endif	// BUSPIC_ACCESS
 #ifdef	BKRAM_ACCESS
 #define	_BOARD_HAS_BKRAM
@@ -398,68 +398,68 @@ extern char	_bkram[0x00100000];
 #endif	// BKRAM_ACCESS
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTCLIGHT
-static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)218103904);
+static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)234881120);
 #endif	// RTC_ACCESS
-#define	_BOARD_HAS_ZIPSCOPE
-static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)83886080);
-#ifdef	SDSPI_SCOPE
-#define	_BOARD_HAS_SDSPI_SCOPE
-static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)67108864);
-#endif	// SDSPI_SCOPE
 #ifdef	FLASH_ACCESS
 #define	_BOARD_HAS_FLASH
 extern char _flash[0x01000000];
 #endif	// FLASH_ACCESS
+#define	_BOARD_HAS_ZIPSCOPE
+static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)83886080);
+#ifdef	SDSPI_SCOPE
+#define	_BOARD_HAS_SDSPI_SCOPE
+static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)0x04000000);
+#endif	// SDSPI_SCOPE
+#define	_BOARD_HAS_BUSERR
+static volatile unsigned *const _buserr = ((unsigned *)184549376);
 #ifdef	HDMIIN_ACCESS
 #define	_BOARD_HAS_HDMI_IN
-static volatile HDMI_IN *const _hin = ((HDMI_IN *)218104000);
+static volatile HDMI_IN *const _hin = ((HDMI_IN *)234881216);
 #endif	// HDMIIN_ACCESS
-#define	_BOARD_HAS_BUSERR
-static volatile unsigned *const _buserr = ((unsigned *)167772160);
 #ifdef	OLEDBW_ACCESS
 #define	_BOARD_HAS_OLEDBW
-static volatile OLEDBW *const _oledbw = ((OLEDBW *)218103872);
+static volatile OLEDBW *const _oledbw = ((OLEDBW *)234881088);
 #endif	// OLEDBW_ACCESS
-#ifdef	ETHERNET_ACCESS
-#define	_BOARD_HAS_ENETP
-static volatile ENETPACKET *const _netp = ((ENETPACKET *)218103968);
-#endif	// ETHERNET_ACCESS
-#ifdef	CFG_ACCESS
-#define	_BOARD_HAS_ICAPTETWO
-static volatile unsigned *const _icape = ((unsigned *)184549376);
-#endif	// CFG_ACCESS
-#ifdef	RTCDATE_ACCESS
-#define	_BOARD_HAS_RTCDATE
-static volatile unsigned *const _date = ((unsigned *)167772176);
-#endif	// RTCDATE_ACCESS
-#ifdef	SPIO_ACCESS
-#define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)167772200);
-#endif	// SPIO_ACCESS
-#define	_BOARD_HAS_VERSION
-#ifdef	HDMI_IN_EDID_ACCESS
-#define	_BOARD_HAS_HDMI_IN_EDID
-static volatile unsigned *const _edin = ((unsigned *)218104064);
-#endif	// HDMI_IN_EDID_ACCESS
-#ifdef	MOUSE_ACCESS
-#define	_BOARD_HAS_WBMOUSE
-static volatile WBMOUSE *const _mouse = ((WBMOUSE *)218103840);
-#endif	// MOUSE_ACCESS
-#ifdef	BUSCONSOLE_ACCESS
-#define	_BOARD_HAS_BUSCONSOLE
-static volatile CONSOLE *const _uart = ((CONSOLE *)0x09000000);
-#endif	// BUSCONSOLE_ACCESS
 #ifdef	GPIO_ACCESS
 #define	_BOARD_HAS_GPIO
-static volatile unsigned *const _gpio = ((unsigned *)167772188);
+static volatile unsigned *const _gpio = ((unsigned *)184549404);
 #endif	// GPIO_ACCESS
 #ifdef	MICROPHONE_ACCESS
 #define	_BOARD_HAS_WBMIC
 static volatile WBMIC *const _wbmic = ((WBMIC *)16777216);
 #endif	// MICROPHONE_ACCESS
+#ifdef	ETHERNET_ACCESS
+#define	_BOARD_HAS_ENETP
+static volatile ENETPACKET *const _netp = ((ENETPACKET *)167772160);
+#endif	// ETHERNET_ACCESS
+#ifdef	CFG_ACCESS
+#define	_BOARD_HAS_ICAPTETWO
+static volatile unsigned *const _icape = ((unsigned *)201326592);
+#endif	// CFG_ACCESS
+#ifdef	RTCDATE_ACCESS
+#define	_BOARD_HAS_RTCDATE
+static volatile unsigned *const _date = ((unsigned *)184549392);
+#endif	// RTCDATE_ACCESS
+#ifdef	SPIO_ACCESS
+#define	_BOARD_HAS_SPIO
+static volatile unsigned *const _spio = ((unsigned *)184549416);
+#endif	// SPIO_ACCESS
+#define	_BOARD_HAS_VERSION
+#ifdef	HDMI_IN_EDID_ACCESS
+#define	_BOARD_HAS_HDMI_IN_EDID
+static volatile unsigned *const _edin = ((unsigned *)234881280);
+#endif	// HDMI_IN_EDID_ACCESS
+#ifdef	MOUSE_ACCESS
+#define	_BOARD_HAS_WBMOUSE
+static volatile WBMOUSE *const _mouse = ((WBMOUSE *)234881056);
+#endif	// MOUSE_ACCESS
+#ifdef	BUSCONSOLE_ACCESS
+#define	_BOARD_HAS_BUSCONSOLE
+static volatile CONSOLE *const _uart = ((CONSOLE *)0x09000000);
+#endif	// BUSCONSOLE_ACCESS
 #ifdef	NETCTRL_ACCESS
 #define	_BOARD_HAS_NETMDIO
-static volatile ENETMDIO *const _mdio = ((ENETMDIO *)201326592);
+static volatile ENETMDIO *const _mdio = ((ENETMDIO *)218103808);
 #endif	// NETCTRL_ACCESS
 //
 // Interrupt assignments (3 PICs)
@@ -467,8 +467,8 @@ static volatile ENETMDIO *const _mdio = ((ENETMDIO *)201326592);
 // PIC: buspic
 #define	BUSPIC_SCOPE	BUSPIC(0)
 #define	BUSPIC_SDCARD	BUSPIC(1)
-#define	BUSPIC_ZIPSCOPE	BUSPIC(2)
-#define	BUSPIC_FLASH	BUSPIC(3)
+#define	BUSPIC_FLASH	BUSPIC(2)
+#define	BUSPIC_ZIPSCOPE	BUSPIC(3)
 #define	BUSPIC_HINSCOPE	BUSPIC(4)
 #define	BUSPIC_SPIO	BUSPIC(5)
 #define	BUSPIC_MOUSE	BUSPIC(6)
@@ -481,11 +481,13 @@ static volatile ENETMDIO *const _mdio = ((ENETMDIO *)201326592);
 #define	ALTPIC_MOC	ALTPIC(5)
 #define	ALTPIC_MPC	ALTPIC(6)
 #define	ALTPIC_MTC	ALTPIC(7)
-#define	ALTPIC_GPSRX	ALTPIC(8)
-#define	ALTPIC_RTC	ALTPIC(9)
-#define	ALTPIC_UARTTX	ALTPIC(10)
-#define	ALTPIC_UARTRX	ALTPIC(11)
+#define	ALTPIC_EDID	ALTPIC(8)
+#define	ALTPIC_GPSRX	ALTPIC(9)
+#define	ALTPIC_RTC	ALTPIC(10)
+#define	ALTPIC_OLED	ALTPIC(11)
 #define	ALTPIC_GPIO	ALTPIC(12)
+#define	ALTPIC_UARTTX	ALTPIC(13)
+#define	ALTPIC_UARTRX	ALTPIC(14)
 // PIC: syspic
 #define	SYSPIC_DMAC	SYSPIC(0)
 #define	SYSPIC_JIFFIES	SYSPIC(1)
@@ -494,12 +496,12 @@ static volatile ENETMDIO *const _mdio = ((ENETMDIO *)201326592);
 #define	SYSPIC_TMA	SYSPIC(4)
 #define	SYSPIC_ALT	SYSPIC(5)
 #define	SYSPIC_BUS	SYSPIC(6)
-#define	SYSPIC_EDID	SYSPIC(7)
-#define	SYSPIC_SDCARD	SYSPIC(8)
-#define	SYSPIC_PPS	SYSPIC(9)
-#define	SYSPIC_OLED	SYSPIC(10)
-#define	SYSPIC_NETTX	SYSPIC(11)
-#define	SYSPIC_NETRX	SYSPIC(12)
-#define	SYSPIC_MOUSE	SYSPIC(13)
-#define	SYSPIC_UARTTXF	SYSPIC(14)
+#define	SYSPIC_SDCARD	SYSPIC(7)
+#define	SYSPIC_PPS	SYSPIC(8)
+#define	SYSPIC_MIC	SYSPIC(9)
+#define	SYSPIC_NETTX	SYSPIC(10)
+#define	SYSPIC_NETRX	SYSPIC(11)
+#define	SYSPIC_MOUSE	SYSPIC(12)
+#define	SYSPIC_UARTTXF	SYSPIC(13)
+#define	SYSPIC_UARTRXF	SYSPIC(14)
 #endif	// BOARD_H

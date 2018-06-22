@@ -162,11 +162,9 @@
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
-@$BASEHX=@$(REGBASE)
-@BASEHX.FORMAT=0x%08x
 @DEVID=FLASH
 @REGDEFS.H.DEFNS=
-#define	@$(DEVID)BASE	@$(BASEHX)
+#define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
 #define	@$(DEVID)LEN	@$NBYTES
 #define	@$(DEVID)LGLEN	@$LGFLASHSZ
 @REGS.0= 0 R_@$(DEVID) FLASH
@@ -187,16 +185,16 @@ _flash=ORIGIN(flash);
 @SIM.DEFNS+=
 #ifdef	@$(ACCESS)
 	QSPIFLASHSIM	*m_@$(MEM.NAME);
-#endif
+#endif // @$(ACCESS)
 @SIM.INIT+=
 #ifdef	@$(ACCESS)
-	m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
-#endif
+		m_@$(MEM.NAME) = new QSPIFLASHSIM(FLASHLGLEN);
+#endif // @$(ACCESS)
 @SIM.TICK +=
 #ifdef	@$(ACCESS)
 		m_core->i_qspi_dat = (*m_@$(MEM.NAME))(m_core->o_qspi_cs_n,
 			m_core->o_qspi_sck, m_core->o_qspi_dat);
-#endif
+#endif // @$(ACCESS)
 @SIM.LOAD +=
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
 #

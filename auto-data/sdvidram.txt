@@ -203,4 +203,6 @@ _@$(PREFIX) = ORIGIN(@$(PREFIX));
 			m_core->i_@$(PREFIX)_stall,
 			m_core->i_@$(PREFIX)_data);
 #endif	// @$(ACCESS)
-
+@SIM.LOAD=
+			// Need to byte swap data to get it into the memory
+			m_sdram->load(start, &buf[offset], wlen >> 2);

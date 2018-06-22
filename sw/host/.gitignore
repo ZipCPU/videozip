@@ -20,6 +20,7 @@ zipstate
 edidtxscope
 edidsrc.bin
 qspidump-original.bin
+chktmds
 cpedid
 rawdscope
 readframe
@@ -27,6 +28,7 @@ readhist
 getframe
 greentest.sh
 hintst.sh
+manping
 oldregdefs.h
 ramread.sh
 ramwrite.sh
@@ -35,4 +37,4 @@ rdsynch.sh
 tstmem.sh
 scopdata.txt
 tstmem.sh
-
+zipscope

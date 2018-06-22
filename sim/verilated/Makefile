@@ -59,7 +59,7 @@ CFLAGS	:= -Og -g -Wall $(INCS)
 #
 SIMSOURCES:= qspiflashsim.cpp zipelf.cpp i2csim.cpp	\
 	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp dbluartsim.cpp	\
-	hdmiinsim.cpp
+	hdmiinsim.cpp enetctrlsim.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
 SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
 VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o

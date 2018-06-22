@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2018, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -92,8 +92,8 @@ $(OBJDIR)/cputestcis.o: cputest.c
 $(OBJDIR)/cputest.s: cputest.c
 	$(CC) $(CFLAGS) -S -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputest.o boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
+cputest: $(OBJDIR)/cputestcis.o boardram.ld
+	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputestcis.o -o $@
 
 memtest: $(OBJDIR)/memtest.o boardram.ld
 	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@

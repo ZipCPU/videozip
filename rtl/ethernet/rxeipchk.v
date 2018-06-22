@@ -208,5 +208,8 @@ module rxeipchk(i_clk, i_reset, i_en, i_v, i_d, o_err);
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(r_v)))
 		assert(!r_v);
+
+	always @(posedge i_clk)
+		cover(o_err);
 `endif
 endmodule

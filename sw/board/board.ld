@@ -15,7 +15,7 @@
 *
 /*******************************************************************************
 *
-* Copyright (C) 2017, Gisselquist Technology, LLC
+* Copyright (C) 2017-2018, Gisselquist Technology, LLC
 *
 * This program is free software (firmware): you can redistribute it and/or
 * modify it under the terms of  the GNU General Public License as published
@@ -44,8 +44,8 @@ ENTRY(_start)
 
 MEMORY
 {
-	   bkram(wx) : ORIGIN = 0x0f000000, LENGTH = 0x00100000
-	   flash(rx) : ORIGIN = 0x10000000, LENGTH = 0x01000000
+	   bkram(wx) : ORIGIN = 0x10000000, LENGTH = 0x00100000
+	   flash(rx) : ORIGIN = 0x11000000, LENGTH = 0x01000000
 	   sdram(wx) : ORIGIN = 0x20000000, LENGTH = 0x20000000
 }
 
@@ -54,7 +54,7 @@ _flash    = ORIGIN(flash);
 _sdram    = ORIGIN(sdram);
 SECTIONS
 {
-	.rocode 0x10400000 : ALIGN(4) {
+	.rocode 0x11400000 : ALIGN(4) {
 		_boot_address = .;
 		*(.start) *(.boot)
 	} > flash

@@ -1,0 +1,3 @@
+read_verilog -D RXEWRITE -formal ../../rtl/ethernet/rxewrite.v
+prep -top rxewrite -nordff
+write_smt2 -wires rxewrite.smt2

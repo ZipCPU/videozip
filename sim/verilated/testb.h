@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -60,6 +60,7 @@ public:
 	TBCLOCK	m_hdmi_in_clk;
 	TBCLOCK	m_hdmi_in_hsclk;
 	TBCLOCK	m_clk_200mhz;
+	TBCLOCK	m_net_rx_clk;
 
 	TESTB(void) {
 		m_core = new VA;
@@ -72,6 +73,7 @@ public:
 		m_hdmi_in_clk.init(6734);	//  148.50 MHz
 		m_hdmi_in_hsclk.init(673);	// 1485.88 MHz
 		m_clk_200mhz.init(5000);	//  200.00 MHz
+		m_net_rx_clk.init(8000);	//  125.00 MHz
 	}
 	virtual ~TESTB(void) {
 		if (m_trace) m_trace->close();
@@ -84,6 +86,8 @@ public:
 			m_trace = new VerilatedVcdC;
 			m_core->trace(m_trace, 99);
 			m_trace->open(vcdname);
+			m_trace->spTrace()->set_time_resolution("ps");
+			m_trace->spTrace()->set_time_unit("ps");
 		}
 	}
 
@@ -104,19 +108,22 @@ public:
 	}
 
 	virtual	void	tick(void) {
-		unsigned	mintime = m_clk.time_to_tick();
+		unsigned	mintime = m_clk.time_to_edge();
 
-		if (m_hdmi_out_clk.time_to_tick() < mintime)
-			mintime = m_hdmi_out_clk.time_to_tick();
+		if (m_hdmi_out_clk.time_to_edge() < mintime)
+			mintime = m_hdmi_out_clk.time_to_edge();
 
-		if (m_hdmi_in_clk.time_to_tick() < mintime)
-			mintime = m_hdmi_in_clk.time_to_tick();
+		if (m_hdmi_in_clk.time_to_edge() < mintime)
+			mintime = m_hdmi_in_clk.time_to_edge();
 
-		if (m_hdmi_in_hsclk.time_to_tick() < mintime)
-			mintime = m_hdmi_in_hsclk.time_to_tick();
+		if (m_hdmi_in_hsclk.time_to_edge() < mintime)
+			mintime = m_hdmi_in_hsclk.time_to_edge();
 
-		if (m_clk_200mhz.time_to_tick() < mintime)
-			mintime = m_clk_200mhz.time_to_tick();
+		if (m_clk_200mhz.time_to_edge() < mintime)
+			mintime = m_clk_200mhz.time_to_edge();
+
+		if (m_net_rx_clk.time_to_edge() < mintime)
+			mintime = m_net_rx_clk.time_to_edge();
 
 		assert(mintime > 1);
 
@@ -128,6 +135,7 @@ public:
 		m_core->i_hdmi_in_clk = m_hdmi_in_clk.advance(mintime);
 		m_core->i_hdmi_in_hsclk = m_hdmi_in_hsclk.advance(mintime);
 		m_core->i_clk_200mhz = m_clk_200mhz.advance(mintime);
+		m_core->i_net_rx_clk = m_net_rx_clk.advance(mintime);
 
 		m_time_ps += mintime;
 
@@ -157,6 +165,10 @@ public:
 			m_changed = true;
 			sim_clk_200mhz_tick();
 		}
+		if (m_net_rx_clk.falling_edge()) {
+			m_changed = true;
+			sim_net_rx_clk_tick();
+		}
 	}
 
 	virtual	void	sim_clk_tick(void) {
@@ -184,6 +196,12 @@ public:
 			m_changed = false;
 		}
 	virtual	void	sim_clk_200mhz_tick(void) {
+			// Your test fixture should over-ride this method.
+			// If you change any of the inputs to the design
+			// (i.e. w/in main.v), then set m_changed to true.
+			m_changed = false;
+		}
+	virtual	void	sim_net_rx_clk_tick(void) {
 			// Your test fixture should over-ride this method.
 			// If you change any of the inputs to the design
 			// (i.e. w/in main.v), then set m_changed to true.

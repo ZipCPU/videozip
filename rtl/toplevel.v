@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2018, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -73,10 +73,10 @@ module	toplevel(i_clk,
 		o_hdmi_out_p, o_hdmi_out_n,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
-		// UART/host to wishbone interface
-		i_wbu_uart_rx, o_wbu_uart_tx,
 		// Top level Quad-SPI I/O ports
 		o_qspi_cs_n, io_qspi_dat,
+		// UART/host to wishbone interface
+		i_wbu_uart_rx, o_wbu_uart_tx,
 		o_unused_fan_pwm,
 		// HDMI input clock, and then data
 		i_hdmi_in_clk_n, i_hdmi_in_clk_p,
@@ -84,6 +84,16 @@ module	toplevel(i_clk,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
+		// GPIO wires
+		io_hdmi_in_cec,
+		o_hdmi_in_hpa,	// Hotplug assert
+		o_hdmi_in_txen,
+		io_hdmi_out_cec,
+		i_hdmi_out_hpd_n, // Hotplug detect
+		o_sd_reset, i_sd_cd,
+		i_gps_3df,
+		// The PMic3 microphone wires
+		o_mic_csn, o_mic_sck, i_mic_din,
 		// Ethernet control (packets) lines
 		o_net_reset_n,
 		// eth_int_b	// Interrupt, leave floating
@@ -96,16 +106,6 @@ module	toplevel(i_clk,
 		io_hdmi_in_scl, io_hdmi_in_sda,
 		// The PS/2 Mouse
 		io_ps2_clk, io_ps2_data,
-		// GPIO wires
-		io_hdmi_in_cec,
-		o_hdmi_in_hpa,	// Hotplug assert
-		o_hdmi_in_txen,
-		io_hdmi_out_cec,
-		i_hdmi_out_hpd_n, // Hotplug detect
-		o_sd_reset, i_sd_cd,
-		i_gps_3df,
-		// The PMic3 microphone wires
-		o_mic_csn, o_mic_sck, i_mic_din,
 		// Toplevel ethernet MDIO ports
 		o_eth_mdclk, io_eth_mdio);
 	//
@@ -145,11 +145,11 @@ module	toplevel(i_clk,
 	output	[2:0]	o_hdmi_out_p, o_hdmi_out_n;
 	input	wire		i_gpsu_rx;
 	output	wire		o_gpsu_tx;
-	input	wire		i_wbu_uart_rx;
-	output	wire		o_wbu_uart_tx;
 	// Quad SPI flash
 	output	wire		o_qspi_cs_n;
 	inout	wire	[3:0]	io_qspi_dat;
+	input	wire		i_wbu_uart_rx;
+	output	wire		o_wbu_uart_tx;
 	inout	wire	o_unused_fan_pwm;
 	// HDMI input clock
 	input	wire	i_hdmi_in_clk_n, i_hdmi_in_clk_p;
@@ -158,6 +158,17 @@ module	toplevel(i_clk,
 	output	wire		o_oled_sck, o_oled_mosi,
 				o_oled_dcn, o_oled_reset_n, o_oled_panel_en,
 				o_oled_logic_en;
+	// GPIO wires
+	inout	wire	io_hdmi_in_cec;
+	output	wire	o_hdmi_in_hpa;
+	output	wire	o_hdmi_in_txen;
+	inout	wire	io_hdmi_out_cec;
+	input	wire	i_hdmi_out_hpd_n;
+	input	wire	i_sd_cd;
+	output	wire	o_sd_reset;
+	input	wire	i_gps_3df;
+	output	wire		o_mic_csn, o_mic_sck;
+	input	wire		i_mic_din;
 	output	wire		o_net_reset_n;
 	input	wire		i_net_rx_clk, i_net_rx_ctl;
 	input	wire	[3:0]	i_net_rxd;
@@ -170,17 +181,6 @@ module	toplevel(i_clk,
 	// HDMI input EDID I2C ports
 	inout	wire	io_hdmi_in_scl, io_hdmi_in_sda;
 	inout	wire	io_ps2_clk, io_ps2_data;
-	// GPIO wires
-	inout	wire	io_hdmi_in_cec;
-	output	wire	o_hdmi_in_hpa;
-	output	wire	o_hdmi_in_txen;
-	inout	wire	io_hdmi_out_cec;
-	input	wire	i_hdmi_out_hpd_n;
-	input	wire	i_sd_cd;
-	output	wire	o_sd_reset;
-	input	wire	i_gps_3df;
-	output	wire		o_mic_csn, o_mic_sck;
-	input	wire		i_mic_din;
 	// Ethernet control (MDIO)
 	output	wire		o_eth_mdclk, io_eth_mdio;
 
@@ -230,18 +230,18 @@ module	toplevel(i_clk,
 	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback;
 	wire		w_hdmi_in_pll_locked;
-	wire	[7:0]		w_net_rxd, w_net_txd;
-	// HDMI command I2C wires, to support the EDID protocol
-	// These are used to determine if the bus wires are to be set to zero
-	// or not
-	wire		w_hdmi_in_scl, w_hdmi_in_sda;
-	wire	[1:0]	w_ps2;
 	// GPIO declarations.  The two wire busses are just virtual lists of
 	// input (or output) ports.
 	wire	[15:0]	i_gpio, o_gpio;
 	wire		w_hdmi_out_en;
 	wire		w_hdmi_bypass_sda;
 	wire		w_hdmi_bypass_scl;
+	wire	[7:0]		w_net_rxd, w_net_txd;
+	// HDMI command I2C wires, to support the EDID protocol
+	// These are used to determine if the bus wires are to be set to zero
+	// or not
+	wire		w_hdmi_in_scl, w_hdmi_in_sda;
+	wire	[1:0]	w_ps2;
 	// Ethernet control (MDIO)
 	wire		w_mdio, w_mdwe;
 
@@ -277,12 +277,14 @@ module	toplevel(i_clk,
 		w_hdmi_out_logic_clk,
 		// HDMI output pixels, set within the main module
 		w_hdmi_out_r, w_hdmi_out_g, w_hdmi_out_b,
+ 		// Reset wire for the ZipCPU
+ 		s_reset,
 		// The GPS-UART
 		i_gpsu_rx, o_gpsu_tx,
-		// UART/host to wishbone interface
-		i_wbu_uart_rx, o_wbu_uart_tx,
 		// Quad SPI flash
 		w_qspi_cs_n, w_qspi_sck, qspi_dat, io_qspi_dat, qspi_bmod,
+		// UART/host to wishbone interface
+		i_wbu_uart_rx, o_wbu_uart_tx,
 		// Clock Generator ports
 		s_genclk_clk,
 		w_genclk_pll_locked,
@@ -298,8 +300,10 @@ module	toplevel(i_clk,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
- 		// Reset wire for the ZipCPU
- 		s_reset,
+		// GPIO wires
+		i_gpio, o_gpio,
+		// The PMic3 microphone wires
+		o_mic_csn, o_mic_sck, i_mic_din,
 		o_net_reset_n,
 		i_net_rx_clk, i_net_rx_ctl, w_net_rxd,
 		i_net_rx_clk, o_net_tx_ctl, w_net_txd,
@@ -309,10 +313,6 @@ module	toplevel(i_clk,
 		io_hdmi_in_scl, io_hdmi_in_sda, w_hdmi_in_scl, w_hdmi_in_sda,
 		// The PS/2 Mouse
 		{ io_ps2_clk, io_ps2_data }, w_ps2,
-		// GPIO wires
-		i_gpio, o_gpio,
-		// The PMic3 microphone wires
-		o_mic_csn, o_mic_sck, i_mic_din,
 		o_eth_mdclk, w_mdio, w_mdwe, io_eth_mdio);
 
 
@@ -558,6 +558,20 @@ module	toplevel(i_clk,
 
 
 
+	assign	i_gpio = { 10'h0,
+			w_hdmi_in_pll_locked,
+			sysclk_locked, i_gps_3df,
+			!i_hdmi_out_hpd_n, i_sd_cd,
+			io_hdmi_out_cec, io_hdmi_in_cec };
+	assign	io_hdmi_in_cec  = o_gpio[0] ? 1'bz : 1'b0;
+	assign	io_hdmi_out_cec = o_gpio[1] ? 1'bz : 1'b0;
+	assign	w_hdmi_bypass_scl=o_gpio[2];
+	assign	w_hdmi_bypass_sda=o_gpio[3];
+	assign	o_hdmi_in_txen  = o_gpio[4];
+	assign	o_hdmi_in_hpa   = o_gpio[5];	// Hotplug assert
+	assign	o_sd_reset      = o_gpio[6];
+	assign	w_hdmi_out_en   = o_gpio[7];
+
 	assign	o_net_tx_clk = i_net_rx_clk;
 
 	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
@@ -585,20 +599,6 @@ module	toplevel(i_clk,
 	// with a high impedence state if not used.
 	assign	io_ps2_clk  = (w_ps2[1])? 1'bz:1'b0;
 	assign	io_ps2_data = (w_ps2[0])? 1'bz:1'b0;
-
-	assign	i_gpio = { 10'h0,
-			w_hdmi_in_pll_locked,
-			sysclk_locked, i_gps_3df,
-			!i_hdmi_out_hpd_n, i_sd_cd,
-			io_hdmi_out_cec, io_hdmi_in_cec };
-	assign	io_hdmi_in_cec  = o_gpio[0] ? 1'bz : 1'b0;
-	assign	io_hdmi_out_cec = o_gpio[1] ? 1'bz : 1'b0;
-	assign	w_hdmi_bypass_scl=o_gpio[2];
-	assign	w_hdmi_bypass_sda=o_gpio[3];
-	assign	o_hdmi_in_txen  = o_gpio[4];
-	assign	o_hdmi_in_hpa   = o_gpio[5];	// Hotplug assert
-	assign	o_sd_reset      = o_gpio[6];
-	assign	w_hdmi_out_en   = o_gpio[7];
 
 	assign	io_eth_mdio = (w_mdwe)?w_mdio : 1'bz;
 
