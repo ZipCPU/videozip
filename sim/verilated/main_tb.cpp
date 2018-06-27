@@ -120,6 +120,7 @@
 
 #define	cpu_break 	VVAR(_swic__DOT__cpu_break)
 #define	cpu_cmd_halt	VVAR(_swic__DOT__cmd_halt)
+#define	cpu_pf_pc	CPUVAR(_pf_pc)
 #define	cpu_ipc		CPUVAR(_ipc)
 #define	cpu_upc		CPUVAR(_SET_USER_PC__DOT__r_upc)
 #define	cpu_gie		CPUVAR(_SET_GIE__DOT__r_gie)
@@ -233,8 +234,7 @@ public:
 		//
 // Looking for string: SIM.SETRESET
 		m_core->i_cpu_reset = 1;
-		m_core->i_clk = 1;
-		m_core->eval();
+		TESTB<Vmain>::reset();
 		// SIM.CLRRESET
 		// If your simulation component needs logic following the
 		// reset tick, that logic can be placed into the
@@ -674,6 +674,10 @@ public:
 
 			load(secp->m_start, secp->m_data, secp->m_len);
 		} free(secpp);
+
+		m_core->cpu_ipc = entry;
+		m_core->cpu_pf_pc   = entry;
+		m_core->cpu_new_pc = 1;
 	}
 
 

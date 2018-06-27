@@ -331,11 +331,11 @@ int main(int argc, char **argv) {
 		} else {
 			printf("The CPU should be fully loaded, you may now\n");
 			printf("start it (from reset/reboot) with:\n");
-			printf("> wbregs cpu 0x40\n");
+			printf("> wbregs cpu 0x0f\n");
 			printf("\n");
 		}
 	} catch(BUSERR a) {
-		fprintf(stderr, "ARTY-BUS error: %08x\n", a.addr);
+		fprintf(stderr, "VIDEOZIP-BUS error: %08x\n", a.addr);
 		exit(-2);
 	}
 
