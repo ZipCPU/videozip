@@ -1,3 +1,0 @@
-read_verilog -D ADDEPREAMBL -formal ../../rtl/ethernet/addepreamble.v
-prep -top addepreamble -nordff
-write_smt2 -wires addepreamble.smt2

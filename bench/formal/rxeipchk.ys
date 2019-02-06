@@ -1,3 +1,0 @@
-read_verilog -D RXEIPCHK -formal ../../rtl/ethernet/rxeipchk.v
-prep -top rxeipchk -nordff
-write_smt2 -wires rxeipchk.smt2

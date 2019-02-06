@@ -1,3 +1,0 @@
-read_verilog -D RXEPREAMBL -formal ../../rtl/ethernet/rxepreambl.v
-prep -top rxepreambl -nordff
-write_smt2 -wires rxepreambl.smt2

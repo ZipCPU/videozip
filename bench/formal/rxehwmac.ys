@@ -1,3 +1,0 @@
-read_verilog -D RXEHWMAC -formal ../../rtl/ethernet/rxehwmac.v
-prep -top rxehwmac -nordff
-write_smt2 -wires rxehwmac.smt2

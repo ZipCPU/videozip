@@ -1,0 +1,15 @@
+[options]
+mode prove
+depth 17
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D RXEIPCHK rxeipchk.v
+prep -top rxeipchk
+
+[files]
+../../rtl/ethernet/rxeipchk.v
+
+

@@ -1,3 +1,0 @@
-read_verilog -D ADDEPAD -formal ../../rtl/ethernet/addepad.v
-prep -top addepad -nordff
-write_smt2 -wires addepad.smt2

@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 4
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D RXEPREAMBL rxepreambl.v
+prep -top rxepreambl
+
+[files]
+../../rtl/ethernet/rxepreambl.v

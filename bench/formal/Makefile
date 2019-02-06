@@ -15,7 +15,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -64,129 +64,59 @@ RXPRE  := rxepreambl
 RXIPK  := rxeipchk
 RXWRT  := rxewrite
 
-$(TXCRC).smt2: $(NETRTL)/$(TXCRC).v $(TXCRC).ys
-	yosys -ql $(TXCRC).yslog -s $(TXCRC).ys
+.PHONY: $(TXCRC)
+$(TXCRC): $(TXCRC)/PASS
+$(TXCRC)/PASS: $(TXCRC).sby $(NETRTL)/$(TXCRC).v
+	sby -f $(TXCRC).sby
 
-$(TXMAC).smt2: $(NETRTL)/$(TXMAC).v $(TXMAC).ys
-	yosys -ql $(TXMAC).yslog -s $(TXMAC).ys
+.PHONY: $(TXMAC)
+$(TXMAC): $(TXMAC)/PASS
+$(TXMAC)/PASS: $(TXMAC).sby $(NETRTL)/$(TXMAC).v
+	sby -f $(TXMAC).sby
 
-$(TXPAD).smt2: $(NETRTL)/$(TXPAD).v $(TXPAD).ys
-	yosys -ql $(TXPAD).yslog -s $(TXPAD).ys
+.PHONY: $(TXPAD)
+$(TXPAD): $(TXPAD)/PASS
+$(TXPAD)/PASS: $(TXPAD).sby $(NETRTL)/$(TXPAD).v
+	sby -f $(TXPAD).sby
 
-$(TXPRE).smt2: $(NETRTL)/$(TXPRE).v $(TXPRE).ys
-	yosys -ql $(TXPRE).yslog -s $(TXPRE).ys
+.PHONY: $(TXPRE)
+$(TXPAD): $(TXPRE)/PASS
+$(TXPRE)/PASS: $(TXPRE).sby $(NETRTL)/$(TXPRE).v
+	sby -f $(TXPRE).sby
 
-$(RXCRC).smt2: $(NETRTL)/$(RXCRC).v $(RXCRC).ys
-	yosys -ql $(RXCRC).yslog -s $(RXCRC).ys
+.PHONY: $(RXCRC)
+$(RXCRC): $(RXCRC)/PASS
+$(RXCRC)/PASS: $(RXCRC).sby $(NETRTL)/$(RXCRC).v
+	sby -f $(RXCRC).sby
 
-$(RXMAC).smt2: $(NETRTL)/$(RXMAC).v $(RXMAC).ys
-	yosys -ql $(RXMAC).yslog -s $(RXMAC).ys
+.PHONY: $(RXMAC)
+$(RXMAC): $(RXMAC)/PASS
+$(RXMAC)/PASS: $(RXMAC).sby $(NETRTL)/$(RXMAC).v
+	sby -f $(RXMAC).sby
 
-$(RXPRE).smt2: $(NETRTL)/$(RXPRE).v $(RXPRE).ys
-	yosys -ql $(RXPRE).yslog -s $(RXPRE).ys
+.PHONY: $(RXPRE)
+$(RXPRE): $(RXPRE)/PASS
+$(RXPRE)/PASS: $(RXPRE).sby $(NETRTL)/$(RXPRE).v
+	sby -f $(RXPRE).sby
 
-$(RXPAD).smt2: $(NETRTL)/$(RXPAD).v $(RXPAD).ys
-	yosys -ql $(RXPAD).yslog -s $(RXPAD).ys
+.PHONY: $(RXPAD)
+$(RXPAD): $(RXPAD)/PASS
+$(RXPAD)/PASS: $(RXPAD).sby $(NETRTL)/$(RXPAD).v
+	sby -f $(RXPAD).sby
 
-$(RXIPK).smt2: $(NETRTL)/$(RXIPK).v $(RXIPK).ys
-	yosys -ql $(RXIPK).yslog -s $(RXIPK).ys
+.PHONY: $(RXIPK)
+$(RXIPK): $(RXIPK)/PASS
+$(RXIPK)/PASS: $(RXIPK).sby $(NETRTL)/$(RXIPK).v
+	sby -f $(RXIPK).sby
 
-$(RXWRT).smt2: $(NETRTL)/$(RXWRT).v $(RXWRT).ys
-	yosys -ql $(RXWRT).yslog -s $(RXWRT).ys
-
-
-$(TXCRC) : $(TXCRC).check
-$(TXCRC).check: $(TXCRC).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 60 --dump-vcd $(TXCRC).vcd $(TXCRC).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 60 --dump-vcd $(TXCRC).vcd $(TXCRC).smt2
-	$(SMTBMC)    $(INDARGS) -t 58 --dump-vcd $(TXCRC).vcd $(TXCRC).smt2
-	touch $@
-
-
-$(TXPAD) : $(TXPAD).check
-$(TXPAD).check: $(TXPAD).smt2
-	@rm -f $@
-	$(SMTBMC) $(BMCARGS) -t 80 --dump-vcd $(TXPAD).vcd $(TXPAD).smt2
-	$(SMTBMC) $(INDARGS) -t 58 --dump-vcd $(TXPAD).vcd $(TXPAD).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 40 --dump-vcd $(TXPAD).vcd $(TXPAD).smt2
-	touch $@
-
-$(TXPRE) : $(TXPRE).check
-$(TXPRE).check: $(TXPRE).smt2
-	@rm -f $@
-	$(SMTBMC) $(BMCARGS) -t 80 --dump-vcd $(TXPRE).vcd $(TXPRE).smt2
-	$(SMTBMC) $(INDARGS) -t 76 --dump-vcd $(TXPRE).vcd $(TXPRE).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 80 --dump-vcd $(TXPRE).vcd $(TXPRE).smt2
-	touch $@
-
-
-$(TXMAC) : $(TXMAC).check
-$(TXMAC).check: $(TXMAC).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 48 --dump-vcd $(TXMAC).vcd $(TXMAC).smt2
-	$(SMTBMC)    $(INDARGS) -t 48 --dump-vcd $(TXMAC).vcd $(TXMAC).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 46 --dump-vcd $(TXMAC).vcd $(TXMAC).smt2
-	touch $@
-
-$(RXCRC) : $(RXCRC).check
-$(RXCRC).check: $(RXCRC).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 20 --dump-vcd $(RXCRC).vcd $(RXCRC).smt2
-	$(SMTBMC)    $(INDARGS) -t 16 --dump-vcd $(RXCRC).vcd $(RXCRC).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 20 --dump-vcd $(RXCRC).vcd $(RXCRC).smt2
-	touch $@
-
-$(RXMAC) : $(RXMAC).check
-$(RXMAC).check: $(RXMAC).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 20 --dump-vcd $(RXMAC).vcd $(RXMAC).smt2
-	$(SMTBMC)    $(INDARGS) -t 16 --dump-vcd $(RXMAC).vcd $(RXMAC).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 20 --dump-vcd $(RXMAC).vcd $(RXMAC).smt2
-	touch $@
-
-$(RXPAD) : $(RXPAD).check
-$(RXPAD).check: $(RXPAD).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXPAD).vcd $(RXPAD).smt2
-	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXPAD).vcd $(RXPAD).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 40 --dump-vcd $(RXPAD).vcd $(RXPAD).smt2
-	touch $@
-
-$(RXPRE) : $(RXPRE).check
-$(RXPRE).check: $(RXPRE).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXPRE).vcd $(RXPRE).smt2
-	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXPRE).vcd $(RXPRE).smt2
-	$(SMTBMC) -g $(BMCARGS) -t 40 --dump-vcd $(RXPRE).vcd $(RXPRE).smt2
-	touch $@
-
-$(RXIPK) : $(RXIPK).check
-$(RXIPK).check: $(RXIPK).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXIPK).vcd $(RXIPK).smt2
-	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXIPK).vcd $(RXIPK).smt2
-	$(SMTBMC) -c $(BMCARGS) -t 40 --dump-vcd $(RXIPK)%.vcd $(RXIPK).smt2
-	touch $@
-
-$(RXWRT) : $(RXWRT).check
-$(RXWRT).check: $(RXWRT).smt2
-	@rm -f $@
-	$(SMTBMC)    $(BMCARGS) -t 40 --dump-vcd $(RXWRT).vcd $(RXWRT).smt2
-	$(SMTBMC)    $(INDARGS) -t 36 --dump-vcd $(RXWRT).vcd $(RXWRT).smt2
-	$(SMTBMC) -c $(BMCARGS) -t 40 --dump-vcd $(RXWRT)%.vcd $(RXWRT).smt2
-	touch $@
+.PHONY: $(RXWRT)
+$(RXWRT): $(RXWRT)/PASS
+$(RXWRT)/PASS: $(RXWRT).sby $(NETRTL)/$(RXWRT).v
+	sby -f $(RXWRT).sby
 
 .PHONY: clean
 clean:
-	rm -f $(TXCRC).smt2 $(TXCRC)*.vcd $(TXCRC).yslog
-	rm -f $(TXPRE).smt2 $(TXPRE)*.vcd $(TXPRE).yslog
-	rm -f $(TXPAD).smt2 $(TXPAD)*.vcd $(TXPAD).yslog
-	rm -f $(TXMAC).smt2 $(TXMAC)*.vcd $(TXMAC).yslog
-	rm -f $(RXCRC).smt2 $(RXCRC)*.vcd $(RXCRC).yslog
-	rm -f $(RXPRE).smt2 $(RXPRE)*.vcd $(RXPRE).yslog
-	rm -f $(RXPAD).smt2 $(RXPAD)*.vcd $(RXPAD).yslog
-	rm -f $(RXMAC).smt2 $(RXMAC)*.vcd $(RXMAC).yslog
-	rm -f $(RXIPK).smt2 $(RXIPK)*.vcd $(RXIPK).yslog
-	rm -f $(RXWRT).smt2 $(RXWRT)*.vcd $(RXWRT).yslog
-	rm -f *.check
+	rm -rf $(TXCRC)/ $(TXPRE)/ $(TXPAD)/ $(TXMAC)/
+	rm -rf $(RXCRC)/ $(RXPRE)/ $(RXPAD)/ $(RXMAC)/
+	rm -rf $(RXIPK)/ $(RXWRT)/
+	rm -rf *.check

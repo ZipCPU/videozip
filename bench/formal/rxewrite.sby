@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 4
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D RXEWRITE rxewrite.v
+prep -top rxewrite
+
+[files]
+../../rtl/ethernet/rxewrite.v

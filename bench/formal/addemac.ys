@@ -1,3 +1,0 @@
-read_verilog -D ADDEMAC -formal ../../rtl/ethernet/addemac.v
-prep -top addemac -nordff
-write_smt2 -wires addemac.smt2

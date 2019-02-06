@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 6
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D ADDECRC addecrc.v
+prep -top addecrc
+
+[files]
+../../rtl/ethernet/addecrc.v
+

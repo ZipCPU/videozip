@@ -1,3 +1,0 @@
-read_verilog -D RXEMIN -formal ../../rtl/ethernet/rxemin.v
-prep -top rxemin -nordff
-write_smt2 -wires rxemin.smt2

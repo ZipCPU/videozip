@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 5
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D ADDEPAD addepad.v
+prep -top addepad
+
+[files]
+../../rtl/ethernet/addepad.v

@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 12
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D RXEHWMAC rxehwmac.v
+prep -top rxehwmac
+
+[files]
+../../rtl/ethernet/rxehwmac.v

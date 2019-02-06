@@ -1,3 +1,0 @@
-read_verilog -D ADDECRC -formal ../../rtl/ethernet/addecrc.v
-prep -top addecrc -nordff
-write_smt2 -wires addecrc.smt2

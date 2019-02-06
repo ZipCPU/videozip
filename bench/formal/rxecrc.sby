@@ -1,0 +1,13 @@
+[options]
+mode prove
+depth 5
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D RXECRC rxecrc.v
+prep -top rxecrc
+
+[files]
+../../rtl/ethernet/rxecrc.v

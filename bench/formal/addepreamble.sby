@@ -1,0 +1,14 @@
+[options]
+mode prove
+depth 12
+
+[engines]
+smtbmc
+
+[script]
+read -formal -D ADDEPREAMBL addepreamble.v
+prep -top addepreamble
+
+[files]
+../../rtl/ethernet/addepreamble.v
+
