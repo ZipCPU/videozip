@@ -1,0 +1,51 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 03:41:53 2019
+[*]
+[dumpfile] "(null)"
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/addemac.gtkw"
+[timestart] 66
+[size] 1920 1054
+[pos] -1 -1
+*-3.909014 40 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 142
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@28
+addemac.f_past_valid
+addemac.i_reset
+@22
+addemac.i_hw_mac[47:0]
+@28
+addemac.i_en
+addemac.i_clk
+addemac.i_ce
+@200
+-
+@28
+[color] 3
+addemac.i_v
+@22
+[color] 3
+addemac.i_byte[7:0]
+@200
+-
+@29
+[color] 2
+addemac.o_v
+@22
+[color] 2
+addemac.o_byte[7:0]
+@200
+-
+@28
+addemac.f_v
+@22
+addemac.f_d[55:0]
+addemac.r_buf[53:0]
+addemac.r_hw[47:0]
+addemac.f_cnt[3:0]
+addemac.r_pos[4:0]
+[pattern_trace] 1
+[pattern_trace] 0

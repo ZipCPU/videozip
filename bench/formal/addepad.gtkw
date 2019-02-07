@@ -1,0 +1,43 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 02:29:20 2019
+[*]
+[dumpfile] "(null)"
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/addepad.gtkw"
+[timestart] 0
+[size] 1920 1054
+[pos] -1 -1
+*-4.167326 110 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 126
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@28
+addepad.f_past_valid
+addepad.i_reset
+addepad.i_ce
+addepad.i_clk
+@200
+-
+@28
+[color] 3
+addepad.i_v
+@22
+[color] 3
+addepad.i_d[7:0]
+@29
+[color] 2
+addepad.o_v
+@23
+[color] 2
+addepad.o_d[7:0]
+@200
+-
+@28
+addepad.f_v
+@22
+addepad.f_d[7:0]
+addepad.f_count[5:0]
+addepad.r_ncnt[5:0]
+[pattern_trace] 1
+[pattern_trace] 0

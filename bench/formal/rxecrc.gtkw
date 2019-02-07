@@ -1,0 +1,64 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 21:15:38 2019
+[*]
+[dumpfile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/rxecrc_cvr/engine_0/trace0.vcd"
+[dumpfile_mtime] "Thu Feb  7 21:13:59 2019"
+[dumpfile_size] 7246
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/rxecrc.gtkw"
+[timestart] 0
+[size] 1681 1053
+[pos] -1 -1
+*-4.576438 70 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 166
+[sst_expanded] 1
+[sst_vpaned_height] 313
+@28
+rxecrc.f_past_valid
+rxecrc.i_reset
+rxecrc.i_en
+rxecrc.i_clk
+rxecrc.i_ce
+@200
+-
+@28
+[color] 3
+rxecrc.i_v
+@22
+[color] 3
+rxecrc.i_d[7:0]
+@200
+-
+@28
+[color] 2
+rxecrc.o_v
+@22
+[color] 2
+rxecrc.o_d[7:0]
+@28
+[color] 2
+rxecrc.o_err
+@200
+-
+@22
+rxecrc.r_crc[31:0]
+rxecrc.f_crc[31:0]
+@200
+-
+@22
+rxecrc.r_buf[26:0]
+rxecrc.r_crc_q0[23:0]
+rxecrc.r_crc_q1[15:0]
+rxecrc.r_crc_q2[7:0]
+@28
+rxecrc.r_err
+@22
+rxecrc.r_mp[3:0]
+@28
+rxecrc.r_mq[2:0]
+@22
+rxecrc.shifted_crc[23:0]
+rxecrc.lowoctet[7:0]
+[pattern_trace] 1
+[pattern_trace] 0

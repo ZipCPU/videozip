@@ -23,7 +23,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2018, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -47,10 +47,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-module	rxewrite(i_clk, i_reset, i_v, i_d, o_v, o_addr, o_data, o_len);
+`default_nettype	none
+//
+module	rxewrite(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_addr, o_data, o_len);
 	parameter	AW = 12;
 	localparam	DW = 32;
-	input	wire			i_clk, i_reset;
+	input	wire			i_clk, i_reset, i_ce;
 	input	wire			i_v;
 	input	wire	[7:0]		i_d;
 	output	reg			o_v;
@@ -71,54 +73,79 @@ module	rxewrite(i_clk, i_reset, i_v, i_d, o_v, o_addr, o_data, o_len);
 		lcl_addr <= 0;
 		o_data   <= 0;
 		o_addr   <= 0;
-	end else if ((!i_v)&&(!o_v))
+	end else if (i_ce)
 	begin
-		o_v      <= 0;
-		lcl_addr <= 0;
-		o_data   <= 0;
-		o_addr   <= 0;
-	end else begin
-		lcl_addr <= lcl_addr + 1'b1;
-		o_v <= i_v;
-		case(lcl_addr[1:0])
-		2'b00: o_data <= { i_d, 24'h00 };
-		2'b01: o_data <= { o_data[31:24], i_d, 16'h00 };
-		2'b10: o_data <= { o_data[31:16], i_d, 8'h00 };
-		2'b11: o_data <= { o_data[31: 8], i_d };
-		endcase
-		o_addr <= lcl_addr[(AW+1):2];
+		if ((!i_v)&&(!o_v))
+		begin
+			o_v      <= 0;
+			lcl_addr <= 0;
+			o_data   <= 0;
+			o_addr   <= 0;
+		end else begin
+			lcl_addr <= lcl_addr + 1'b1;
+			o_v <= i_v;
+			case(lcl_addr[1:0])
+			2'b00: o_data <= { i_d, 24'h00 };
+			2'b01: o_data <= { o_data[31:24], i_d, 16'h00 };
+			2'b10: o_data <= { o_data[31:16], i_d, 8'h00 };
+			2'b11: o_data <= { o_data[31: 8], i_d };
+			endcase
+			o_addr <= lcl_addr[(AW+1):2];
+		end
 	end
 
 	assign	o_len  = lcl_addr[(AW+1):0];
 
 
 `ifdef	FORMAL
+	reg	[31:0]	f_d;
+	reg	[3:0]	f_v;
 
 	reg	f_past_valid;
 	initial	f_past_valid = 1'b0;
 	always @(posedge i_clk)
 		f_past_valid <= 1'b1;
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming assumptions
+	//
 	initial	assume(i_reset);
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(f_past_valid))
-		&&(!$past(i_v))&&($past(i_v,1)))
-		assume(!$past(i_v));
+	if (!$past(i_ce))
+		assume(i_ce);
 
-
-	always @(*)
-	if (!f_past_valid)
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!f_v[0])&&(f_v[1]))
 		assume(!i_v);
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(i_reset)))
+	if (!$past(i_ce))
+		assume($stable(i_v) && $stable(i_d));
+
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
 		assume(!i_v);
 
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Safety (assertion) properties
+	//
+	always @(posedge i_clk)
+	if (i_ce)
+		f_d <= { f_d[23:0], i_d };
+	initial	f_v = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_v <= 0;
+	else if (i_ce)
+		f_v <= { f_v[2:0], i_v };
 
 	always @(posedge i_clk)
 	if ((!f_past_valid)||($past(i_reset))
-		||((!$past(i_v)) && (!$past(o_v)) ))
+		||($past(i_ce && !i_v && !o_v)) )
 	begin
 		assert(o_v      == 0);
 		assert(lcl_addr == 0);
@@ -128,22 +155,29 @@ module	rxewrite(i_clk, i_reset, i_v, i_d, o_v, o_addr, o_data, o_len);
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_reset)))
-		assert(o_v == $past(i_v));
+		assert(o_v == f_v[0]);
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(i_v))&&(!$past(i_reset)))
+	if ((f_past_valid)&&($past(!i_reset && i_v && i_ce)))
 	begin
 		assert(o_v);
 		case(lcl_addr[1:0])
-		2'b01: assert((o_data[31:24]==$past(i_d))&&(o_data[23:0]==0));
-		2'b10: assert((o_data[23:16]==$past(i_d))&&(o_data[15:0]==0));
-		2'b11: assert((o_data[15: 8]==$past(i_d))&&(o_data[ 7:0]==0));
-		2'b00: assert( o_data[ 7: 0]==$past(i_d));
+		2'b01: assert((o_data[31:24]==f_d[ 7:0])&&(o_data[23:0]==0));
+		2'b10: assert((o_data[31:16]==f_d[15:0])&&(o_data[15:0]==0));
+		2'b11: assert((o_data[31: 8]==f_d[23:0])&&(o_data[ 7:0]==0));
+		2'b00: assert( o_data[31: 0]==f_d[31:0]);
 		endcase
-	end
+	end else if (o_v)
+		assert($stable(lcl_addr) && $stable(o_data) && $stable(o_addr));
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover properties
+	//
 	always @(posedge i_clk)
 		cover(o_v&&(!i_v));
+	always @(posedge i_clk)
+		cover(o_v && lcl_addr == 0 && o_addr == 10);
 `endif
 endmodule
 

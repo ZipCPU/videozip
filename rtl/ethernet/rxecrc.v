@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -39,17 +39,17 @@
 //
 `default_nettype	none
 //
-module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
+module	rxecrc(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d, o_err);
 	localparam [31:0]	TAPS = 32'hedb88320;
 	localparam	[0:0]	INVERT = 1'b1;
-	input	wire		i_clk, i_reset, i_en;
+	input	wire		i_clk, i_reset, i_ce, i_en;
 	input	wire		i_v;
 	input	wire	[7:0]	i_d;
 	output	reg		o_v;
 	output	reg	[7:0]	o_d;
 	output	wire		o_err;
 
-	reg	r_err;
+	reg		r_err;
 	reg	[2:0]	r_mq; // Partial CRC matches
 	reg	[3:0]	r_mp; // Prior CRC matches
 
@@ -99,51 +99,28 @@ module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
 	wire	[31:0]	shifted_crc;
 	assign	shifted_crc = { 8'h0, r_crc[31:8] };
 
+	initial	r_crc = (INVERT==0)? 32'h00 : 32'hffffffff;
+	always @(posedge i_clk)
+	if (i_reset)
+		r_crc <= (INVERT==0)? 32'h00 : 32'hffffffff;
+	else if (i_ce)
+	begin
+		if ((!i_v)&&(!o_v))
+			r_crc <= (INVERT==0)? 32'h00 : 32'hffffffff;
+		else if (i_v)
+			/// Calculate the CRC
+			r_crc <= shifted_crc ^ crcvec[lowoctet];
+	end
+
 
 	initial	o_v = 0;
 	initial	o_d = 8'h0;
-	initial	r_crc = (INVERT==0)? 32'h00 : 32'hffffffff;
+	initial	r_buf = 0;
 	always @(posedge i_clk)
 	begin
-
-		r_crc_q0 <= r_crc[31:8];
-		r_crc_q1 <= r_crc_q0[23:8];
-		r_crc_q2 <= r_crc_q1[15:8];
-
-		r_buf <= { r_buf[17:0], i_v, i_d };
-		if (((!i_v)&&(!o_v))||(i_reset))
+		if (i_ce)
 		begin
-			r_crc <= (INVERT==0)? 32'h00 : 32'hffffffff;
-			// r_crc <= 32'hffff_ffff;
-			r_err <= 1'b0;
-
-			r_mq[2:0] <= 3'h0;
-
-			r_mp <= 4'h0;
-
-			r_buf[ 8] <= 1'b0;
-			r_buf[17] <= 1'b0;
-			r_buf[26] <= 1'b0;
-
-			o_v <= 1'b0;
-			o_d <= 0;
-		end else
-		begin
-			/// Calculate the CRC
-			if (i_v)
-				r_crc <= shifted_crc ^ crcvec[lowoctet];
-
-			r_mq[0] <=            (i_v)&&(i_d == ((INVERT)?~r_crc[   7:0]:r_crc[7:0]));
-			r_mq[1] <= (r_mq[0])&&(i_v)&&(i_d == ((INVERT)?~r_crc_q0[7:0]:r_crc_q0[7:0]));
-			r_mq[2] <= (r_mq[1])&&(i_v)&&(i_d == ((INVERT)?~r_crc_q1[7:0]:r_crc_q1[7:0]));
-
-			r_mp <= { r_mp[2:0], 
-				(r_mq[2])&&(i_v)&&(i_d == (~r_crc_q2[7:0])) };
-
-			// Now, we have an error if ...
-			// On the first empty, none of the prior N matches
-			// matched.
-			r_err <= (r_err)||((i_en)&&(!i_v)&&(r_buf[8])&&(r_mp == 4'h0));
+			r_buf <= { r_buf[17:0], i_v, i_d };
 			if ((!i_v)&&(r_buf[8]))
 			begin
 				if (r_mp[3])
@@ -158,23 +135,94 @@ module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
 				end else if (r_mp[1])
 					r_buf[8] <= 1'b0;
 				// else if (r_mp[0]) ... keep everything
+			end else begin
+				o_v <= r_buf[26];
+				o_d <= r_buf[25:18];
 			end
+		end
 
-			o_v <= r_buf[26];
-			o_d <= r_buf[25:18];
+		if (i_reset)
+		begin
+			r_buf[ 8] <= 1'b0;
+			r_buf[17] <= 1'b0;
+			r_buf[26] <= 1'b0;
+
+			o_v <= 0;
+			o_d <= 8'h0;
+		end
+	end
+		
+	initial r_err = 1'b0;
+	initial	r_mq  = 0;
+	initial	r_mp  = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		r_crc_q0 <= 0;
+		r_crc_q1 <= 0;
+		r_crc_q2 <= 0;
+
+		r_err <= 1'b0;
+		r_mq[2:0] <= 3'h0;
+		r_mp <= 4'h0;
+	end else if (i_ce)
+	begin
+		r_crc_q0 <= r_crc[31:8];
+		r_crc_q1 <= r_crc_q0[23:8];
+		r_crc_q2 <= r_crc_q1[15:8];
+
+		if ((!i_v)&&(!o_v))
+		begin
+			r_err <= 1'b0;
+			r_mq[2:0] <= 3'h0;
+			r_mp <= 4'h0;
+		end else
+		begin
+			if (i_v)
+			begin
+				r_mq[0] <=            (i_d == ((INVERT)?~r_crc[   7:0]:r_crc[7:0]));
+				r_mq[1] <= (r_mq[0])&&(i_d == ((INVERT)?~r_crc_q0[7:0]:r_crc_q0[7:0]));
+				r_mq[2] <= (r_mq[1])&&(i_d == ((INVERT)?~r_crc_q1[7:0]:r_crc_q1[7:0]));
+			end else
+				r_mq <= 0;
+
+			r_mp <= { r_mp[2:0], 
+				(r_mq[2])&&(i_v)&&(i_d == (~r_crc_q2[7:0])) };
+
+			// Now, we have an error if ...
+			// On the first empty, none of the prior N matches
+			// matched.
+			r_err <= (r_err)||((i_en)&&(!i_v)&&(r_buf[8])&&(r_mp == 4'h0));
 		end
 	end
 
 	assign o_err = r_err;
 
 
-
+////////////////////////////////////////////////////////////////////////////////
+//
+//
+//
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
-	reg	f_past_valid;
+	reg	[4:0]	f_v;
+	reg		f_past_valid;
+
 	initial	f_past_valid = 0;
 	always @(posedge  i_clk)
 		f_past_valid <= 1'b1;
 
+	initial	f_v = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_v <= 0;
+	else if (i_ce)
+		f_v <= { f_v[3:0], i_v };
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming assumptions
+	//
 	always @(*)
 	if (!f_past_valid)
 		assume(i_reset);
@@ -193,16 +241,6 @@ module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
 		assume(!i_v);
 
 	always @(posedge i_clk)
-	if ((!f_past_valid)||($past(i_reset)))
-	begin
-		// Test initial/reset conditions
-		assert(r_crc == (INVERT==0)? 32'h00 : 32'hffffffff);
-		assert(o_v   == 1'b0);
-		assert(o_d   == 8'h0);
-	end
-
-
-	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_reset))&&((o_v)||(i_v)))
 		assume(i_en == $past(i_en));
 
@@ -213,6 +251,15 @@ module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
 			&&(!$past(i_v)))
 		assume(!i_v);
 
+	always @(posedge i_clk)
+	if (f_v != 0)
+	begin
+		if (!f_v[4])
+			assume(i_v);
+		else if (!f_v[0])
+			assume(!i_v);
+	end
+			
 	//always @(posedge i_clk)
 	//if ((f_past_valid)&&($past(o_v))&&(!$past(i_v))&&(!$past(i_reset)))
 
@@ -224,31 +271,72 @@ module	rxecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d, o_err);
 		assert(o_d == $past(i_d));
 	end
 	*/
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	always @(posedge i_clk)
+	if ((!f_past_valid)||($past(i_reset)))
+	begin
+		// Test initial/reset conditions
+		assert(r_crc == (INVERT==0)? 32'h00 : 32'hffffffff);
+		assert(o_v   == 1'b0);
+		assert(o_d   == 8'h0);
+	end
 
-	reg	[31:0]	pre_crc	[7:0];
+	always @(*)
+	begin
+		assert(!r_buf[ 8] || f_v[0] == r_buf[ 8]);
+		assert(!r_buf[17] || f_v[1] == r_buf[17]);
+		assert(!r_buf[26] || f_v[2] == r_buf[26]);
+
+		if (f_v != 0)
+			assert((f_v == 5'h01)||(f_v == 5'h03)
+				||(f_v == 5'h07)||(f_v == 5'h0f)
+				||(f_v == 5'h1f)||(f_v == 5'h1e)
+				||(f_v == 5'h1c)||(f_v == 5'h18)
+				||(f_v == 5'h10));
+	end
+
+
+
+	reg	[31:0]	f_pre_crc	[7:0];
 	reg	[31:0]	f_crc;
 
 	// Need to verify the CRC
 	always @(*)
 	begin : GEN_PRECRC
 		if (i_d[0] ^ r_crc[0])
-			pre_crc[0] = { 1'b0, r_crc[31:1] } ^ TAPS;
+			f_pre_crc[0] = { 1'b0, r_crc[31:1] } ^ TAPS;
 		else
-			pre_crc[0] = { 1'b0, r_crc[31:1] };
+			f_pre_crc[0] = { 1'b0, r_crc[31:1] };
 
 		for(k=1; k<8; k=k+1)
 		begin
-			if (pre_crc[k-1][0]^i_d[k])
-				pre_crc[k] = { 1'b0, pre_crc[k-1][31:1] } ^ TAPS;
+			if (f_pre_crc[k-1][0]^i_d[k])
+				f_pre_crc[k] = { 1'b0, f_pre_crc[k-1][31:1] } ^ TAPS;
 			else
-				pre_crc[k] = { 1'b0, pre_crc[k-1][31:1] };
+				f_pre_crc[k] = { 1'b0, f_pre_crc[k-1][31:1] };
 		end
 
-		f_crc = pre_crc[7];
+		f_crc = f_pre_crc[7];
 	end
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_v)))
+	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_v && i_ce)))
 		assert(r_crc == $past(f_crc));
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover Properties
+	//
+	always @(posedge i_clk)
+	if ($past(!i_reset && i_en))
+	begin
+		cover(f_past_valid && $fell(o_v) && $past(o_err));
+		cover(f_past_valid && $fell(o_v) && o_err);
+		cover(f_past_valid && $fell(o_v) && $past(!o_err));
+		cover(f_past_valid && $fell(o_v) && !o_err);
+	end
+
 `endif
 endmodule

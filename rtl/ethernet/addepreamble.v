@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2017, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,8 +38,8 @@
 //
 `default_nettype	none
 //
-module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
-	input	wire		i_clk, i_reset, i_en;
+module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
+	input	wire		i_clk, i_reset, i_ce, i_en;
 	input	wire		i_v;	// Valid
 	input	wire	[7:0]	i_d;	// Data Byte
 	output	reg		o_v;
@@ -56,7 +56,7 @@ module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 		shiftreg <= {
 			9'h155, 9'h155, 9'h155, 9'h155,
 			9'h155, 9'h155, 9'h155, 9'h15d };
-	end else begin
+	end else if (i_ce) begin
 		shiftreg <= { shiftreg[62:0], { i_v, i_d }};
 		o_v <= shiftreg[71]&&((o_v)||(i_v));
 		o_d <= shiftreg[70:63];
@@ -80,11 +80,18 @@ module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 	end
 
 `ifdef	FORMAL
-	reg	f_past_valid;
+	reg	[9-1:0]		f_v;
+	reg	[9*8-1:0]	f_d;
+	reg	[3:0]		f_cnt;
+	reg			f_past_valid;
+
 	initial	f_past_valid = 1'b0;
 	always @(posedge  i_clk)
 		f_past_valid <= 1'b1;
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming assumptions
 	always @(*)
 	if (!f_past_valid)
 		assume(i_reset);
@@ -94,8 +101,20 @@ module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 		assume(!i_v);
 
 	always @(posedge i_clk)
+	if (!$past(i_ce))
+		assume(i_ce);
+
+	always @(posedge i_clk)
+	if (!$past(i_ce))
+	begin
+		assume($stable(i_en));
+		assume($stable(i_v));
+		assume($stable(i_d));
+	end
+	
+	always @(posedge i_clk)
 	if ((f_past_valid)&&((i_v)||(o_v))&&(!$past(i_reset)))
-		assume(i_en == $past(i_en));
+		assume($stable(i_en));
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(o_v))&&(!$past(i_v)))
@@ -103,35 +122,51 @@ module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(i_v))
-		assume(i_en == $past(i_en));
-
-	reg	[3:0]	f_cnt;
+		assume($stable(i_en));
 
 	initial	f_cnt = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		f_cnt <= 0;
-	else if (!i_v)
-		f_cnt <= 0;
-	else if (! &f_cnt)
-		f_cnt <= f_cnt + 1'b1;
+	else if (i_ce)
+	begin
+		if (!i_v)
+			f_cnt <= 0;
+		else if (! &f_cnt)
+			f_cnt <= f_cnt + 1'b1;
+	end
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_v))&&(f_cnt < 9))
 		assume(i_v);
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	initial	f_v = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_v <= 0;
+	else if (i_ce)
+		f_v <= { f_v[9-1:0], i_v };
+
+	always @(posedge i_clk)
+	if (i_ce)
+		f_d <= { f_d[8*9-1:0], i_d };
+
 	always @(posedge i_clk)
 	if ((f_past_valid)
 		&&($past(f_past_valid))
 		&&(o_v)&&(f_cnt > 8))
-		assert({ o_v, o_d } == $past({ i_v, i_d }, 9));
+	begin
+		assert(o_v == f_v[8]);
+		assert(o_d == f_d[8*9-1:8*8]);
+ 		// Was { o_v, o_d } == $past({ i_v, i_d }, 9));
+	end
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(f_past_valid))
-			&&(!$past(i_reset  ))&&($past(i_v  ))
-			&&(!$past(i_reset,2))&&($past(i_v,2))
-			&&(i_v)
-			&&(i_en))
+	if (i_en && i_v && (&f_v[1:0]))
 		assert(o_v);
 
 	always @(posedge i_clk)
@@ -146,12 +181,19 @@ module addepreamble(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 	4'h7: assert((o_v)&&(o_d == 8'h55));
 	4'h8: assert((o_v)&&(o_d == 8'h5d));
 	endcase
-	else if ((f_past_valid)&&(f_cnt < 4'h9)&&($past(i_v)))
+	else if ((f_past_valid)&&(f_cnt < 4'h9)&&(f_v[0]))
 		assert(!o_v);
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(o_v)&&(f_cnt >= 9))
-		assert(o_d == $past(i_d,9));
+		assert(o_d == f_d[9*8-1:8*8]);
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover properties
+	//
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset)))
+		cover($fell(o_v));
 `endif
 endmodule

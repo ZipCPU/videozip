@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,6 +38,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
+//
+`default_nettype	none
 //
 module	xoddrb(i_clk, i_v, o_pin);
 	input	wire		i_clk;

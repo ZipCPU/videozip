@@ -1,0 +1,67 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 16:16:50 2019
+[*]
+[dumpfile] "(null)"
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/rxeipchk.gtkw"
+[timestart] 0
+[size] 1920 1054
+[pos] -1 -1
+*-5.732443 100 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 166
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@28
+rxeipchk.f_past_valid
+rxeipchk.i_reset
+rxeipchk.i_en
+rxeipchk.i_clk
+rxeipchk.i_ce
+@200
+-
+@28
+[color] 3
+rxeipchk.i_v
+@22
+[color] 3
+rxeipchk.i_d[7:0]
+@28
+[color] 2
+rxeipchk.o_err
+@200
+-
+@28
+rxeipchk.f_v[2:0]
+@22
+rxeipchk.f_d[23:0]
+@200
+-
+@22
+rxeipchk.f_check[15:0]
+@28
+rxeipchk.f_check_now
+@22
+rxeipchk.f_check_when[7:0]
+rxeipchk.r_check[16:0]
+[color] 3
+rxeipchk.f_bytecount[15:0]
+[color] 3
+rxeipchk.r_cnt[6:0]
+@200
+-
+@28
+[color] 2
+rxeipchk.r_ip
+@22
+[color] 2
+rxeipchk.r_hlen[5:0]
+@200
+-
+@28
+rxeipchk.r_v
+@22
+rxeipchk.r_word[15:0]
+rxeipchk.r_idx[5:0]
+[pattern_trace] 1
+[pattern_trace] 0

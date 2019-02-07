@@ -15,7 +15,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2018, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -41,11 +41,11 @@
 //
 `default_nettype	none
 //
-module addepad(i_clk, i_reset, i_v, i_d, o_v, o_d);
+module addepad(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_d);
 	parameter	MINOCTETS=60;
 	localparam	LGNCOUNT=(MINOCTETS<63)? 6
 				:((MINOCTETS<127)? 7:((MINOCTETS<255)? 8:9));
-	input	wire		i_clk, i_reset;
+	input	wire		i_clk, i_reset, i_ce;
 	input	wire		i_v;	// Valid
 	input	wire	[7:0]	i_d;	// Data nibble
 	output	reg		o_v;
@@ -59,64 +59,94 @@ module addepad(i_clk, i_reset, i_v, i_d, o_v, o_d);
 	begin
 		r_ncnt <= 0;
 		o_v <= 1'b0;
-	end else if (!o_v)
+	end else if (i_ce)
 	begin
-		r_ncnt <= 0;
-		o_v <= i_v;
-	end else if (i_v)
-	begin
-		o_v <= i_v;
-		r_ncnt <= (r_ncnt<MINOCTETS) ? r_ncnt+1'b1 : r_ncnt;
-	end else begin
-		o_v <= (o_v)&&(r_ncnt<MINOCTETS);
-		r_ncnt <= ((o_v)&&(r_ncnt<MINOCTETS)) ? r_ncnt+1'b1 : r_ncnt;
+		o_v <= (i_v)||((o_v)&&(r_ncnt<MINOCTETS-1'b1));
+
+		if (!o_v)
+			r_ncnt <= 0;
+		else if (r_ncnt < MINOCTETS)
+			r_ncnt <= r_ncnt + 1;
 	end
 
 	always @(posedge i_clk)
 	if (i_reset)
 		o_d <= 8'h00;
-	else if (i_v)
-		o_d <= i_d;
-	else
-		o_d <= 8'h00;
+	else if (i_ce)
+	begin
+		if (i_v)
+			o_d <= i_d;
+		else
+			o_d <= 8'h00;
+	end
 
 `ifdef	FORMAL
-	reg	f_past_valid;
+	reg	[LGNCOUNT-1:0]	f_count;
+	reg			f_past_valid, f_v;
+	reg	[7:0]		f_d;
 
 	initial	f_past_valid = 1'b0;
 	always @(posedge i_clk)
 		f_past_valid <= 1'b1;
 
-	reg	[LGNCOUNT-1:0]	f_count;
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Input assumptions
+	//
+	always @(*)
+	if (!f_past_valid)
+		assume(i_reset);
 
 	initial	assume(!i_v);
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_reset)))
 		assume(!i_v);
 
-	initial	f_count = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-		f_count <= 0;
-	else if ((!i_v)&&(!o_v))
-		f_count <= 0;
-	else begin
-		if (!o_v)
-			f_count <= 1'b0;
-		else if (! &f_count)
-			f_count <= f_count + 1'b1;
-	end
-
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_v))&&($past(o_v)))
 		assume(!i_v);
 
 	always @(posedge i_clk)
-	if (f_count < MINOCTETS)
-		assert(f_count == r_ncnt);
+	if (!$past(i_ce))
+		assume(i_ce);
+
 	always @(posedge i_clk)
-	if (r_ncnt < MINOCTETS)
-		assert(f_count == r_ncnt);
+	if ((f_past_valid)&&(!$past(i_reset))&&(!$past(i_ce)))
+	begin
+		assume($stable(i_v));
+		assume($stable(i_d));
+	end
+
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Assertions
+	//
+	initial	f_count = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_count <= 0;
+	else if (i_ce)
+	begin
+		if (!o_v)
+			f_count <= 0;
+		else if (! &f_count)
+			f_count <= f_count + 1'b1;
+	end
+
+	always @(posedge i_clk)
+	if (i_reset)
+		f_v <= 1'b0;
+	else if (i_ce)
+		f_v <= i_v;
+
+	always @(posedge i_clk)
+	if (i_ce)
+		f_d <= i_d;
+
+	always @(posedge i_clk)
+	if (f_count != r_ncnt)
+		assert((r_ncnt < f_count)&&(r_ncnt == MINOCTETS));
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(o_v))&&(!$past(i_reset))&&(!o_v))
@@ -125,13 +155,13 @@ module addepad(i_clk, i_reset, i_v, i_d, o_v, o_d);
 	always  @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_reset)))
 		assert(o_d == 0);
-	else if ((f_past_valid)&&($past(i_v)))
-		assert(o_d == $past(i_d));
-	else if ((f_past_valid)&&(!$past(i_v)))
+	else if ((f_past_valid)&&(f_v))
+		assert(o_d == f_d);
+	else if ((f_past_valid)&&(!f_v))
 		assert(o_d == 0);
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_v)))
+	if ((f_past_valid)&&(!$past(i_reset))&&(f_v))
 		assert(o_v);
 
 
@@ -139,6 +169,21 @@ module addepad(i_clk, i_reset, i_v, i_d, o_v, o_d);
 	if ((!f_past_valid)||($past(i_reset)))
 		assert(!o_v);
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover
+	//
+	reg	short_packet;
+
+	initial short_packet = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset)
+		short_packet <= 1'b0;
+	else if (($fell(i_v))&&(r_ncnt == 32))
+		short_packet <= 1'b1;
+
+	always @(posedge i_clk)
+		cover(short_packet && $fell(o_v));
 
 `endif
 endmodule

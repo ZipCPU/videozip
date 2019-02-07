@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2018, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,11 +38,11 @@
 //
 `default_nettype	none
 //
-module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
+module addecrc(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	// localparam [31:0]	TAPS = 32'h1db71064;
 	localparam [31:0]	TAPS = 32'hedb88320;
 	localparam	INVERT = 1; // Proper operation requires INVERT=1
-	input	wire		i_clk, i_reset, i_en;
+	input	wire		i_clk, i_reset, i_ce, i_en;
 	input	wire		i_v;
 	input	wire	[7:0]	i_d;
 	output	reg		o_v;
@@ -114,26 +114,29 @@ module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 		r_p   <= 4'hf;
 		o_v   <= 1'b0;
 		o_d   <= 8'h0;
-	end else if ((!i_v)&&(!o_v))
+	end else if (i_ce)
 	begin
-		// Reset the interface
-		r_crc <= (INVERT==0)? 32'h00 : 32'hffffffff;
-		r_p <= 4'hf;
-		o_v <= 1'b0;
-		o_d <= 8'h0;
-	end else if (i_v)
-	begin
-		o_v <= i_v;
-		r_p <= 4'hf;
-		o_d <= i_d;
+		if ((!i_v)&&(!o_v))
+		begin
+			// Reset the interface
+			r_crc <= (INVERT==0)? 32'h00 : 32'hffffffff;
+			r_p <= 4'hf;
+			o_v <= 1'b0;
+			o_d <= 8'h0;
+		end else if (i_v)
+		begin
+			o_v <= i_v;
+			r_p <= 4'hf;
+			o_d <= i_d;
 
-		r_crc <= shifted_crc ^ crcvec[lowoctet];
-	end else begin // if o_v
-		// Flush out the CRC
-		r_p <= { r_p[2:0], 1'b0 };
-		o_v <= (i_en)?r_p[3]:1'b0;
-		o_d <= r_crc[7:0] ^ ((INVERT==0)? 8'h0:8'hff);
-		r_crc <= { 8'h0, r_crc[31:8] };
+			r_crc <= shifted_crc ^ crcvec[lowoctet];
+		end else begin // if o_v
+			// Flush out the CRC
+			r_p <= { r_p[2:0], 1'b0 };
+			o_v <= (i_en)?r_p[3]:1'b0;
+			o_d <= r_crc[7:0] ^ ((INVERT==0)? 8'h0:8'hff);
+			r_crc <= { 8'h0, r_crc[31:8] };
+		end
 	end
 
 `ifdef	FORMAL
@@ -142,6 +145,9 @@ module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 	always @(posedge  i_clk)
 		f_past_valid <= 1'b1;
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming assumptions
 	always @(*)
 	if (!f_past_valid)
 		assume(i_reset);
@@ -151,13 +157,38 @@ module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 		assume(!i_v);
 
 	always @(posedge i_clk)
+	if (!$past(i_ce))
+		assume(i_ce);
+
+	always @(posedge i_clk)
+	if (!$past(i_ce))
+	begin
+		assume($stable(i_v));
+		assume($stable(i_d));
+	end
+
+	always @(posedge i_clk)
 	if ((f_past_valid)&&((i_v) || (o_v)))
-		assume(i_en == $past(i_en));
+		assume($stable(i_en));
 
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_v))&&(o_v))
 		assume(!i_v);
+
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset))&&((o_v)||(i_v)))
+		assume($stable(i_en));
+
+	// i_v cannot restart while o_v is active
+	always @(posedge i_clk)
+	if ((f_past_valid)&&(!$past(i_reset))&&($past(o_v))&&(!$past(i_v)))
+		assume(!i_v);
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Formal assertions
+	//
 
 	always @(posedge i_clk)
 	if ((!f_past_valid)||($past(i_reset)))
@@ -170,33 +201,22 @@ module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 	end
 
 
-	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&((o_v)||(i_v)))
-		assume(i_en == $past(i_en));
-
-	// i_v cannot restart while o_v is active
-	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))
-			&&($past(o_v))
-			&&(!$past(i_v)))
-		assume(!i_v);
-
-	//always @(posedge i_clk)
 	//if ((f_past_valid)&&($past(o_v))&&(!$past(i_v))&&(!$past(i_reset)))
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(i_v))&&(!$past(i_reset)))
+	if ((f_past_valid)&&($past(i_v))&&(!$past(i_reset))&&($past(i_ce)))
 	begin
 		assert(o_v);
 		assert(o_d == $past(i_d));
 	end
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(o_v))&&(!$past(i_v)))
+	if ((f_past_valid)&&(!$past(i_reset))&&($past(o_v))&&(!$past(i_v))
+		&&($past(i_ce)))
 		assert(r_p == { $past(r_p[2:0]), 1'b0 } );
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_en))
+	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_en))&&($past(i_ce))
 			&&($past(o_v))&&(!$past(i_v)))
 		assert(o_v == $past(r_p[3]));
 
@@ -223,7 +243,7 @@ module addecrc(i_clk, i_reset, i_en, i_v, i_d, o_v, o_d);
 	end
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_v)))
+	if ((f_past_valid)&&(!$past(i_reset))&&($past(i_v))&&($past(i_ce)))
 		assert(r_crc == $past(f_crc));
 `endif
 endmodule

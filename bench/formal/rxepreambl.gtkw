@@ -1,0 +1,52 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 20:04:19 2019
+[*]
+[dumpfile] "(null)"
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/rxepreambl.gtkw"
+[timestart] 0
+[size] 1920 1054
+[pos] -1 -1
+*-4.190785 120 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 126
+[sst_expanded] 1
+[sst_vpaned_height] 315
+@28
+rxepreambl.f_past_valid
+rxepreambl.i_reset
+[color] 1
+rxepreambl.i_en
+rxepreambl.i_clk
+rxepreambl.i_ce
+@200
+-
+@28
+[color] 3
+rxepreambl.i_v
+@22
+[color] 3
+rxepreambl.i_d[7:0]
+@200
+-
+@28
+[color] 2
+rxepreambl.o_v
+@22
+[color] 2
+rxepreambl.o_d[7:0]
+@200
+-
+@28
+rxepreambl.f_v
+@22
+rxepreambl.f_d[7:0]
+@200
+-
+@28
+rxepreambl.r_inpkt
+@22
+rxepreambl.f_match[6:0]
+rxepreambl.nsyncs[3:0]
+[pattern_trace] 1
+[pattern_trace] 0

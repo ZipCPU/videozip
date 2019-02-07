@@ -1,12 +1,18 @@
+[tasks]
+prf
+cvr
+
 [options]
-mode prove
-depth 20
+prf: mode prove
+prf: depth 17
+cvr: mode cover
+cvr: depth 80
 
 [engines]
 smtbmc
 
 [script]
-read -formal -D ADDEMAC -formal addemac.v
+read -formal -D ADDEMAC addemac.v
 prep -top addemac
 
 [files]

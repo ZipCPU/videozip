@@ -39,7 +39,7 @@
 ################################################################################
 ##
 ##
-TESTS := addecrc addemac addepad addepreambl
+TESTS := addecrc addemac addepad addepreamble
 TESTS += rxecrc rxehwmac rxeipchk rxemin rxepreambl rxewrite
 .PHONY: $(TESTS)
 all: $(TESTS)
@@ -70,24 +70,32 @@ $(TXCRC)/PASS: $(TXCRC).sby $(NETRTL)/$(TXCRC).v
 	sby -f $(TXCRC).sby
 
 .PHONY: $(TXMAC)
-$(TXMAC): $(TXMAC)/PASS
-$(TXMAC)/PASS: $(TXMAC).sby $(NETRTL)/$(TXMAC).v
-	sby -f $(TXMAC).sby
+$(TXMAC): $(TXMAC)_prf/PASS $(TXMAC)_cvr/PASS
+$(TXMAC)_prf/PASS: $(TXMAC).sby $(NETRTL)/$(TXMAC).v
+	sby -f $(TXMAC).sby prf
+$(TXMAC)_cvr/PASS: $(TXMAC).sby $(NETRTL)/$(TXMAC).v
+	sby -f $(TXMAC).sby cvr
 
 .PHONY: $(TXPAD)
-$(TXPAD): $(TXPAD)/PASS
-$(TXPAD)/PASS: $(TXPAD).sby $(NETRTL)/$(TXPAD).v
-	sby -f $(TXPAD).sby
+$(TXPAD): $(TXPAD)_prf/PASS $(TXPAD)_cvr/PASS
+$(TXPAD)_prf/PASS: $(TXPAD).sby $(NETRTL)/$(TXPAD).v
+	sby -f $(TXPAD).sby prf
+$(TXPAD)_cvr/PASS: $(TXPAD).sby $(NETRTL)/$(TXPAD).v
+	sby -f $(TXPAD).sby cvr
 
 .PHONY: $(TXPRE)
-$(TXPAD): $(TXPRE)/PASS
-$(TXPRE)/PASS: $(TXPRE).sby $(NETRTL)/$(TXPRE).v
-	sby -f $(TXPRE).sby
+$(TXPRE): $(TXPRE)_prf/PASS $(TXPRE)_cvr/PASS
+$(TXPRE)_prf/PASS: $(TXPRE).sby $(NETRTL)/$(TXPRE).v
+	sby -f $(TXPRE).sby prf
+$(TXPRE)_cvr/PASS: $(TXPRE).sby $(NETRTL)/$(TXPRE).v
+	sby -f $(TXPRE).sby cvr
 
 .PHONY: $(RXCRC)
-$(RXCRC): $(RXCRC)/PASS
-$(RXCRC)/PASS: $(RXCRC).sby $(NETRTL)/$(RXCRC).v
-	sby -f $(RXCRC).sby
+$(RXCRC): $(RXCRC)_prf/PASS $(RXCRC)_cvr/PASS
+$(RXCRC)_prf/PASS: $(RXCRC).sby $(NETRTL)/$(RXCRC).v
+	sby -f $(RXCRC).sby prf
+$(RXCRC)_cvr/PASS: $(RXCRC).sby $(NETRTL)/$(RXCRC).v
+	sby -f $(RXCRC).sby cvr
 
 .PHONY: $(RXMAC)
 $(RXMAC): $(RXMAC)_prf/PASS $(RXMAC)_cvr/PASS
@@ -97,28 +105,43 @@ $(RXMAC)_cvr/PASS: $(RXMAC).sby $(NETRTL)/$(RXMAC).v
 	sby -f $(RXMAC).sby cvr
 
 .PHONY: $(RXPRE)
-$(RXPRE): $(RXPRE)/PASS
-$(RXPRE)/PASS: $(RXPRE).sby $(NETRTL)/$(RXPRE).v
-	sby -f $(RXPRE).sby
+$(RXPRE): $(RXPRE)_prf/PASS $(RXPRE)_cvr/PASS
+$(RXPRE)_prf/PASS: $(RXPRE).sby $(NETRTL)/$(RXPRE).v
+	sby -f $(RXPRE).sby prf
+$(RXPRE)_cvr/PASS: $(RXPRE).sby $(NETRTL)/$(RXPRE).v
+	sby -f $(RXPRE).sby cvr
 
 .PHONY: $(RXPAD)
-$(RXPAD): $(RXPAD)/PASS
-$(RXPAD)/PASS: $(RXPAD).sby $(NETRTL)/$(RXPAD).v
-	sby -f $(RXPAD).sby
+$(RXPAD): $(RXPAD)_prf/PASS $(RXPAD)_cvr/PASS
+$(RXPAD)_prf/PASS: $(RXPAD).sby $(NETRTL)/$(RXPAD).v
+	sby -f $(RXPAD).sby prf
+$(RXPAD)_cvr/PASS: $(RXPAD).sby $(NETRTL)/$(RXPAD).v
+	sby -f $(RXPAD).sby cvr
 
 .PHONY: $(RXIPK)
-$(RXIPK): $(RXIPK)/PASS
-$(RXIPK)/PASS: $(RXIPK).sby $(NETRTL)/$(RXIPK).v
-	sby -f $(RXIPK).sby
+$(RXIPK): $(RXIPK)_prf/PASS $(RXIPK)_cvr/PASS
+$(RXIPK)_prf/PASS: $(RXIPK).sby $(NETRTL)/$(RXIPK).v
+	sby -f $(RXIPK).sby prf
+$(RXIPK)_cvr/PASS: $(RXIPK).sby $(NETRTL)/$(RXIPK).v
+	sby -f $(RXIPK).sby cvr
 
 .PHONY: $(RXWRT)
-$(RXWRT): $(RXWRT)/PASS
-$(RXWRT)/PASS: $(RXWRT).sby $(NETRTL)/$(RXWRT).v
-	sby -f $(RXWRT).sby
+$(RXWRT): $(RXWRT)_prf/PASS $(RXWRT)_cvr/PASS
+$(RXWRT)_prf/PASS: $(RXWRT).sby $(NETRTL)/$(RXWRT).v
+	sby -f $(RXWRT).sby prf
+$(RXWRT)_cvr/PASS: $(RXWRT).sby $(NETRTL)/$(RXWRT).v
+	sby -f $(RXWRT).sby cvr
 
 .PHONY: clean
 clean:
-	rm -rf $(TXCRC)/ $(TXPRE)/ $(TXPAD)/ $(TXMAC)/
-	rm -rf $(RXCRC)/ $(RXPRE)/ $(RXPAD)/ $(RXMAC)_prf/ $(RXMAC)_cvr/
-	rm -rf $(RXIPK)/ $(RXWRT)/
+	rm -rf $(TXCRC)/
+	rm -rf $(TXPRE)_prf/ $(TXPRE)_cvr/
+	rm -rf $(TXPAD)_prf/ $(TXPAD)_cvr/
+	rm -rf $(TXMAC)_prf/ $(TXMAC)_cvr/
+	rm -rf $(RXPRE)_prf/ $(RXPRE)_cvr/
+	rm -rf $(RXCRC)_prf/ $(RXCRC)_cvr/
+	rm -rf $(RXPAD)_prf/ $(RXPAD)_cvr/
+	rm -rf $(RXMAC)_prf/ $(RXMAC)_cvr/
+	rm -rf $(RXIPK)_prf/ $(RXIPK)_cvr/
+	rm -rf $(RXWRT)_prf/ $(RXWRT)_cvr/
 	rm -rf *.check

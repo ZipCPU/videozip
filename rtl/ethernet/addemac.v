@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2018, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,9 +38,9 @@
 //
 `default_nettype	none
 //
-module	addemac(i_clk, i_reset, i_en, i_hw_mac,
+module	addemac(i_clk, i_reset, i_ce, i_en, i_hw_mac,
 		i_v, i_byte, o_v, o_byte);
-	input	wire		i_clk, i_reset, i_en;
+	input	wire		i_clk, i_reset, i_ce, i_en;
 	input	wire	[47:0]	i_hw_mac;
 	input	wire		i_v;
 	input	wire	[7:0]	i_byte;
@@ -63,7 +63,7 @@ module	addemac(i_clk, i_reset, i_en, i_hw_mac,
 		r_pos <= 0;
 		o_v   <= 0;
 		o_byte<= 0;
-	end else begin
+	end else if (i_ce) begin
 		r_buf <= { r_buf[44:0], i_v, i_byte };
 
 		if ((!i_v)&&(!o_v))
@@ -83,37 +83,49 @@ module	addemac(i_clk, i_reset, i_en, i_hw_mac,
 
 		if ((!i_v)&&(!o_v))
 			r_pos <= 5'h0;
-		else if ((r_pos < 5'h0c )&&(i_en))
+		else if (!(&r_pos))
 			r_pos <= r_pos + 5'h1;
-		else if ((r_pos < 5'h10 )&&(!i_en))
-			r_pos <= r_pos + 5'h1;
+
+		o_byte <= i_byte;
 
 		if (i_en)
 		begin
+
 			if ((!i_v)&&(!o_v))
 			begin
 				o_v <= 1'b0;
 			end else begin
 				if (r_pos < 5'h6) // six bytes
-				begin
-					{ o_v, o_byte } <= { i_v, i_byte };
-				end else if (r_pos < 5'hc)	// 12 bytes
-				begin
-					{ o_v, o_byte } <= { 1'b1, r_hw[47:40] };
-				end else
-					{ o_v, o_byte } <= r_buf[53:45];
+					o_v <= i_v;
+				else if (r_pos < 5'hc)	// 12 bytes
+					o_v <= 1'b1;
+				else
+					o_v <= r_buf[53];
 			end
+
+			if (r_pos < 5'h6)
+				o_byte <= i_byte;
+			else if (r_pos < 5'hc)
+				o_byte <= r_hw[47:40];
+			else
+				o_byte <= r_buf[52:45];
 		end else
-			{ o_v, o_byte } <= { i_v, i_byte };
-		if(i_reset)
-			o_v <= 1'b0;
+			o_v <= i_v;
 	end
+
 `ifdef	FORMAL
-	reg	f_past_valid;
+	reg			f_past_valid;
+	reg	[7-1:0]		f_v;
+	reg	[8*7-1:0]	f_d;
+
 	initial	f_past_valid = 1'b0;
 	always @(posedge  i_clk)
 		f_past_valid <= 1'b1;
 
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Incoming assumptions
+	//
 	always @(*)
 	if (!f_past_valid)
 		assume(i_reset);
@@ -124,13 +136,35 @@ module	addemac(i_clk, i_reset, i_en, i_hw_mac,
 	if ($past(i_reset))
 		assume(!i_v);
 
+	// CE's will come fairly often, but may not necessarily be every clock
+	always @(posedge i_clk)
+	if (!$past(i_ce))
+		assume(i_ce);
+
+	// H/W MAC will never change mid-packet
 	always @(posedge i_clk)
 	if ((f_past_valid)&&((i_v)||(o_v)))
-		assume(i_hw_mac == $past(i_hw_mac));
+	begin
+		assume($stable(i_hw_mac));
+		assume($stable(i_en));
+	end
 
+	initial	f_v = 0;
 	always @(posedge i_clk)
-	if ((f_past_valid)&&($past(o_v))&&(!$past(i_v)))
+	if (i_reset)
+		f_v <= 1'b0;
+	else if (i_ce)
+		f_v <= { f_v[5:0], i_v };
+
+	//
+	// New packets will never start while the last is still active
+	//
+	always @(posedge i_clk)
+	if ((f_past_valid)&&($past(o_v))&&(!f_v[0]))
 		assume(!i_v);
+	always @(posedge i_clk)
+	if (!$past(i_ce))
+		assume($stable(i_v));
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&((i_v)||(o_v)))
@@ -142,25 +176,70 @@ module	addemac(i_clk, i_reset, i_en, i_hw_mac,
 	always @(posedge i_clk)
 	if (i_reset)
 		f_cnt <= 0;
-	else if (!o_v)
-		f_cnt <= 0;
-	else if (! &f_cnt)
-		f_cnt <= f_cnt + 1'b1;
+	else if (i_ce)
+	begin
+		if (!o_v)
+			f_cnt <= 0;
+		else if (! &f_cnt)
+			f_cnt <= f_cnt + 1'b1;
+	end
+
+	initial	f_d = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		f_d <= 0;
+	else if (i_ce)
+		f_d <= { f_d[8*7-1 : 0], i_byte };
 
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(($past(i_v))||($past(f_cnt) > 0))&&($past(f_cnt) < 12)&&(!$past(i_reset)))
+	if ((f_past_valid)&&(f_v[0] ||($past(f_cnt) > 0))
+			&&($past(f_cnt) < 12)&&(!$past(i_reset)))
 		assume(i_v);
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	always @(*)
+	if ((r_pos > 0)&&(!r_pos[4]))
+		assert(f_cnt == r_pos-1);
+	else if ((r_pos[4])&&(r_pos[3:0] != 0))
+		assert(&f_cnt);
+	else if (r_pos == 0)
+		assert(f_cnt == 0);
+
+
+	always @(posedge i_clk)
+	if (f_v[0])
+	begin
+		case(f_cnt)
+		4'h0: assert(r_hw == { i_hw_mac[39:0], i_hw_mac[47:40] });
+		4'h1: assert(r_hw == { i_hw_mac[31:0], i_hw_mac[47:32] });
+		4'h2: assert(r_hw == { i_hw_mac[23:0], i_hw_mac[47:24] });
+		4'h3: assert(r_hw == { i_hw_mac[15:0], i_hw_mac[47:16] });
+		4'h4: assert(r_hw == { i_hw_mac[ 7:0], i_hw_mac[47: 8] });
+		4'h5: assert(r_hw == i_hw_mac);
+		4'h6: assert(r_hw == { i_hw_mac[39:0], i_hw_mac[47:40] });
+		4'h7: assert(r_hw == { i_hw_mac[31:0], i_hw_mac[47:32] });
+		4'h8: assert(r_hw == { i_hw_mac[23:0], i_hw_mac[47:24] });
+		4'h9: assert(r_hw == { i_hw_mac[15:0], i_hw_mac[47:16] });
+		4'ha: assert(r_hw == { i_hw_mac[ 7:0], i_hw_mac[47: 8] });
+		4'hb: assert(r_hw == i_hw_mac);
+		4'hc: assert(r_hw == { i_hw_mac[39:0], i_hw_mac[47:40] });
+		4'hd: assert(r_hw == { i_hw_mac[31:0], i_hw_mac[47:32] });
+		default: begin end
+		endcase
+	end
 
 	always @(posedge i_clk)
 	if ((o_v)&&(i_en))
 	begin
 		case(f_cnt)
-		4'h0: assert(o_byte == $past(i_byte));
-		4'h1: assert(o_byte == $past(i_byte));
-		4'h2: assert(o_byte == $past(i_byte));
-		4'h3: assert(o_byte == $past(i_byte));
-		4'h4: assert(o_byte == $past(i_byte));
-		4'h5: assert(o_byte == $past(i_byte));
+		4'h0: assert(o_byte == f_d[7:0]);
+		4'h1: assert(o_byte == f_d[7:0]);
+		4'h2: assert(o_byte == f_d[7:0]);
+		4'h3: assert(o_byte == f_d[7:0]);
+		4'h4: assert(o_byte == f_d[7:0]);
+		4'h5: assert(o_byte == f_d[7:0]);
 		4'h6: assert(o_byte == i_hw_mac[47:40]);
 		4'h7: assert(o_byte == i_hw_mac[39:32]);
 		4'h8: assert(o_byte == i_hw_mac[31:24]);
@@ -168,18 +247,64 @@ module	addemac(i_clk, i_reset, i_en, i_hw_mac,
 		4'ha: assert(o_byte == i_hw_mac[15: 8]);
 		4'hb: assert(o_byte == i_hw_mac[ 7: 0]);
 		default: begin
-			assert((!f_past_valid)||(o_byte == $past(i_byte,7)));
+			assert(o_byte == f_d[8*6 +: 8]);
 		end endcase
+	end else if ((o_v)&&(!i_en))
+		assert(o_byte == f_d[7:0]);
+
+	always @(posedge i_clk)
+	begin
+		/*
+		assert((f_v == 7'h00)||(f_v == 7'h01)
+			||(f_v == 7'h03)||(f_v == 7'h07)
+			||(f_v == 7'h0f)||(f_v == 7'h1f)
+			||(f_v == 7'h3f)||(f_v == 7'h7f)
+			||(f_v == 7'h7e)||(f_v == 7'h7c)
+			||(f_v == 7'h78)||(f_v == 7'h70)
+			||(f_v == 7'h60)||(f_v == 7'h40));
+		*/
+
+		casez(f_v)
+		7'b000_0001: assert(r_pos == 1);
+		7'b000_0011: assert(r_pos == 2);
+		7'b000_0111: assert(r_pos == 3);
+		7'b000_1111: assert(r_pos == 4);
+		7'b001_1111: assert(r_pos == 5);
+		7'b011_1111: assert(r_pos == 6);
+		default: begin end
+		endcase
+	end
+
+	always @(posedge i_clk)
+	begin
+		assert(!r_buf[ 8] || f_v[0]);
+		assert(!r_buf[17] || f_v[1]);
+		assert(!r_buf[26] || f_v[2]);
+		assert(!r_buf[35] || f_v[3]);
+		assert(!r_buf[44] || f_v[4]);
+		assert(!r_buf[53] || f_v[5]);
+
+		assert(r_buf[ 7: 0] == f_d[ 7: 0]);
+		assert(r_buf[16: 9] == f_d[15: 8]);
+		assert(r_buf[25:18] == f_d[23:16]);
+		assert(r_buf[34:27] == f_d[31:24]);
+		assert(r_buf[43:36] == f_d[39:32]);
+		assert(r_buf[52:45] == f_d[47:40]);
 	end
 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!i_en))
-		assert((!o_v)||(o_byte == $past(i_byte)));
+		assert((!o_v)||(o_byte == f_d[7:0]));
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!i_en)&&(!$past(i_reset)))
-		assert(o_v == $past(i_v));
+		assert(o_v == f_v[0]);
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Cover properties
+	//
 	always @(posedge i_clk)
-	if ((f_past_valid)&&(!$past(i_reset))&&($past(o_v)))
-		cover(!o_v);
+	if ((f_past_valid)&&(!$past(i_reset)))
+		cover($fell(o_v));
 `endif
 endmodule
