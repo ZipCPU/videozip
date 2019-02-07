@@ -90,9 +90,11 @@ $(RXCRC)/PASS: $(RXCRC).sby $(NETRTL)/$(RXCRC).v
 	sby -f $(RXCRC).sby
 
 .PHONY: $(RXMAC)
-$(RXMAC): $(RXMAC)/PASS
-$(RXMAC)/PASS: $(RXMAC).sby $(NETRTL)/$(RXMAC).v
-	sby -f $(RXMAC).sby
+$(RXMAC): $(RXMAC)_prf/PASS $(RXMAC)_cvr/PASS
+$(RXMAC)_prf/PASS: $(RXMAC).sby $(NETRTL)/$(RXMAC).v
+	sby -f $(RXMAC).sby prf
+$(RXMAC)_cvr/PASS: $(RXMAC).sby $(NETRTL)/$(RXMAC).v
+	sby -f $(RXMAC).sby cvr
 
 .PHONY: $(RXPRE)
 $(RXPRE): $(RXPRE)/PASS
@@ -117,6 +119,6 @@ $(RXWRT)/PASS: $(RXWRT).sby $(NETRTL)/$(RXWRT).v
 .PHONY: clean
 clean:
 	rm -rf $(TXCRC)/ $(TXPRE)/ $(TXPAD)/ $(TXMAC)/
-	rm -rf $(RXCRC)/ $(RXPRE)/ $(RXPAD)/ $(RXMAC)/
+	rm -rf $(RXCRC)/ $(RXPRE)/ $(RXPAD)/ $(RXMAC)_prf/ $(RXMAC)_cvr/
 	rm -rf $(RXIPK)/ $(RXWRT)/
 	rm -rf *.check

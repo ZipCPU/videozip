@@ -1,0 +1,61 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Thu Feb  7 00:28:46 2019
+[*]
+[dumpfile] "(null)"
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/rxehwmac.gtkw"
+[timestart] 0
+[size] 1918 600
+[pos] -1 -1
+*-6.909014 790 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 166
+[sst_expanded] 1
+[sst_vpaned_height] 155
+@28
+rxehwmac.f_past_valid
+rxehwmac.i_reset
+@22
+rxehwmac.i_hwmac[47:0]
+@28
+rxehwmac.i_en
+rxehwmac.i_clk
+rxehwmac.i_ce
+@200
+-
+@28
+[color] 3
+rxehwmac.i_v
+@22
+[color] 3
+rxehwmac.i_d[7:0]
+@200
+-
+@28
+[color] 2
+rxehwmac.o_v
+@22
+[color] 2
+rxehwmac.o_d[7:0]
+@28
+[color] 2
+rxehwmac.o_err
+[color] 2
+rxehwmac.o_broadcast
+@200
+-
+@28
+rxehwmac.r_broadcast
+@22
+rxehwmac.r_hwmac[47:0]
+@28
+rxehwmac.r_hwmatch
+@22
+rxehwmac.r_p[13:0]
+@201
+-
+@22
+rxehwmac.f_v[12:0]
+rxehwmac.f_past_data[63:0]
+[pattern_trace] 1
+[pattern_trace] 0

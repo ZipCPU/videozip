@@ -3,7 +3,8 @@ addemac/
 addepad/
 addepreamble/
 rxecrc/
-rxehwmac/
+rxehwmac_prf/
+rxehwmac_cvr/
 rxeipchk/
 rxemin/
 rxepreambl/
