@@ -232,9 +232,9 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 			// size will likely be 2^(ADDRESS_WIDTH+2) octets
 			ADDRESS_WIDTH=28,
 			// Number of page table entries
-			LGTBL=6,
-			// The requested log page size in bytes
-			PLGPGSZB=12,
+			LGTBL=4'h6,
+			// The requested log page size in 8-bit bytes
+			PLGPGSZB=20,
 			// Number of bits describing context
 			PLGCTXT=16;
 	parameter [0:0] OPT_DELAY_RETURN = 1'b0;

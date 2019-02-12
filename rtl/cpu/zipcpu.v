@@ -1593,10 +1593,6 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		pipemem	#(.ADDRESS_WIDTH(AW),
 			.IMPLEMENT_LOCK(OPT_LOCK),
 			.WITH_LOCAL_BUS(WITH_LOCAL_BUS)
-`ifdef	FORMAL
-			, .OPT_MAXDEPTH(4'h3),
-			.F_LGDEPTH(F_LGDEPTH)
-`endif
 			) domem(i_clk,i_reset,
 		///{{{
 			(mem_ce)&&(set_cond), bus_lock,
@@ -2414,17 +2410,11 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 
 `ifdef	DEBUG_SCOPE
 	//{{{
-	reg	[10:0]	dbg_trigger_counter;
-	always @(posedge i_clk)
-	if (alu_pc_valid)
-		dbg_trigger_counter <= 0;
-	else if ((!i_halt)&&(!sleep))
-		dbg_trigger_counter <= dbg_trigger_counter + 1'b1;
 
 	reg		debug_trigger;
 	initial	debug_trigger = 1'b0;
 	always @(posedge i_clk)
-		debug_trigger <= ((!i_halt)&&(o_break))||(&dbg_trigger_counter);
+		debug_trigger <= (!i_halt)&&(o_break);
 
 	wire	[31:0]	debug_flags;
 	assign debug_flags = { debug_trigger, 3'b101,
@@ -2502,6 +2492,13 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		assign generic_ignore = wr_spreg_vl[31:(AW+2)];
 	end endgenerate
 	// verilator lint_on  UNUSED
+	//}}}
+
+	// Formal methods
+	//{{{
+`ifdef	FORMAL
+// The ZipCPU formal properties are maintained elsewhere
+`endif	// FORMAL
 	//}}}
 
 endmodule

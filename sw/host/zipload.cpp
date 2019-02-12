@@ -346,6 +346,10 @@ int main(int argc, char **argv) {
 		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
 		m_fpga->writeio(R_ZIPDATA, entry);
 
+#ifdef	_BOARD_HAS_ZIPSCOPE
+			m_fpga->writeio(R_ZIPSCOPE, 0);
+#endif
+
 		if (start_when_finished) {
 			printf("Starting the CPU\n");
 			m_fpga->writeio(R_ZIPCTRL, CPU_GO|CPU_sPC);

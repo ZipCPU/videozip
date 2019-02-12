@@ -126,7 +126,7 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 		return;
 	}
 
-	if ((wb_stb)&&(wb_we))
+	if ((0)&&(wb_stb)&&(wb_we))
 		printf("MEMSIM::WR[%08x]&%5x: ", wb_addr, wbsel);
 
 	m_head += 4;
@@ -147,7 +147,7 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 
 				if ((dsel&0x0f)==0x0f) {
 					uint32_t memv = *sp--;
-					printf("%02x:%02x:%02x:%02x  ",
+					if (0) printf("%02x:%02x:%02x:%02x  ",
 						(memv>>24)&0x0ff,
 						(memv>>16)&0x0ff,
 						(memv>> 8)&0x0ff,
@@ -170,6 +170,7 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 					memv |= (*sp-- & sel);
 					m_mem[addr & m_mask] = memv;
 
+					if (0) {
 					if (sel&0x0ff000000)
 						printf("%02x:", (memv>>24)&0x0ff);
 					else
@@ -189,11 +190,12 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 						printf("%02x  ", (memv)&0x0ff);
 					else
 						printf("--  ");
+					}
 				}
 			}
 			m_fifo_ack[m_head + k] = 1;
 			m_fifo_data[m_head + k] = m_mem[addr & m_mask];
-#define	DEBUG
+// #define	DEBUG
 #ifdef	DEBUG
 			printf("MEMBUS %s[%08x] = %08x\n",
 				(wb_we)?"W":"R",
@@ -213,8 +215,5 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 		addr++;
 	}
 
-	if ((wb_stb)&&(wb_we))
-		printf("\n");
+	// if ((wb_stb)&&(wb_we)) printf("\n");
 }
-
-

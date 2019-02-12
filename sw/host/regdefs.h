@@ -59,8 +59,8 @@
 #define	R_NETSCOPE        	0x01000000	// 01000000, wbregs names: NETSCOPE
 #define	R_NETSCOPED       	0x01000004	// 01000000, wbregs names: NETSCOPED
 // WB-Microphone registers
-#define	R_MIC_DATA        	0x02000000	// 02000000, wbregs names: MICD
-#define	R_MIC_CTRL        	0x02000004	// 02000000, wbregs names: MICC
+#define	R_MIC_DATA        	0x01000000	// 01000000, wbregs names: MICD
+#define	R_MIC_CTRL        	0x01000004	// 01000000, wbregs names: MICC
 // EDID/I2C Debug Scope
 #define	R_EDID_SCOPC      	0x03000000	// 03000000, wbregs names: ESCOPC, ESCOPE
 #define	R_EDID_SCOPD      	0x03000004	// 03000000, wbregs names: ESCOPD
