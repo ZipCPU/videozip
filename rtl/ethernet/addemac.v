@@ -59,12 +59,12 @@ module	addemac(i_clk, i_reset, i_ce, i_en, i_hw_mac,
 	if (i_reset)
 	begin
 		r_hw  <= i_hw_mac;
-		r_buf <= 0;
+		r_buf <= {(6){ 1'b0, 8'h55 } };
 		r_pos <= 0;
 		o_v   <= 0;
-		o_byte<= 0;
+		o_byte<= 8'h55;
 	end else if (i_ce) begin
-		r_buf <= { r_buf[44:0], i_v, i_byte };
+		r_buf <= { r_buf[44:0], i_v, (i_v) ? i_byte : 8'hff };
 
 		if ((!i_v)&&(!o_v))
 		begin

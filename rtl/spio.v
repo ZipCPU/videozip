@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -53,62 +53,77 @@ module	spio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 	output	reg	[(NLEDS-1):0]	o_led;
 	output	reg			o_int;
 
-	reg		use_bouncer;
-	reg	[(NLEDS-1):0]	r_led;
+	reg		led_demo;
+	reg	[(8-1):0]	r_led;
 	initial	r_led = 0;
-	initial	use_bouncer = 1'b1;
+	initial	led_demo = 1'b1;
 	always @(posedge i_clk)
 	begin
 		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_sel[0]))
 		begin
 			if (!i_wb_sel[1])
-				r_led <= i_wb_data[(NLEDS-1):0];
+				r_led[NLEDS-1:0] <= i_wb_data[(NLEDS-1):0];
 			else
-				r_led <= (r_led&(~i_wb_data[(8+NLEDS-1):8]))
+				r_led[NLEDS-1:0] <= (r_led[NLEDS-1:0]&(~i_wb_data[(8+NLEDS-1):8]))
 					|(i_wb_data[(NLEDS-1):0]&i_wb_data[(8+NLEDS-1):8]);
 		end
 	end
 
-	wire	[(8-1):1]	w_btn;
 	wire	[(8-1):0]	o_btn;
-	debouncer #(NBTN) thedebouncer(i_clk, i_btn, o_btn[(NBTN-1):0]);
-	assign	w_btn[(NBTN-1):1] = i_btn[(NBTN-1):1];
+	generate if (NBTN > 0)
+		debouncer #(NBTN) thedebouncer(i_clk,
+			i_btn, o_btn[(NBTN-1):0]);
+	endgenerate
+
 	generate if (NBTN < 8)
-		assign	w_btn[7:NBTN] = 0;
 		assign	o_btn[7:NBTN] = 0;
 	endgenerate
 
-	wire	[(8-1):0]		w_sw;
-	assign	w_sw[(NSW-1):0] = i_sw;
-	generate if (NLEDS < 8)
-		assign	w_sw[7:NSW] = 0;
-	endgenerate
+	// 2FF synchronizer for our switches
+	reg	[(8-1):0]	r_sw;
+	reg			sw_int;
+	generate if (NSW > 0)
+	begin
+		reg	[2*NSW-1:0]	sw_pipe;
+
+		initial	r_sw    = 0;
+		initial	sw_pipe = 0;
+		always @(posedge i_clk)
+		begin
+			r_sw <= 0;
+			{ r_sw[NSW-1:0], sw_pipe } <= { sw_pipe, i_sw };
+
+			sw_int <= (r_sw[NSW-1:0] != sw_pipe[2*NSW-1:NSW]);
+		end
+
+	end else begin
+
+		always @(*)
+			r_sw = 0;
+
+	end endgenerate
 
 	always @(posedge i_clk)
 		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_sel[3]))
-			use_bouncer <= i_wb_data[24];
+			led_demo <= i_wb_data[24];
 
-	assign	o_wb_data = { w_btn[7:1], use_bouncer, w_sw, o_btn, r_led };
+	assign	o_wb_data = { 7'h0, led_demo, r_sw, o_btn, r_led };
 
-	reg	[(NSW-1):0]	last_sw;
 	reg	[(NBTN-1):0]	last_btn;
-	always @(posedge i_clk)
-		last_sw <= i_sw;
 	always @(posedge i_clk)
 		last_btn <= o_btn[(NBTN-1):0];
 	always @(posedge i_clk)
-		o_int <= (last_sw != i_sw)
-			|| (|((o_btn[(NBTN-1):0])&(~last_btn)));
+		o_int <= sw_int || (|((o_btn[(NBTN-1):0])&(~last_btn)));
 
 	wire	[(NLEDS-1):0]	bounced;
 	ledbouncer	#(NLEDS, 25)
 		knightrider(i_clk, bounced);
 
 	always @(posedge i_clk)
-		if (use_bouncer)
-			o_led <= bounced;
-		else
-			o_led <= r_led;
+	if (led_demo)
+		o_led <= bounced;
+	else
+		o_led <= r_led[NLEDS-1:0];
 
 	assign	o_wb_stall = 1'b0;
 	always @(posedge i_clk)

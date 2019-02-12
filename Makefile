@@ -13,7 +13,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2016-2017, Gisselquist Technology, LLC
+## Copyright (C) 2016-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -117,14 +117,16 @@ archive:
 #
 .PHONY: autodata
 autodata: check-autofpga
-	$(MAKE) --no-print-directory --directory=auto-data
+	$(SUBMAKE) auto-data
 	$(call copyif-changed,auto-data/toplevel.v,rtl/toplevel.v)
 	$(call copyif-changed,auto-data/main.v,rtl/main.v)
+	$(call copyif-changed,auto-data/iscachable.v,rtl/iscachable.v)
 	$(call copyif-changed,auto-data/build.xdc,rtl/board.xdc)
 	$(call copyif-changed,auto-data/regdefs.h,sw/host/regdefs.h)
 	$(call copyif-changed,auto-data/regdefs.cpp,sw/host/regdefs.cpp)
 	$(call copyif-changed,auto-data/board.h,sw/zlib/board.h)
 	$(call copyif-changed,auto-data/board.h,sw/board/board.h)
+	$(call copyif-changed,auto-data/bkram.ld,sw/board/bkram.ld)
 	$(call copyif-changed,auto-data/board.ld,sw/board/board.ld)
 	$(call copyif-changed,auto-data/rtl.make.inc,rtl/make.inc)
 	$(call copyif-changed,auto-data/testb.h,sim/verilated/testb.h)
@@ -136,7 +138,7 @@ autodata: check-autofpga
 # simulation class library that we can then use for simulation
 #
 .PHONY: verilated
-verilated: datestamp autodata check-verilator
+verilated: datestamp check-verilator
 	+@$(SUBMAKE) rtl
 
 .PHONY: rtl
@@ -155,23 +157,7 @@ sim: rtl check-gpp
 # A master target to build all of the support software
 #
 .PHONY: sw
-sw: sw-host sw-board
-
-#
-#
-# Build the hardware specific newlib library
-#
-.PHONY: sw-zlib
-sw-zlib: autodata check-zip-gcc
-	+@$(SUBMAKE) sw/zlib
-
-#
-#
-# Build the board software.  This may (or may not) use the software library
-#
-.PHONY: sw-board
-sw-board: check-zip-gcc # sw-zlib
-	+@$(SUBMAKE) sw/board
+sw: sw-host sw-zlib sw-board
 
 #
 #
@@ -180,6 +166,23 @@ sw-board: check-zip-gcc # sw-zlib
 .PHONY: sw-host
 sw-host: check-gpp
 	+@$(SUBMAKE) sw/host
+
+
+#
+#
+# Build the hardware specific newlib library
+#
+.PHONY: sw-zlib
+sw-zlib: check-zip-gcc
+	+@$(SUBMAKE) sw/zlib
+
+#
+#
+# Build the board software.  This may (or may not) use the software library
+#
+.PHONY: sw-board
+sw-board: check-zip-gcc sw-zlib
+	+@$(SUBMAKE) sw/board
 
 #
 #

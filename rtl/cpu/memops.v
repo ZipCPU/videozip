@@ -6,7 +6,7 @@
 //
 // Purpose:	A memory unit to support a CPU.
 //
-//	In the interests of code simplicity, this memory operator is 
+//	In the interests of code simplicity, this memory operator is
 //	susceptible to unknown results should a new command be sent to it
 //	before it completes the last one.  Unpredictable results might then
 //	occurr.
@@ -19,7 +19,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015,2017-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015,2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -57,7 +57,6 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 			WITH_LOCAL_BUS=1'b1,
 			OPT_ALIGNMENT_ERR=1'b1,
 			OPT_ZERO_ON_IDLE=1'b0;
-	parameter [0:0]	F_OPT_CLK2FFLOGIC = 1'b0;
 	localparam	AW=ADDRESS_WIDTH;
 	input	wire		i_clk, i_reset;
 	input	wire		i_stb, i_lock;
@@ -91,9 +90,9 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 	begin : GENERATE_ALIGNMENT_ERR
 		always @(*)
 		casez({ i_op[2:1], i_addr[1:0] })
-		4'b01?1: misaligned = 1'b1; // Words must be halfword aligned
-		4'b0110: misaligned = 1'b1; // Words must be word aligned
-		4'b10?1: misaligned = 1'b1; // Halfwords must be aligned
+		4'b01?1: misaligned = i_stb; // Words must be halfword aligned
+		4'b0110: misaligned = i_stb; // Words must be word aligned
+		4'b10?1: misaligned = i_stb; // Halfwords must be aligned
 		// 4'b11??: misaligned <= 1'b0; Byte access are never misaligned
 		default: misaligned = 1'b0;
 		endcase
@@ -111,22 +110,22 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 	initial	r_wb_cyc_gbl = 1'b0;
 	initial	r_wb_cyc_lcl = 1'b0;
 	always @(posedge i_clk)
-		if (i_reset)
+	if (i_reset)
+	begin
+		r_wb_cyc_gbl <= 1'b0;
+		r_wb_cyc_lcl <= 1'b0;
+	end else if ((r_wb_cyc_gbl)||(r_wb_cyc_lcl))
+	begin
+		if ((i_wb_ack)||(i_wb_err))
 		begin
 			r_wb_cyc_gbl <= 1'b0;
 			r_wb_cyc_lcl <= 1'b0;
-		end else if ((r_wb_cyc_gbl)||(r_wb_cyc_lcl))
-		begin
-			if ((i_wb_ack)||(i_wb_err))
-			begin
-				r_wb_cyc_gbl <= 1'b0;
-				r_wb_cyc_lcl <= 1'b0;
-			end
-		end else begin // New memory operation
-			// Grab the wishbone
-			r_wb_cyc_lcl <= (lcl_stb)&&(!misaligned);
-			r_wb_cyc_gbl <= (gbl_stb)&&(!misaligned);
 		end
+	end else begin // New memory operation
+		// Grab the wishbone
+		r_wb_cyc_lcl <= (lcl_stb);
+		r_wb_cyc_gbl <= (gbl_stb);
+	end
 	initial	o_wb_stb_gbl = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -137,7 +136,7 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 		o_wb_stb_gbl <= (o_wb_stb_gbl)&&(i_wb_stall);
 	else
 		// Grab wishbone on any new transaction to the gbl bus
-		o_wb_stb_gbl <= (gbl_stb)&&(!misaligned);
+		o_wb_stb_gbl <= (gbl_stb);
 
 	initial	o_wb_stb_lcl = 1'b0;
 	always @(posedge i_clk)
@@ -149,7 +148,7 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 		o_wb_stb_lcl <= (o_wb_stb_lcl)&&(i_wb_stall);
 	else
 		// Grab wishbone on any new transaction to the lcl bus
-		o_wb_stb_lcl  <= (lcl_stb)&&(!misaligned);
+		o_wb_stb_lcl  <= (lcl_stb);
 
 	reg	[3:0]	r_op;
 	initial	o_wb_we   = 1'b0;
@@ -208,10 +207,10 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 	always @(posedge i_clk)
 	if (i_reset)
 		o_err <= 1'b0;
-	else if (i_stb)
-		o_err <= misaligned;
-	else if ((o_wb_cyc_gbl)||(o_wb_cyc_lcl))
+	else if ((r_wb_cyc_gbl)||(r_wb_cyc_lcl))
 		o_err <= i_wb_err;
+	else if ((i_stb)&&(!o_busy))
+		o_err <= misaligned;
 	else
 		o_err <= 1'b0;
 
@@ -251,11 +250,18 @@ module	memops(i_clk, i_reset, i_stb, i_lock,
 			lock_gbl <= 1'b0;
 			lock_lcl <= 1'b0;
 		end else if (((i_wb_err)&&((r_wb_cyc_gbl)||(r_wb_cyc_lcl)))
-				||((i_stb)&&(misaligned)))
+				||(misaligned))
 		begin
+			// Kill the lock if
+			//	there's a bus error, or
+			//	User requests a misaligned memory op
 			lock_gbl <= 1'b0;
 			lock_lcl <= 1'b0;
 		end else begin
+			// Kill the lock if
+			//	i_lock goes down
+			//	User starts on the global bus, then switches
+			//	  to local or vice versa
 			lock_gbl <= (i_lock)&&((r_wb_cyc_gbl)||(lock_gbl))
 					&&(!lcl_stb);
 			lock_lcl <= (i_lock)&&((r_wb_cyc_lcl)||(lock_lcl))

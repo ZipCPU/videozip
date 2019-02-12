@@ -17,7 +17,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -46,7 +46,6 @@
 module	rtcgps(i_clk, i_reset,
 		// Wishbone interface
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-		//	o_wb_ack, o_wb_stb, o_wb_data, // no reads here
 		// Output registers
 		o_wb_ack, o_wb_stall, o_wb_data, // mux'd based upon i_wb_addr
 		// Output controls

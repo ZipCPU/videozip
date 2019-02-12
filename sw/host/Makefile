@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015-2017, Gisselquist Technology, LLC
+## Copyright (C) 2015-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -38,8 +38,8 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid \
-	rdsync getframe manping readmdio
-SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope
+	rdsync getframe manping rdmdio
+SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope erxscope etxscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
@@ -48,7 +48,7 @@ SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
 	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
 	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp manping.cpp	\
-	readmdio.cpp
+	erxscope.cpp etxscope.cpp
 	# wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
@@ -66,7 +66,6 @@ $(OBJDIR)/%.o: %.c
 	$(CXX) $(CFLAGS) -c $< -o $@
 
 .PHONY: gps
-gps:
 gps: $(BUSOBJS) # $(OBJDIR)/scopecls.o
 	@bash -c "if [[ -e gps/Makefile ]]; then $(SUBMAKE) gps; fi"
 
@@ -74,13 +73,15 @@ gps: $(BUSOBJS) # $(OBJDIR)/scopecls.o
 clean:
 	rm -rf $(OBJDIR)/ $(PROGRAMS) a.out
 
-$(OBJDIR)/scopecls.o: scopecls.cpp scopecls.h
+$(OBJDIR)/scopecls.o:    scopecls.cpp    scopecls.h
 $(OBJDIR)/edidrxscope.o: edidrxscope.cpp scopecls.h
 $(OBJDIR)/edidtxscope.o: edidtxscope.cpp scopecls.h
-$(OBJDIR)/rawdscope.o:   rawdscope.cpp scopecls.h
-$(OBJDIR)/tmdscope.o:    tmdscope.cpp scopecls.h
-$(OBJDIR)/dumpflash.o:   dumpflash.cpp regdefs.h
-$(OBJDIR)/readmdio.o:    readmdio.cpp regdefs.h
+$(OBJDIR)/rawdscope.o:   rawdscope.cpp   scopecls.h
+$(OBJDIR)/tmdscope.o:    tmdscope.cpp    scopecls.h
+$(OBJDIR)/dumpflash.o:   dumpflash.cpp   regdefs.h
+# $(OBJDIR)/readmdio.o:    readmdio.cpp    regdefs.h
+$(OBJDIR)/erxscope.o:    erxscope.cpp    scopecls.h
+$(OBJDIR)/etxscope.o:    etxscope.cpp    scopecls.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
@@ -91,7 +92,7 @@ netuart: $(OBJDIR)/netuart.o
 #	$(CXX) $(CFLAGS) $^ -o $@
 zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
-netsetup: $(OBJDIR)/netsetup.o $(BUSOBJS)
+rdmdio: $(OBJDIR)/rdmdio.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
@@ -111,8 +112,8 @@ getframe: $(OBJDIR)/getframe.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 manping: $(OBJDIR)/manping.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
-readmdio: $(OBJDIR)/readmdio.o $(BUSOBJS)
-	$(CXX) $(CFLAGS) $^ -o $@
+# readmdio: $(OBJDIR)/readmdio.o $(BUSOBJS)
+#	$(CXX) $(CFLAGS) $^ -o $@
 
 #
 # Programs that depend upon not just the bus objects, but the flash driver
@@ -135,6 +136,10 @@ rawdscope: $(OBJDIR)/rawdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 tmdscope: $(OBJDIR)/tmdscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 zipscope: $(OBJDIR)/zipscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+erxscope: $(OBJDIR)/erxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+etxscope: $(OBJDIR)/etxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 
 #
@@ -166,4 +171,6 @@ depends: tags
 $(OBJDIR)/depends.txt: $(SOURCES) $(HEADERS)
 	$(build-depends)
 
+ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
+endif

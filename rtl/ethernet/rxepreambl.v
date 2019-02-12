@@ -84,7 +84,7 @@ module	rxepreambl(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 			o_d <= 8'h0;
 		end else if (!r_inpkt)
 		begin
-			r_inpkt <= (nsyncs > 4'h6)&&(i_v)&&(i_d == 8'h5d);
+			r_inpkt <= (nsyncs > 4'h6)&&(i_v)&&(i_d == 8'hd5);
 			o_v <= 1'b0;
 			o_d <= 8'h0;
 		end else begin
@@ -170,7 +170,7 @@ module	rxepreambl(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 		assert(!r_inpkt);
 	else if (!$past(i_ce))
 		assert($stable(r_inpkt));
-	else if ($past(&f_match) && f_v && $past(nsyncs >= 6) && ($past(i_d) == 8'h5d))
+	else if ($past(&f_match) && f_v && $past(nsyncs >= 6) && ($past(i_d) == 8'hd5))
 		assert(r_inpkt);
 
 	always @(posedge i_clk)
@@ -180,7 +180,7 @@ module	rxepreambl(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_en))&&(!$past(i_reset))
 			&&($past(nsyncs>4'h6))&&(f_v)
-			&&($past(i_d == 8'h5d))
+			&&($past(i_d == 8'hd5))
 			&&($past(i_ce)))
 		assert(r_inpkt);
 	else if ((f_past_valid)&&($past(i_en))&&(!$past(r_inpkt)))

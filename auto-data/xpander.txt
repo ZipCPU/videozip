@@ -2,7 +2,7 @@
 ##
 ## Filename: 	xpander.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	To describe a simple peripheral capable of expanding a bus from
 ##		one data width (32) to another (128)
@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published

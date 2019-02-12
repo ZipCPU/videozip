@@ -55,7 +55,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 		o_d <= 8'h0;
 		shiftreg <= {
 			9'h155, 9'h155, 9'h155, 9'h155,
-			9'h155, 9'h155, 9'h155, 9'h15d };
+			9'h155, 9'h155, 9'h155, 9'h1d5 };
 	end else if (i_ce) begin
 		shiftreg <= { shiftreg[62:0], { i_v, i_d }};
 		o_v <= shiftreg[71]&&((o_v)||(i_v));
@@ -64,7 +64,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 		begin
 			shiftreg <= {
 				9'h155, 9'h155, 9'h155, 9'h155,
-				9'h155, 9'h155, 9'h155, 9'h15d };
+				9'h155, 9'h155, 9'h155, 9'h1d5 };
 			if (!i_en)
 			begin
 				shiftreg[1*9-1] <= 1'b0;
@@ -179,7 +179,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	4'h5: assert((o_v)&&(o_d == 8'h55));
 	4'h6: assert((o_v)&&(o_d == 8'h55));
 	4'h7: assert((o_v)&&(o_d == 8'h55));
-	4'h8: assert((o_v)&&(o_d == 8'h5d));
+	4'h8: assert((o_v)&&(o_d == 8'hd5));
 	endcase
 	else if ((f_past_valid)&&(f_cnt < 4'h9)&&(f_v[0]))
 		assert(!o_v);

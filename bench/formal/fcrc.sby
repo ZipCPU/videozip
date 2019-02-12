@@ -1,0 +1,22 @@
+[tasks]
+prf
+
+[options]
+# prf: mode bmc
+prf: mode prove
+prf: depth 64
+
+[engines]
+# smtbmc
+abc pdr
+
+[script]
+read -formal addecrc.v
+read -formal rxecrc.v
+read -formal fcrc.v
+prep -top rxecrc
+
+[files]
+../../rtl/ethernet/addecrc.v
+../../rtl/ethernet/rxecrc.v
+fcrc.v

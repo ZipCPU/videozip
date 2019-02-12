@@ -330,9 +330,10 @@ module	enetpackets(i_wb_clk, i_reset,
 	wire	[3:0]	w_maw;
 
 	assign	w_maw = MAW+2; // Number of bits in the packet length field
-	assign	w_rx_ctrl = { 4'h0, w_maw, {(24-20){1'b0}},
-			(rx_valid)&&(rx_broadcast)&&(!rx_clear),
-			rx_crcerr, rx_err, rx_miss,
+	assign	w_rx_ctrl = { 4'h0, w_maw, {(24-20){1'b0}}, // 12 bits
+			(rx_valid)&&(rx_broadcast)&&(!rx_clear), // 1-bit
+			rx_crcerr, rx_err, rx_miss,		// 3-bits
+			// 16-bits follow
 			rx_busy, (rx_valid)&&(!rx_clear),
 			{(14-MAW-2){1'b0}}, rx_len };
 
@@ -507,9 +508,12 @@ module	enetpackets(i_wb_clk, i_reset,
 	assign	w_txcrcd  = w_macd;
 `endif
 
+	wire	w_net_tx_ctl;
 	addepreamble txprei(i_net_tx_clk, ((n_reset)||(n_tx_cancel)), tx_ce,
 				n_tx_config_hw_preamble,
-				w_txcrcen, w_txcrcd, o_net_tx_ctl, o_net_txd);
+				w_txcrcen, w_txcrcd, w_net_tx_ctl, o_net_txd);
+
+	assign	o_net_tx_ctl = w_net_tx_ctl | r_txd_en | n_tx_cmd;
 
 	(* ASYNC_REG = "TRUE" *) reg	r_tx_busy;
 	always @(posedge i_wb_clk)
@@ -553,7 +557,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	wire		w_minerr, w_rxcrcerr, w_macerr, w_broadcast, w_iperr;
 
 `ifndef	RX_BYPASS_HW_PREAMBLE
-	rxepreambl rxprei(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), 1'b1,
+	rxepreambl rxprei(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), 1'b1, 1'b1,
 			i_net_rx_ctl, i_net_rxd, w_npre, w_npred);
 `else
 	assign	w_npre  = i_net_rx_ctl; 
@@ -571,7 +575,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	assign	w_rxmind= w_npred;
 
 `ifndef	RX_BYPASS_HW_CRC
-	rxecrc	rxcrci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+	rxecrc	rxcrci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), rx_ce,
 			n_rx_config_hw_crc,
 			w_rxmin, w_rxmind, w_rxcrc, w_rxcrcd, w_rxcrcerr);
 `else
@@ -581,7 +585,8 @@ module	enetpackets(i_wb_clk, i_reset,
 `endif
 
 `ifndef	RX_BYPASS_HW_RMMAC
-	rxehwmac rxmaci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), rx_ce, n_rx_config_hw_mac, hw_mac,
+	rxehwmac rxmaci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+			rx_ce, n_rx_config_hw_mac, hw_mac,
 			w_rxcrc, w_rxcrcd,
 			w_rxmac, w_rxmacd,
 			w_macerr, w_broadcast);
@@ -594,7 +599,8 @@ module	enetpackets(i_wb_clk, i_reset,
 `ifdef	RX_HW_IPCHECK
 	// Check: if this packet is an IP packet, is the IP header checksum
 	// valid?
-	rxeipchk rxipci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), n_rx_config_ip_check,
+	rxeipchk rxipci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+			rx_ce, n_rx_config_ip_check,
 			w_rxcrc, w_rxcrcd, w_iperr);
 `else
 	assign	w_iperr = 1'b0;
@@ -606,7 +612,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	wire	[(MAW+1):0]	w_rxlen;
 
 	rxewrite #(MAW) rxememi(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
-			w_rxmac, w_rxmacd,
+			rx_ce, w_rxmac, w_rxmacd,
 			w_rxwr, w_rxaddr, w_rxdata, w_rxlen);
 
 	reg	last_rxwr, n_rx_valid, n_eop, n_rx_busy, n_rx_crcerr,
@@ -711,42 +717,53 @@ module	enetpackets(i_wb_clk, i_reset,
 	assign	o_rx_int = (rx_valid)&&(!rx_clear);
 	assign	o_wb_stall = 1'b0;
 
-	wire	[31:0]	rxdbg;
-	/*
-	wire	rx_trigger; // reg	rx_trigger;
-	always @(posedge i_net_rx_clk)
-	begin
-		if ((n_rx_clear)&&(!rx_trigger))
-			rx_trigger <= 1'b1;
-		else if (!n_rx_clear)
-			rx_trigger <= 1'b0;
-	end
-	assign	rx_trigger = i_net_rx_ctl;
-	*/
+	localparam	[0:0]	RXSCOPE = 1'b0;
 
-	assign	rxdbg = { 32'h0 };
-	/*
-	rx_trigger, n_eop, w_rxwr,
-		w_npre, w_npred,
-		w_rxcrc, w_rxcrcd,
-		w_macerr, w_broadcast, w_rxmac, w_rxmacd,
-		n_rx_clear, i_net_rxerr, n_rx_miss, n_rx_net_err,// 4 bits
-		n_rx_valid, n_rx_busy, i_net_crs, i_net_rx_ctl,	// 4 bits
-		i_net_rxd };					// 4 bits
-	*/
+	generate if (RXSCOPE)
+	begin : RXSCOPE_DEF
+
+		reg	rx_trigger, rx_last_ctl;
+		always @(posedge i_net_rx_clk)
+			rx_last_ctl <= i_net_rx_ctl;
+		always @(posedge i_net_rx_clk)
+			rx_trigger <= (i_net_rx_ctl)&&(!rx_last_ctl);
+
+		assign	o_debug = {
+			// Signals, and Potential errors
+			rx_trigger, n_eop, w_macerr, w_broadcast,
+			n_rx_clear, n_rx_miss, n_rx_net_err, n_rx_valid,
+			n_rx_busy, // 9-bits
+			// Memory stage, 1-bits
+			w_rxwr,
+			//
+			//
+			// Preamble stage, 1-bits
+			w_npre, // w_npred,
+			// Min Packet, 1 bit
+			w_rxmin, // w_rxmind,
+
+			// RXCRC, 10 bits
+			w_rxcrc, w_rxcrcd, w_rxcrcerr,
+			// // H/W MAC processing - 1-bits
+			w_rxmac, // w_rxmacd,
+			//
+			i_net_rx_ctl, i_net_rxd };		// 9 bits
 
 
-	/*
-	wire	[31:0]	txdbg;
-	assign	txdbg = { 32'h0 };
-	n_tx_cmd, i_net_rx_ctl, rx_busy, n_rx_err, i_net_rxd,
-			{(24-(MAW+3)-10){1'b0}}, 
-			n_tx_addr[(MAW+2):0],
-		1'b0, n_tx_cancel,
-		n_tx_cmd, n_tx_complete, n_tx_busy, o_net_tx_en,
-		o_net_txd
+	end else begin : TXSCOPE_DEF
+
+		assign	o_debug = {
+			// 3 bits
+			n_tx_cmd, n_tx_complete, n_tx_busy,
+			// 9 bits
+			r_txd_en, r_txd,
+			// 2 bits
+			w_macen, w_paden,
+			// 9-bits
+			w_txcrcen, w_txcrcd,
+			// 9 bits
+			o_net_tx_ctl, o_net_txd
 		};
-	*/
+	end endgenerate
 
-	assign	o_debug = rxdbg;
 endmodule

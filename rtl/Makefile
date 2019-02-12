@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2015-2017, Gisselquist Technology, LLC
+## Copyright (C) 2015-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -43,11 +43,21 @@ YYMMDD=`date +%Y%m%d`
 CXX   := g++
 FBDIR := .
 VDIRFB:= $(FBDIR)/obj_dir
+VOBJ := obj_dir
+CPUDR := cpu
+BASE  := main
+
+.DELETE_ON_ERROR:
+SUBMAKE := $(MAKE) --no-print-directory -C $(VOBJ) -f
+ifeq ($(VERILATOR_ROOT),)
 VERILATOR := verilator
+else
+VERILATOR := $(VERILATOR_ROOT)/bin/verilator
+endif
+VFLAGS = -Wall --MMD -O3 --trace -Mdir $(VDIRFB) $(AUTOVDIRS) -cc
 
 -include make.inc
 
-VFLAGS     = -MMD -Wall -O3 -trace -cc $(AUTOVDIRS)
 
 .PHONY: test
 test: $(VDIRFB)/Vmain__ALL.a
@@ -94,9 +104,6 @@ $(VDIRFB)/Vmain.mk:  $(VDIRFB)/Vmain.h
 $(VDIRFB)/Vmain.h: main.v $(VFLIST)
 	$(VERILATOR) $(VFLAGS) main.v
 
-$(VDIRFB)/Vbusmaster.cpp $(VDIRFB)/Vbusmaster.h $(VDIRFB)/Vbusmaster.mk: \
-	$(SLOWSRC) $(JTAGBUS) $(CPUSOURCES)
-
 cpudefs.h: cpu/cpudefs.v
 	@echo "Building cpudefs.h"
 	@echo "// " > $@
@@ -116,12 +123,17 @@ design.h: main.v
 	@echo "#ifndef DESIGN_H" >> $@
 	@echo "#define DESIGN_H" >> $@
 	@echo >> $@
-	@grep "^\`" $< | grep -v default_nettype | grep -v include | sed -e '{ s/^`/#/ }' | sed -e ' s/main.v/design.h/' | grep -v timescale >> $@
+	@grep "^\`" $< | grep -v default_nettype		\
+		| grep -v include				\
+		| grep -v timescale				\
+		| sed -e '{ s/^`/#/ }'				\
+		| sed -e ' s/^#elsif/#elif/'			\
+		| sed -e ' s/main.v/design.h/' >> $@
 	@echo >> $@
 	@echo "#endif // DESIGN_H" >> $@
 
-$(VDIRFB)/V%__ALL.a: $(VDIRFB)/V%.mk
-	cd $(VDIRFB); make -f V$*.mk
+$(VOBJ)/V%__ALL.a: $(VOBJ)/V%.mk
+	$(SUBMAKE) V$*.mk
 
 .PHONY:
 archive:
@@ -134,7 +146,12 @@ clean:
 	rm -rf $(VDIRFB)/*.h
 	rm -rf $(VDIRFB)/
 
-DEFS=$(wildcard $(VDIRFB)/*.d)
-ifneq ($(DEFS),)
-include $(DEFS)
+#
+# Note Verilator's dependency created information, and include it here if we
+# can
+DEPS := $(wildcard $(VOBJ)/*.d)
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(DEPS),)
+include $(DEPS)
+endif
 endif

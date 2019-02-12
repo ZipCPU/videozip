@@ -2,7 +2,7 @@
 ##
 ## Filename: 	sdspi.c
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Describes how to connect an SD-SPI peripheral to a wishbone
 ##		bus, as used by autofpga.  Note how the description requires
@@ -18,7 +18,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published

@@ -2,7 +2,7 @@
 ##
 ## Filename: 	hdmiin.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	
 ##
@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -35,6 +35,13 @@
 ################################################################################
 ##
 ##
+@PREFIX=iclock
+@CLOCK.NAME=clk
+@CLOCK.WIRE=i_clk
+@CLOCK.FREQUENCY=100000000
+@CLOCK.TOP=i_clk
+#
+#
 @PREFIX=hdmiin
 @NADDR=16
 @ACCESS=HDMIIN_ACCESS
@@ -252,23 +259,21 @@ typedef	struct	HDMI_IN_S {
 		m_core->i_hdmi_in_b = b;
 		}
 @SIM.DBGCONDITION=
-		writeout = (writeout)||(m_core->v__DOT__thehdmiin__DOT__copypix__DOT__frame_en_pipe);
-		writeout = (writeout)||(m_core->v__DOT__vid_cyc);
+		writeout = (writeout)||(m_core->VVAR(_thehdmiin__DOT__copypix__DOT__frame_en_pipe));
+		writeout = (writeout)||(m_core->VVAR(_vid_cyc));
 @SIM.DEBUG=
 			printf("%s%s %s%s @%08x ",
-				m_core->v__DOT__vid_cyc?"CYC":"   ",
-				m_core->v__DOT__vid_stb?"STB":"   ",
-				m_core->v__DOT__vid_bus_ack?"ACK":"   ",
-				m_core->v__DOT__vid_bus_stall?"STALL":"     ",
-				m_core->v__DOT__vid_addr);
+				m_core->VVAR(_vid_cyc)?"CYC":"   ",
+				m_core->VVAR(_vid_stb)?"STB":"   ",
+				m_core->VVAR(_vid_bus_ack)?"ACK":"   ",
+				m_core->VVAR(_vid_bus_stall)?"STALL":"     ",
+				m_core->VVAR(_vid_addr));
 			for(int @$(PREFIX)j = 0; @$(PREFIX)j<4; @$(PREFIX)j++) {
 				printf("%08x%c",
-					m_core->v__DOT__vid_data[@$(PREFIX)j],
+					m_core->VVAR(_vid_data)[@$(PREFIX)j],
 					(3==@$(PREFIX)j)?':':' ');
 			}
 			printf("\n");
-#
-#
 #
 #
 #
@@ -598,6 +603,7 @@ typedef	struct	EDID_SRC_S {
 #
 #
 @PREFIX=clkhdmiin
+@DEVID=HDMI_INCLK
 @INCLUDEFILE=clkcounter.txt
 @REGS.NOTE= // HDMI-IN Clock Counter (measures clock speed)
 @REGS.0 = 0 R_HDMI_INCLK HCLKIN
@@ -607,6 +613,7 @@ typedef	struct	EDID_SRC_S {
 #
 #
 @PREFIX=clkhdmiout
+@DEVID=HDMI_OUTCLK
 @INCLUDEFILE=clkcounter.txt
 # @TSTCLOCK= i_hdmi_out_clk
 # @TSTCLOCK= i_hdmi_in_hsclk

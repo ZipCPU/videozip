@@ -51,12 +51,12 @@ set_property -dict {PACKAGE_PIN M17 IOSTANDARD LVCMOS12} [get_ports {i_sw[7]}]
 
 
 ## OLED Display
-set_property -dict { PACKAGE_PIN W22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_dcn      }]; #IO_L7N_T1_D10_14 Sch=oled_dc SPI select port
-set_property -dict { PACKAGE_PIN U21   IOSTANDARD LVCMOS33 } [get_ports { o_oled_reset_n  }]; #IO_L4N_T0_D05_14 Sch=oled_res RESET
-set_property -dict { PACKAGE_PIN W21   IOSTANDARD LVCMOS33 } [get_ports { o_oled_sck      }]; #IO_L7P_T1_D09_14 Sch=oled_sclk SPI Clk port
-set_property -dict { PACKAGE_PIN Y22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_mosi     }]; #IO_L9N_T1_DQS_D13_14 Sch=oled_sdin Data port
-set_property -dict { PACKAGE_PIN P20   IOSTANDARD LVCMOS33 } [get_ports { o_oled_panel_en }]; #IO_0_14 Sch=oled_vbat VBAT
-set_property -dict { PACKAGE_PIN V22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_logic_en }]; #IO_L3N_T0_DQS_EMCCLK_14 Sch=oled_vdd VDD
+#set_property -dict { PACKAGE_PIN W22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_dcn      }]; #IO_L7N_T1_D10_14 Sch=oled_dc SPI select port
+#set_property -dict { PACKAGE_PIN U21   IOSTANDARD LVCMOS33 } [get_ports { o_oled_reset_n  }]; #IO_L4N_T0_D05_14 Sch=oled_res RESET
+#set_property -dict { PACKAGE_PIN W21   IOSTANDARD LVCMOS33 } [get_ports { o_oled_sck      }]; #IO_L7P_T1_D09_14 Sch=oled_sclk SPI Clk port
+#set_property -dict { PACKAGE_PIN Y22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_mosi     }]; #IO_L9N_T1_DQS_D13_14 Sch=oled_sdin Data port
+#set_property -dict { PACKAGE_PIN P20   IOSTANDARD LVCMOS33 } [get_ports { o_oled_panel_en }]; #IO_0_14 Sch=oled_vbat VBAT
+#set_property -dict { PACKAGE_PIN V22   IOSTANDARD LVCMOS33 } [get_ports { o_oled_logic_en }]; #IO_L3N_T0_DQS_EMCCLK_14 Sch=oled_vdd VDD
 
 
 ## HDMI in
@@ -319,3 +319,7 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 ## Adding in any XDC_INSERT tags
 
+## From enetscope
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scope*/*br_*}] -to [get_cells -hier -filter {NAME=~*scope*/*q_*}] 12.3
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scope*/*br_*}] -to [get_cells -hier -filter {NAME=~*scope*/*dr_*}] 12.3
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scopei*/*waddr*}] -to [get_cells -hier -filter {NAME=~*scopei*/*this_addr*}] 12.3

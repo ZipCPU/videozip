@@ -15,7 +15,7 @@
 //	divided by four (2*CKPCK).
 //
 //	The next step in using the core is to set enable it by setting i_en
-//	high.  This controlls how long the SPI port will be active.  If the
+//	high.  This controls how long the SPI port will be active.  If the
 //	enable line goes low, the transaction will finish and CS will be
 //	de-asserted (raised high)
 //
@@ -35,16 +35,18 @@
 //
 //	o_word[11:0]	The last received sample
 //
+//	This was drawn from the https://github.com/ZipCPU/wbpmic repository, from
+//	the rtl/smpladc.v file.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017, Gisselquist Technology, LLC
+// Copyright (C) 2017-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -79,7 +81,7 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	reg	[8:0]	r_clk;
 	reg		active, last_en, valid_stb, zclk, r_valid, hclk;
 	reg	[4:0]	m_clk;
-	reg	[14:0]	r_data;
+	reg	[10:0]	r_data;
 	reg	[11:0]	r_output;
 
 	initial	active    = 1'b0;
@@ -92,11 +94,13 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	initial	hclk      = 1'b0;
 	always @(posedge i_clk)
 	begin
-		if ((i_request)&&(!active))
-			last_en <= i_en;
-		if ((i_request)&&(!active)&&((i_en)||(last_en)))
-			active <= 1'b1;
-		else if ((hclk)&&(o_sck)&&(m_clk >= 5'h0a)&&(!i_en))
+		if (r_clk == CKPCK-1)
+		begin
+			if ((i_request)&&(!active))
+				last_en <= i_en;
+			if ((i_request)&&(!active)&&((i_en)||(last_en)))
+				active <= 1'b1;
+		end else if ((hclk)&&(o_sck)&&(m_clk >= 5'h0a)&&(!i_en))
 			active <= 1'b0;
 		else if ((hclk)&&(o_sck)&&(m_clk >= 5'h10))
 			active <= 1'b0;
@@ -112,7 +116,7 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 		hclk <= 1'b0;	// hclk is the half clock
 		if ((active)||(!o_sck))
 		begin
-			if (r_clk == CKPCK)
+			if (r_clk == CKPCK-1)
 			begin
 				hclk <= 1'b1;
 				zclk  <= o_sck;
@@ -121,7 +125,10 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 			end else
 				r_clk <= r_clk + 1'b1;
 		end else begin
-			r_clk <= (!active) ? CKPCK : 0;
+			if (r_clk < CKPCK-1)
+				r_clk <= r_clk + 1;
+			else
+				r_clk <= CKPCK-1;
 			o_sck <= 1'b1;
 		end
 	end
@@ -137,12 +144,12 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	// Grab the value on the rise
 	always @(posedge i_clk)
 		if ((hclk)&&(!zclk))
-			r_data <= { r_data[13:0], i_miso };
+			r_data <= { r_data[9:0], i_miso };
 
 	initial	r_output = 0;
 	always @(posedge i_clk)
 		if ((hclk)&&(o_sck)&&(m_clk >= 5'h10))
-			r_output <= r_data[14:3];
+			r_output <= { r_data[10:0], i_miso };
 
 	assign	o_data = { !last_en, r_valid, r_output };
 
@@ -154,7 +161,6 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 `endif
 
 	reg	f_past_valid;
-	reg	f_last_clk;
 	reg	[11:0]	f_sreg;
 
 	initial	f_past_valid = 0;
@@ -162,44 +168,11 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 		f_past_valid <= 1'b1;
 
 	initial	f_sreg = 0;
-	always @($global_clock)
-	begin
-		f_last_clk <= i_clk;
-		restrict(i_clk == !f_last_clk);
-	end
 
 	// Constrain the inputs
-	always @(*)
-	begin
-		restrict(i_request);
-		restrict(i_en);
-		if (!r_valid)
-			`ASSUME(!i_rd);
-		if (r_valid)
-			assume(s_eventually (i_rd));
-	end
-
-	always @($global_clock)
-	if (!$rose(i_clk))
-	begin
-		`ASSUME($stable(i_request));
-		`ASSUME($stable(i_rd));
-		`ASSUME($stable(i_en));
-	end
-
-	always @($global_clock)
-	if (!$fell(o_sck))
-		restrict($stable(i_miso));
-	/*
-	if (f_past_valid)
-	begin
-		// i_miso only changes when o_sck changes
-		if ($past(o_sck) == o_sck)
-			`ASSUME($past(i_miso) == i_miso);
-		if (!$past(o_sck))
-			`ASSUME($past(i_miso) == i_miso);
-	end
-	*/
+	always @(posedge i_clk)
+	if ((!o_csn)&&(o_sck))
+		assume($stable(i_miso));
 
 	// Constrain the outputs
 	reg	[5:0]	f_nck;
@@ -208,7 +181,6 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 	initial		f_zcount = 0;
 	always @(posedge i_clk)
 	begin
-		assert(s_eventually active);
 		if ((zclk)&&(active))
 			assert(r_clk == 0);
 		if ((hclk)&&(active))
@@ -217,19 +189,19 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 			assert(o_sck);
 
 		if (!active)
-			f_zcount <= CKPCK-1;
+			f_zcount <= CKPCK-2;
 		else if (!zclk)
 			f_zcount <= f_zcount + 1'b1;
 		else // if (zclk)
 			f_zcount <= 0;
-		assert(f_zcount <= CKPCK*2+1);
+		assert(f_zcount <= CKPCK*2-1);
 
-		if (hclk) assert((f_zcount == CKPCK)||(f_zcount == CKPCK*2+1));
+		if (hclk) assert((f_zcount == CKPCK-1)||(f_zcount == CKPCK*2-1));
 		if (hclk)
 			assert(r_clk == 0);
 		if (!o_csn)
-			assert(r_clk <= CKPCK);
-		if ((f_past_valid)&&(f_zcount < CKPCK))
+			assert(r_clk <= CKPCK-1);
+		if ((f_past_valid)&&(f_zcount < CKPCK-1))
 			assert($past(o_sck) == o_sck);
 
 		if (!active)
@@ -240,7 +212,7 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 		if (active)
 			assert(f_nck == m_clk);
 
-		if ((f_past_valid)&&(!$past(o_sck))&&(o_sck)&&(f_nck <= 12))
+		if ((f_past_valid)&&($rose(o_sck)))
 			f_sreg[11:0] <= {f_sreg[10:0], i_miso };
 
 		if ((f_past_valid)&&(!valid_stb))
@@ -249,10 +221,99 @@ module	smpladc(i_clk, i_request, i_rd, i_en, o_csn, o_sck, i_miso, o_data);
 			assert(o_data[11:0] == f_sreg[11:0]);
 
 		if ((f_past_valid)&&(!$past(o_csn))&&(o_csn))
-			assert( (f_nck == 5'ha) || (f_nck == 6'h10));
-		if ((f_past_valid)&&($past(i_request))&&($past(i_en))&&($past(o_csn)))
+		begin
+			if (!$past(i_en))
+				assert((f_nck >= 5'ha)&&(f_nck <= 6'h10));
+			else
+				assert(f_nck == 6'h10);
+		end
+
+		if ((f_past_valid)&&($past(i_request))&&($past(i_en))
+				&&($past(o_csn))&&($past(r_clk)==CKPCK-1))
 			assert(!o_csn);
 	end
+
+	always @(*)
+	if (o_csn)
+		assert(o_sck);
+
+	always @(posedge i_clk)
+		cover(r_valid);
+`endif
+`ifdef	VERIFIC
+	sequence CLOCK_PERIOD(HALFCLOCKS,ST);
+		((!o_sck)&&(hclk)&&(zclk)&&(r_clk == 0))
+		##1 ((!o_sck)&&(!hclk)&&(!zclk)&&(m_clk==ST)) [*HALFCLOCKS-1]
+		##1 ((o_sck)&&(hclk)&&(!zclk)&&(m_clk==ST)&&(r_clk == 0))
+		##1 ((o_sck)&&(!hclk)&&(!zclk)&&(m_clk==ST)) [*HALFCLOCKS-1];
+	endsequence
+
+	sequence DATA_PERIOD(HALFCLOCKS,ST,MISO,RDAT);
+		((!o_sck)&&(hclk)&&(zclk)&&(r_clk == 0))
+		##1 ((!o_sck)&&(!hclk)&&(!zclk)&&(m_clk==ST)
+			&&(i_miso == MISO)) [*HALFCLOCKS-1]
+		##1 ((o_sck)&&(hclk)&&(!zclk)&&(m_clk==ST)&&(r_clk == 0)
+			&&(RDAT))
+		##1 ((o_sck)&&(!hclk)&&(!zclk)&&(m_clk==ST)
+			&&(RDAT)) [*HALFCLOCKS-1];
+	endsequence
+
+	assert property (@(posedge i_clk)
+		(!active)&&(i_request)&&(i_en)&&(r_clk == CKPCK-1)
+		|=> (((active)&&(!valid_stb)) throughout
+			((o_sck) ##1 
+			CLOCK_PERIOD(CKPCK, 5'h1)
+			##1 CLOCK_PERIOD(CKPCK, 5'h2)
+			##1 CLOCK_PERIOD(CKPCK, 5'h3)
+			##1 CLOCK_PERIOD(CKPCK, 5'h4)
+			##1 CLOCK_PERIOD(CKPCK, 5'h5)
+			##1 CLOCK_PERIOD(CKPCK, 5'h6)
+			##1 CLOCK_PERIOD(CKPCK, 5'h7)
+			##1 CLOCK_PERIOD(CKPCK, 5'h8)
+			##1 CLOCK_PERIOD(CKPCK, 5'h9)
+			##1 ((!o_sck)&&(hclk)&&(zclk)&&(r_clk == 0))
+			##1 ((!o_sck)&&(!hclk)&&(!zclk)&&(m_clk==5'ha)) [*CKPCK-1]
+			##1 ((o_sck)&&(hclk)&&(!zclk)&&(m_clk==5'ha)&&(r_clk == 0)))));
+
+	(* anyconst *)	wire	[11:0]	f_data;
+	(* anyseq *)	wire	[3:0]	f_ignored;
+
+	assert property (@(posedge i_clk)
+		disable iff (!i_en)
+		(!active)&&(i_request)&&(i_en)
+		##1 (((active)&&(!valid_stb)) throughout
+			(o_sck)
+			##1 DATA_PERIOD(CKPCK,5'h1, f_ignored[3], 1'b1)
+			##1 DATA_PERIOD(CKPCK,5'h2, f_ignored[2], 1'b1)
+			##1 DATA_PERIOD(CKPCK,5'h3, f_ignored[1], 1'b1)
+			##1 DATA_PERIOD(CKPCK,5'h4, f_ignored[0], 1'b1)
+			##1 DATA_PERIOD(CKPCK,5'h5, f_data[11],
+					(r_data[   0] == f_data[11   ]))
+			##1 DATA_PERIOD(CKPCK,5'h6, f_data[10],
+					(r_data[ 1:0] == f_data[11:10]))
+			##1 DATA_PERIOD(CKPCK,5'h7, f_data[ 9],
+					(r_data[ 2:0] == f_data[11: 9]))
+			##1 DATA_PERIOD(CKPCK,5'h8, f_data[ 8],
+					(r_data[ 3:0] == f_data[11: 8]))
+			##1 DATA_PERIOD(CKPCK,5'h9, f_data[ 7],
+					(r_data[ 4:0] == f_data[11: 7]))
+			##1 DATA_PERIOD(CKPCK,5'ha, f_data[ 6],
+					(r_data[ 5:0] == f_data[11: 6]))
+			##1 DATA_PERIOD(CKPCK,5'hb, f_data[ 5],
+					(r_data[ 6:0] == f_data[11: 5]))
+			##1 DATA_PERIOD(CKPCK,5'hc, f_data[ 4],
+					(r_data[ 7:0] == f_data[11: 4]))
+			##1 DATA_PERIOD(CKPCK,5'hd, f_data[ 3],
+					(r_data[ 8:0] == f_data[11: 3]))
+			##1 DATA_PERIOD(CKPCK,5'he, f_data[ 2],
+					(r_data[ 9:0] == f_data[11: 2]))
+			##1 DATA_PERIOD(CKPCK,5'hf, f_data[ 1],
+					(r_data[10:0] == f_data[11: 1]))
+			##1 ((!o_sck)&&(hclk)&&(zclk)&&(r_clk == 0))
+			##1 ((!o_sck)&&(!hclk)&&(!zclk)&&(m_clk==5'h10)) [*CKPCK-1]
+			##1 ((o_sck)&&(hclk)&&(!zclk)&&(m_clk==5'h10)&&(r_clk == 0)&&(i_miso == f_data[0])))
+		|=> (!active)&&(valid_stb)&&(o_data[11:0] == f_data)
+		##1 (r_valid)&&(o_data[11:0] == f_data));
 
 `endif
 endmodule

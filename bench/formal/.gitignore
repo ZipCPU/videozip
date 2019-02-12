@@ -5,6 +5,7 @@ addepad_prf/
 addepad_cvr/
 addepreamble_prf/
 addepreamble_cvr/
+fcrc_prf/
 rxecrc_prf/
 rxecrc_cvr/
 rxehwmac_prf/

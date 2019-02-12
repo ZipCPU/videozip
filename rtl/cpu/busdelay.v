@@ -37,7 +37,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -93,6 +93,7 @@ module	busdelay(i_clk, i_reset,
 	input	wire			i_dly_stall;
 	input	wire	[(DW-1):0]	i_dly_data;
 	input	wire			i_dly_err;
+
 
 	generate
 	if (DELAY_STALL != 0)
@@ -251,16 +252,9 @@ module	busdelay(i_clk, i_reset,
 		// o_wb_stall <= (i_wb_cyc)&&(i_wb_stb) ... or some such?
 		// assign o_wb_stall=((i_wb_cyc)&&(i_dly_stall)&&(o_dly_stb));//&&o_cyc
 		assign	o_wb_stall = (i_dly_stall)&&(o_dly_stb);
-
-`ifdef	FORMAL
-		// f_wpending isn't used if DELAY_STALL is zero, but we'll give
-		// it a seemingly useful value anyway--if for no other reason
-		// than to be sure we set it to the right number of bits
-		assign	f_wpending = { i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel };
-`endif
 	end endgenerate
 
 `ifdef	FORMAL
-// Formal properties for this module are maintained elsewhere
+// The formal proof for this module is maintained elsewhere
 `endif
 endmodule

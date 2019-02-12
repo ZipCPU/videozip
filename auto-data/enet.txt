@@ -2,7 +2,7 @@
 ##
 ## Filename: 	enet.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	
 ##
@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -40,13 +40,8 @@
 ##
 @PREFIX=netb
 @$LGBUFSZ=@$(/LGPKTBUFSZB)
-##
-## Enough addresses to store two packets, but in words.  Hence, we'll divide
-## by four and multiply by two here.
-@$NADDR=(1<<(@$(LGBUFSZ)-1))
-# Technically, this could be DOUBLE memory.  It meets the requirements.
-# Here, we place it into OTHER anyway, to guarantee it gets shuffled into
-# an address last.
+@$MEMORY_ADDRESS_WIDTH=@$(LGBUFSZ)
+@$NADDR=(1<<@$MEMORY_ADDRESS_WIDTH)/2
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
 @MAIN.INSERT=
@@ -57,25 +52,36 @@
 	// itself isnt defined.  Otherwise, the access is accomplished by the
 	// ethernet module
 
-	memdev #(@$(LGBUFSZ)+1)
-		enet_buffers(i_clk, (wb_cyc), (wb_stb)&&(netb_sel),
-				(wb_we)&&(wb_addr[@$(LGBUFSZ)-2]),
-				wb_addr[@$(LGBUFSZ)-2:0], wb_data, wb_sel,
+	memdev #(@$(MEMORY_ADDRESS_WIDTH))
+		enet_buffers(i_clk,
+			(wb_cyc), (wb_stb)&&(netb_sel),
+				(wb_we)&&(wb_addr[@$(MEMORY_ADDRESS_WIDTH)-1]),
+				wb_addr[@$(MEMORY_ADDRESS_WIDTH)-2:0], wb_data, wb_sel,
 				netb_ack, netb_stall, netb_data);
 
 `else
 
 	assign	netb_ack   = 1'b0;
 	assign	netb_stall = 1'b0;
-	assign	netb_data  = 32'h0;
+	assign	netb_data  = 0;
 
 `endif
 
-@$TXOFFSET=(1<<(@$(LGBUFSZ)-2))
 @REGS.N=2
 @REGS.0= 0	R_NET_RXBUF NETRXB
-@REGS.1=@$(TXOFFSET) R_NET_TXBUF NETTXB
+@$TXREG=(1<< @$(MEMORY_ADDRESS_WIDTH))/4
+@REGS.1= @$(TXREG) R_NET_TXBUF NETTXB
+@BDEF.IONAME=_netb
+@BDEF.OSDEF=_BOARD_HAS_ENETB
+@BDEF.OSVAL=
+static volatile unsigned *const @$(BDEF.IONAME)rx = ((unsigned *)@$[0x%08x](REGBASE));
+static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REGBASE) + (@$[0x%04x](NADDR)<<1)));
+##
+##
+##
 @PREFIX=netp
+@DEVID=ETHERNET
+@ACCESS=@$(DEVID)_ACCESS
 @$LGBUFSZ=@$(/LGPKTBUFSZB)
 @INT.NETRX.WIRE=netrx_int
 @INT.NETTX.WIRE=nettx_int
@@ -84,7 +90,6 @@
 @NADDR=8
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
-@ACCESS=ETHERNET_ACCESS
 @TOP.PORTLIST=
 		// Ethernet control (packets) lines
 		o_net_reset_n,
@@ -100,22 +105,27 @@
 	output	wire	[3:0]	o_net_txd;
 @TOP.DEFNS=
 	wire	[7:0]		w_net_rxd, w_net_txd;
+	wire			w_net_rxctlp,
+				w_net_rxctln,
+				w_net_txctl;
 @TOP.MAIN=
 		o_net_reset_n,
-		i_net_rx_clk, i_net_rx_ctl, w_net_rxd,
-		i_net_rx_clk, o_net_tx_ctl, w_net_txd
+		i_net_rx_clk, w_net_rxctlp, w_net_rxd,
+		i_net_rx_clk, w_net_txctl, w_net_txd
 @TOP.INSERT=
-	assign	o_net_tx_clk = i_net_rx_clk;
 
 	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
 	xiddr	rx1(i_net_rx_clk, i_net_rxd[1], { w_net_rxd[5], w_net_rxd[1] });
 	xiddr	rx2(i_net_rx_clk, i_net_rxd[2], { w_net_rxd[6], w_net_rxd[2] });
 	xiddr	rx3(i_net_rx_clk, i_net_rxd[3], { w_net_rxd[7], w_net_rxd[3] });
+	xiddr	rxc(i_net_rx_clk, i_net_rx_ctl, { w_net_rxctlp, w_net_rxctln });
 
-	xoddr	tx0(o_net_tx_clk, { w_net_txd[4], w_net_txd[0] }, o_net_txd[0]);
-	xoddr	tx1(o_net_tx_clk, { w_net_txd[5], w_net_txd[1] }, o_net_txd[1]);
-	xoddr	tx2(o_net_tx_clk, { w_net_txd[6], w_net_txd[2] }, o_net_txd[2]);
-	xoddr	tx3(o_net_tx_clk, { w_net_txd[7], w_net_txd[3] }, o_net_txd[3]);
+	xoddr	tx0(i_net_rx_clk, { w_net_txd[0], w_net_txd[4] }, o_net_txd[0]);
+	xoddr	tx1(i_net_rx_clk, { w_net_txd[1], w_net_txd[5] }, o_net_txd[1]);
+	xoddr	tx2(i_net_rx_clk, { w_net_txd[2], w_net_txd[6] }, o_net_txd[2]);
+	xoddr	tx3(i_net_rx_clk, { w_net_txd[3], w_net_txd[7] }, o_net_txd[3]);
+	xoddr	txc(i_net_rx_clk, { w_net_txctl,  w_net_txctl  }, o_net_tx_ctl);
+	xoddr	txck(i_net_rx_clk,{ 1'b1,  1'b0  }, o_net_tx_clk);
 
 
 @MAIN.PORTLIST=
@@ -136,13 +146,13 @@
 @MAIN.DEFNS=
 	//
 	wire	[31:0]	netp_debug;
+@MAWB= @$(netb.MEMORY_ADDRESS_WIDTH)
 @MAIN.INSERT=
 	assign	o_net_tx_clk = i_net_rx_clk;
-	enetpackets	#(@$(LGBUFSZ))
+	enetpackets	#(.MEMORY_ADDRESS_WIDTH(@$(MAWB)))
 		netctrl(i_clk, i_reset,
-			wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)), wb_we,
-			{ (netb_sel), wb_addr[@$(LGBUFSZ)-2:0] },
-				wb_data, wb_sel,
+			wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
+			wb_we, { (netb_sel), wb_addr[@$(MAWB)-2:0] }, wb_data, wb_sel,
 				netp_ack, netp_stall, netp_data,
 			o_net_reset_n,
 			i_net_rx_clk, i_net_rx_ctl, i_net_rxd,
@@ -206,10 +216,19 @@ typedef	struct ENETPACKET_S {
 	unsigned long	n_mac;
 	unsigned	n_rxmiss, n_rxerr, n_rxcrc, n_txcol;
 } ENETPACKET;
+
+#define	SYSINT_ENETRX	SYSINT(@$(INT.NETRX.syspic.ID))
+#define	SYSINT_ENETTX	SYSINT(@$(INT.NETTX.syspic.ID))
+
+@SIM.CLOCK=net_rx_clk
+@SIM.TICK=
+		m_core->i_net_rx_ctl = m_core->o_net_tx_ctl;
+		m_core->i_net_rxd    = m_core->o_net_txd;
+
 @BDEF.IONAME=io_enet
 @BDEF.IOTYPE=ENETPACKET
 @BDEF.OSDEF=_BOARD_HAS_ENETP
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const _netp = ((ENETPACKET *)@$(REGBASE));
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const _netp = ((ENETPACKET *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP=ENET
 @RTL.MAKE.SUBD=ethernet
 @RTL.MAKE.FILES= enetpackets.v
@@ -218,7 +237,3 @@ typedef	struct ENETPACKET_S {
 	xiddr.v xoddr.v
 @CLOCK.NAME=net_rx_clk
 @$CLOCK.FREQUENCY=125000000
-@SIM.CLOCK=net_rx_clk
-@SIM.TICK=
-		m_core->i_net_rx_ctl = m_core->o_net_tx_ctl;
-		m_core->i_net_rxd    = m_core->o_net_txd;

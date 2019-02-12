@@ -2,7 +2,7 @@
 ##
 ## Filename: 	wbuconsole.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Provide access to both a debugging bus and a console port for
 ##		the CPU.  The debugging bus will be given 7-bit transfer codes
@@ -16,7 +16,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -41,6 +41,7 @@
 ##
 ##
 @PREFIX=wbu
+@DEVID=DBGBUS
 @ACCESS=WBUBUS_MASTER
 @MASTER.BUS=wbu
 @MASTER.TYPE=HOST
@@ -48,11 +49,11 @@
 @BUS.CLOCK=clk
 @BUS.WIDTH=32
 @BUS.TYPE=wb
-@$BAUDRATE=25000000
+@$BAUDRATE=2000000
 @CLOCK.NAME=clk
 @$SETUP=@$(CLOCK.FREQUENCY) / @$BAUDRATE
 @SETUP.FORMAT=24'h%x
-@$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
+@$BUS_ADDRESS_WIDTH= @$(MASTER.BUS.AWID)
 @MAIN.PORTLIST=
 		// UART/host to wishbone interface
 		i_@$(PREFIX)_uart_rx, o_@$(PREFIX)_uart_tx
@@ -65,8 +66,8 @@
 	// UART interface
 	//
 	//
-	// Baudrate : @$BAUDRATE
-	// Clock    : @$(CLOCK.FREQUENCY)
+	// Baudrate : @$[%9d](BAUDRATE)
+	// Clock    : @$[%9d](CLOCK.FREQUENCY)
 	localparam [23:0] BUSUART = @$SETUP;	// @$BAUDRATE baud
 	wire	[7:0]	@$(PREFIX)_rx_data, @$(PREFIX)_tx_data;
 	wire		@$(PREFIX)_rx_stb;
@@ -91,10 +92,15 @@
 @$ZIP_DBGDATA=4+@$.ZIP_ADDRESS
 @ZIP_DBGDATA.FORMAT= 0x%08x
 @MAIN.INSERT=
+	localparam	@$(DEVID)BITS = $clog2(BUSUART);
 	// The Host USB interface, to be used by the WB-UART bus
-	rxuartlite	#(BUSUART) rcv(@$(CLOCK.WIRE), i_@$(PREFIX)_uart_rx,
+	rxuartlite	#(.TIMER_BITS(@$(DEVID)BITS),
+				.CLOCKS_PER_BAUD(BUSUART[@$(DEVID)BITS-1:0]))
+		rcv(@$(CLOCK.WIRE), i_@$(PREFIX)_uart_rx,
 				@$(PREFIX)_rx_stb, @$(PREFIX)_rx_data);
-	txuartlite	#(BUSUART) txv(@$(CLOCK.WIRE),
+	txuartlite	#(.TIMING_BITS(@$(DEVID)BITS[4:0]),
+				.CLOCKS_PER_BAUD(BUSUART[@$(DEVID)BITS-1:0]))
+		txv(@$(CLOCK.WIRE),
 				@$(PREFIX)_tx_stb,
 				@$(PREFIX)_tx_data,
 				o_@$(PREFIX)_uart_tx,
@@ -166,7 +172,7 @@
 	wire	w_console_rx_stb, w_console_tx_stb, w_console_busy;
 	wire	[6:0]	w_console_rx_data, w_console_tx_data;
 @MAIN.INSERT=
-	wbconsole console(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0,
+	wbconsole #(.LGFLEN(6)) console(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0,
  			wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
 				wb_addr[1:0], wb_data,
  			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
@@ -187,9 +193,10 @@ typedef struct  CONSOLE_S {
 	unsigned	u_rx, u_tx;
 } CONSOLE;
 
+#define	_@$(PREFIX)_txbusy	((_uart->u_fifo & 0x10000)==0)
 @BDEF.IONAME= io_console
 @BDEF.IOTYPE= CONSOLE
 @BDEF.OSDEF=	_BOARD_HAS_BUSCONSOLE
-@BDEF.OSVAL=static volatile CONSOLE *const _uart = ((CONSOLE *)@$[0x%08x](REGBASE));
+@BDEF.OSVAL=static volatile CONSOLE *const _@$(PREFIX) = ((CONSOLE *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP= CONSOLE
 @RTL.MAKE.FILES= wbconsole.v txuartlite.v rxuartlite.v ufifo.v

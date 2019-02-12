@@ -2,7 +2,7 @@
 ##
 ## Filename: 	flash.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Describes the flash in our new data format.
 ##
@@ -11,7 +11,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -36,14 +36,15 @@
 ##
 ##
 @PREFIX= flash
-@$LGFLASHSZ.EXPR=24
+@DEVID=FLASH
+@ACCESS= FLASH_ACCESS
+@$LGFLASHSZ=24
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
 @ACCESS= FLASH_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
-@LD.PERM=rx
 @INT.FLASH.WIRE= flash_interrupt
 @INT.FLASH.PIC= buspic
 @$ISPIF_EN.EXPR=@$ISPIF_DIS|0x80000000
@@ -162,7 +163,6 @@
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
-@DEVID=FLASH
 @REGDEFS.H.DEFNS=
 #define	@$(DEVID)BASE	@$[0x%08x](REGBASE)
 #define	@$(DEVID)LEN	@$NBYTES
@@ -170,10 +170,8 @@
 @REGS.0= 0 R_@$(DEVID) FLASH
 @BDEF.OSDEF=_BOARD_HAS_FLASH
 @BDEF.OSVAL=extern char _flash[@$NBYTES];
-@LDSCRIPT.PSTR=	rx
-@LDSCRIPT.PTR=	flash
-@LDSCRIPT.DEF=
-_flash=ORIGIN(flash);
+@LD.PERM=	rx
+@LD.NAME=	@$(PREFIX)
 @REGDEFS.H.INSERT=
 
 #define	R_ICONTROL	R_PIC
@@ -196,16 +194,19 @@ _flash=ORIGIN(flash);
 			m_core->o_qspi_sck, m_core->o_qspi_dat);
 #endif // @$(ACCESS)
 @SIM.LOAD +=
+#ifdef	@$(ACCESS)
 			m_@$(MEM.NAME)->load(start, &buf[offset], wlen);
-#
-#
-#
-#
-#
-# Now, the control interface
+#endif // @$(ACCESS)
+##
+##
+##
+##
+## Now the control interface
 @PREFIX= flctl
 @NADDR= 4
-@ACCESS= FLASH_ACCESS
+@DEVID=FLASHCTL
+@ACCESS=@$(DEVID)_ACCESS
+@DEPENDS= FLASH_ACCESS
 # This cannot be a DOUBLE peripheral type, since our response may take more than
 # two clock cycles.
 @SLAVE.TYPE=OTHER
@@ -213,9 +214,9 @@ _flash=ORIGIN(flash);
 @MAIN.INSERT=
 	// The Flash control interface result comes back together with the
 	// flash interface itself.  Hence, we always return zero here.
-	assign	flctl_ack   = 1'b0;
-	assign	flctl_stall = 1'b0;
-	assign	flctl_data  = 0;
+	assign	@$(PREFIX)_ack   = 1'b0;
+	assign	@$(PREFIX)_stall = 1'b0;
+	assign	@$(PREFIX)_data  = 0;
 @REGS.NOTE= // FLASH erase/program configuration registers
 @REGS.N= 4
 @REGS.0= 0 R_QSPI_EREG QSPIE
@@ -244,6 +245,10 @@ typedef struct FLASHCTL_S {
 #define	SUBSECTOROF(A)	((A) & (-1<<12))
 #define	PAGEOF(A)	((A) & (-1<<8))
 
-@BDEF.IONAME= io_flctl
+@BDEF.IONAME= _@$(PREFIX)
+@BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) * const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)(@$[0x%08x](REGBASE)));
+##
 @RTL.MAKE.GROUP= FLASH
 @RTL.MAKE.FILES= wbqspiflash.v llqspi.v flashconfig.v

@@ -4,14 +4,17 @@
 //
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	TBCLOCK is a class originally developed for the VideoZIP project
+//		as a helper class to give Verilator the ability to test across
+//	multiple clock domains.  In particular, it helps the testb.h file
+//	determine when the next clocking event will (should) occur.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -103,6 +106,15 @@ public:
 		// period for raising the clock, and another for lowering
 		// the clock.
 		m_increment_ps = (interval_ps>>1)&-2l;
+		assert(m_increment_ps > 0);
+	}
+
+	void	set_frequency_hz(unsigned long frequency_hz) {
+		double	tmp = 1e12 / (double)frequency_hz;
+		unsigned long tmp_interval = (unsigned long)tmp;
+
+		m_increment_ps = (tmp_interval>>1)&-2l;
+		// printf("SET FREQ = %f MHz = %ld ps\n", frequency_hz/1e6, tmp_interval);
 		assert(m_increment_ps > 0);
 	}
 

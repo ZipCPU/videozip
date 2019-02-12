@@ -2,7 +2,7 @@
 ##
 ## Filename: 	zipmaster.txt
 ##
-## Project:	AutoFPGA, a utility for composing FPGA designs from peripherals
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	To describe what needs to be done to make the ZipCPU a part
 ##		of a main .v file.  This Wishbone Master description
@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -51,9 +51,13 @@
 @BUS.CLOCK=clk
 @SCOPE.TRIGGER=zip_trigger
 @SCOPE.DATA=zip_debug
+@CPURESET=i_cpu_reset
+@$RESET_ADDRESS=@$(flash.REGBASE)+(4<<20)
 @INT.ZIP.WIRE=zip_cpu_int
 @INT.ZIP.BUS=buspic
-@CPURESET=i_cpu_resetn
+@CACHABLE.FILE=iscachable.v
+@LGICACHE=10
+@LGDCACHE=0
 @TOP.PORTLIST=
 # 		// A reset wire for the ZipCPU
 # 		i_cpu_resetn
@@ -64,21 +68,21 @@
  		// Reset wire for the ZipCPU
  		s_reset
 @MAIN.PORTLIST=
-		i_cpu_reset
+		@$(CPURESET)
 @MAIN.IODECL=
-	input	wire		i_cpu_reset;
+	input	wire		@$(CPURESET);
 @MAIN.PARAM=
 	//
 	//
 	// Variables/definitions needed by the ZipCPU BUS master
 	//
 	//
-	// A 32-bit address indicating where teh ZipCPU should start running
+	// A 32-bit address indicating where the ZipCPU should start running
 	// from
 	localparam	RESET_ADDRESS = @$RESET_ADDRESS;
 	//
 	// The number of valid bits on the bus
-	localparam	ZIP_ADDRESS_WIDTH = @$(MASTER.BUS.AWID);	// Zip-CPU address width
+	localparam	ZIP_ADDRESS_WIDTH = @$(BUS.AWID); // Zip-CPU address width
 	//
 	// Number of ZipCPU interrupts
 	localparam	ZIP_INTS = 16;
@@ -92,7 +96,7 @@
 	// All we define here is a set of scope wires
 	wire	[31:0]	zip_debug;
 	wire		zip_trigger;
-	wire	[15:0] zip_int_vector;
+	wire	[ZIP_INTS-1:0] zip_int_vector;
 @MAIN.INSERT=
 	//
 	//
@@ -100,8 +104,9 @@
 	//
 	//
 	assign	zip_int_vector = { alt_int_vector[14:8], sys_int_vector[14:6] };
-	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,10,ZIP_START_HALTED,ZIP_INTS)
-		swic(i_clk, i_cpu_reset,
+	zipsystem #(RESET_ADDRESS,ZIP_ADDRESS_WIDTH,@$(LGICACHE),@$(LGDCACHE),
+			ZIP_START_HALTED,ZIP_INTS)
+		swic(i_clk, (i_reset)||(@$(CPURESET)),
 			// Zippys wishbone interface
 			zip_cyc, zip_stb, zip_we, zip_addr, zip_data, zip_sel,
 					zip_ack, zip_stall, zip_idata, zip_err,
@@ -111,7 +116,7 @@
 			wbu_addr[0],
 			wbu_data, zip_dbg_ack, zip_dbg_stall, zip_dbg_data,
 			zip_debug);
-	assign	zip_trigger = zip_debug[0];
+	assign	zip_trigger = zip_debug[31];
 @BDEF.INCLUDE=
 #include <design.h>
 #include <cpudefs.h>
@@ -145,6 +150,8 @@
 #define	CPU_uCC		0x001e
 #define	CPU_uPC		0x001f
 
+#define	RESET_ADDRESS	@$[0x%08x](RESET_ADDRESS)
+
 
 @SIM.INCLUDE=
 #include "zipelf.h"
@@ -160,10 +167,11 @@
 
 #define	CPUVAR(A)	VVAR(_swic__DOT__thecpu__DOT_ ## A)
 
+#define	cpu_reset	VVAR(_swic__DOT__cmd_reset)
 #define	cpu_break 	VVAR(_swic__DOT__cpu_break)
 #define	cpu_cmd_halt	VVAR(_swic__DOT__cmd_halt)
-#define	cpu_pf_pc	CPUVAR(_pf_pc)
 #define	cpu_ipc		CPUVAR(_ipc)
+#define	cpu_pf_pc	CPUVAR(_pf_pc)
 #define	cpu_upc		CPUVAR(_SET_USER_PC__DOT__r_upc)
 #define	cpu_gie		CPUVAR(_SET_GIE__DOT__r_gie)
 #define	cpu_iflags	CPUVAR(_w_iflags)
@@ -203,7 +211,7 @@
 @SIM.CLRRESET=
 		m_core->i_cpu_reset = 0;
 @SIM.METHODS=
-
+#ifdef	@$(ACCESS)
 	void	loadelf(const char *elfname) {
 		ELFSECTION	**secpp, *secp;
 		uint32_t	entry;
@@ -211,14 +219,19 @@
 		elfread(elfname, entry, secpp);
 
 		for(int s=0; secpp[s]->m_len; s++) {
+			bool	successful_load;
 			secp = secpp[s];
 
-			load(secp->m_start, secp->m_data, secp->m_len);
-		} free(secpp);
+			successful_load = load(secp->m_start,
+				secp->m_data, secp->m_len);
 
-		m_core->cpu_ipc = entry;
-		m_core->cpu_pf_pc   = entry;
-		m_core->cpu_new_pc = 1;
+			if (!successful_load) {
+				printf("Could not load section "
+					"from %08x to %08x--no such address\n",
+					secp->m_start,
+					secp->m_start+secp->m_len);
+			}
+		} free(secpp);
 	}
 
 
@@ -369,7 +382,7 @@
 				m_core->cpu_upc);
 		} fflush(stdout);
 	}
-
+#endif
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		// ZipCPU Sim instruction support

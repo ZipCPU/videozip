@@ -12,7 +12,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2018, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -48,20 +48,25 @@ NM	:=zip-nm
 OBJDIR	:= obj-zip
 RDELF	:= zip-readelf
 OBJDUMP := zip-objdump
+SUBMAKE:= $(MAKE) --no-print-directory -C
+#
+#
 SOURCES := cputest.c memtest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
-LDSCRIPT:= -Tboard.ld
-LFLAGS  := $(LDSCRIPT)
 INCS    := -I../zlib -I../../rtl -I.
-CFLAGS  := -O3 $(INCS)
+# LDSCRIPT:= -Tboard.ld
+LDSCRIPT:= -T bkram.ld
 ZIPLIB	:= libvidzip.a
-LIBS    := -lc -lvidzip
 INSTALLD:=/home/dan/work/rnd/zipcpu/sw/install
 NLIBD	:=$(INSTALLD)/cross-tools/zip/lib
-ZLIBD	:=../zlib
 LIB	:= $(NLIBD)/libg.a $(NLIBD)/libc.a
+ZLIBD	:=../zlib
+LFLAGS  := $(LDSCRIPT) $(LIB) $(ZLIBD)/$(ZIPLIB)
+# LIBS    := -lc -lvidzip
+CFLAGS  := -O3 $(INCS)
 #
 # For source analysis, the following macros are defined:
+#
 
 %.o: $(OBJDIR)/%.o
 $(OBJDIR)/%.o: %.c
@@ -79,7 +84,7 @@ $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 
 #
 # The CPUTest program here is special--it doesn't use the C library.  Hence,
-# it must have the -fno-builtin flag in order to build, and the -Tartyram.ld
+# it must have the -fno-builtin flag in order to build, and the -Tbkram.ld
 # linker script to build something that doesn't go into flash but directly into
 # RAM instead.
 #
@@ -92,8 +97,10 @@ $(OBJDIR)/cputestcis.o: cputest.c
 $(OBJDIR)/cputest.s: cputest.c
 	$(CC) $(CFLAGS) -S -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputestcis.o boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputestcis.o -o $@
+cputest: $(OBJDIR)/cputest.o bkram.ld
+	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
+cputestcis: $(OBJDIR)/cputestcis.o bkram.ld
+	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputestcis.map $(OBJDIR)/cputestcis.o -o $@
 
 memtest: $(OBJDIR)/memtest.o boardram.ld
 	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@
@@ -132,9 +139,13 @@ readframe: $(READFRAMEOBJS) boardram.ld
 helloworld: $(OBJDIR)/helloworld.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
+simple_ping: $(OBJDIR)/simple_ping.o $(OBJDIR)/zipcpu.o
+simple_ping: $(OBJDIR)/arp.o $(OBJDIR)/ipcksum.o $(OBJDIR)/ipcksum.o
+	$(CC) -Wl,-Map=simple_ping.map $(CFLAGS) $(LFLAGS) $^ -o $@
+
 
 define	mk-objdir
-	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR); fi"
+	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR)/; fi"
 endef
 
 define	build-depends
@@ -149,13 +160,6 @@ tags: $(SOURCES) $(HEADERS)
 	@echo "Generating tags"
 	@ctags $(SOURCES) $(HEADERS)
 
-.PHONY: depends
-depends: tags
-	$(build-depends)
-
-$(OBJDIR)/depends.txt: $(SOURCES) $(HEADERS)
-	$(build-depends)
-
 .PHONY: clean
 clean:
 	rm -f $(PROGRAMS)
@@ -163,4 +167,13 @@ clean:
 	rm -rf $(addsuffix .txt,$(PROGRAMS))
 	rm -rf $(OBJDIR)/
 
+$(OBJDIR)/depends.txt: tags
+	$(build-depends)
+
+.PHONY: depends
+depends:
+	$(build-depends)
+
+ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
+endif

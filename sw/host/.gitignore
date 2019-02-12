@@ -38,3 +38,8 @@ tstmem.sh
 scopdata.txt
 tstmem.sh
 zipscope
+erxscope
+etxscope
+rdmdio
+readmdio
+readmdio.cpp

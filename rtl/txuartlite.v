@@ -14,7 +14,7 @@
 //	high for one cycle, and your data will be off.  Wait until the 'o_busy'
 //	line is low before strobing the i_wr line again--this implementation
 //	has NO BUFFER, so strobing i_wr while the core is busy will just
-//	get ignored.  The output will be placed on the o_txuart output line. 
+//	get ignored.  The output will be placed on the o_txuart output line.
 //
 //	(I often set both data and strobe on the same clock, and then just leave
 //	them set until the busy line is low.  Then I move on to the next piece
@@ -25,7 +25,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -64,7 +64,9 @@
 //
 //
 module txuartlite(i_clk, i_wr, i_data, o_uart_tx, o_busy);
-	parameter	[23:0]	CLOCKS_PER_BAUD = 24'd868;
+	parameter	[4:0]	TIMING_BITS = 5'd24;
+	localparam		TB = TIMING_BITS;
+	parameter	[(TB-1):0]	CLOCKS_PER_BAUD = 8; // 24'd868;
 	input	wire		i_clk;
 	input	wire		i_wr;
 	input	wire	[7:0]	i_data;
@@ -75,7 +77,7 @@ module txuartlite(i_clk, i_wr, i_data, o_uart_tx, o_busy);
 	// for transmission.
 	output	wire		o_busy;
 
-	reg	[23:0]	baud_counter;
+	reg	[(TB-1):0]	baud_counter;
 	reg	[3:0]	state;
 	reg	[7:0]	lcl_data;
 	reg		r_busy, zero_baud_counter;
@@ -87,8 +89,9 @@ module txuartlite(i_clk, i_wr, i_data, o_uart_tx, o_busy);
 		if (!zero_baud_counter)
 			// r_busy needs to be set coming into here
 			r_busy <= 1'b1;
-		else if (state == `TXUL_IDLE)	// STATE_IDLE
+		else if (state > `TXUL_STOP)	// STATE_IDLE
 		begin
+			state <= `TXUL_IDLE;
 			r_busy <= 1'b0;
 			if ((i_wr)&&(!r_busy))
 			begin	// Immediately start us off with a start bit
@@ -99,10 +102,10 @@ module txuartlite(i_clk, i_wr, i_data, o_uart_tx, o_busy);
 			// One clock tick in each of these states ...
 			r_busy <= 1'b1;
 			if (state <=`TXUL_STOP) // start bit, 8-d bits, stop-b
-				state <= state + 1;
+				state <= state + 1'b1;
 			else
 				state <= `TXUL_IDLE;
-		end 
+		end
 	end
 
 	// o_busy
@@ -184,24 +187,28 @@ module txuartlite(i_clk, i_wr, i_data, o_uart_tx, o_busy);
 	// The logic is a bit twisted here, in that it will only check for the
 	// above condition when zero_baud_counter is false--so as to make
 	// certain the STOP bit is complete.
-	initial	zero_baud_counter = 1'b0;
-	initial	baud_counter = 24'h05;
+	initial	zero_baud_counter = 1'b1;
+	initial	baud_counter = 0;
 	always @(posedge i_clk)
 	begin
-		zero_baud_counter <= (baud_counter == 24'h01);
+		zero_baud_counter <= (baud_counter == 1);
 		if (state == `TXUL_IDLE)
 		begin
-			baud_counter <= 24'h0;
+			baud_counter <= 0;
 			zero_baud_counter <= 1'b1;
 			if ((i_wr)&&(!r_busy))
 			begin
-				baud_counter <= CLOCKS_PER_BAUD - 24'h01;
+				baud_counter <= CLOCKS_PER_BAUD - 1'b1;
 				zero_baud_counter <= 1'b0;
 			end
+		end else if ((zero_baud_counter)&&(state == 4'h9))
+		begin
+			baud_counter <= 0;
+			zero_baud_counter <= 1'b1;
 		end else if (!zero_baud_counter)
-			baud_counter <= baud_counter - 24'h01;
+			baud_counter <= baud_counter - 1'b1;
 		else
-			baud_counter <= CLOCKS_PER_BAUD - 24'h01;
+			baud_counter <= CLOCKS_PER_BAUD - 1'b1;
 	end
 endmodule
 

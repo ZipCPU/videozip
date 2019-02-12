@@ -14,7 +14,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2018, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -49,16 +49,22 @@
 #endif
 
 #define	UARTTX		_uart->u_tx
+#define	UART_CTRL	_uart->u_setup
+#undef PIC
 #define	PIC		_zip->z_pic
 #define	TIMER		_zip->z_tma
 #define	COUNTER		_zip->z_m.ac_ck
 
-// #define	HAVE_COUNTER
-// #define	HAVE_SCOPE
-// #define	SCOPEc			_sys->io_scope[0].s_ctrl
-// #define	SCOPE_DELAY		4
-// #define	TRIGGER_SCOPE_NOW	(WBSCOPE_TRIGGER|SCOPE_DELAY)
-// #define	PREPARE_SCOPE		SCOPE_DELAY
+#ifdef	ZIPSCOPE_SCOPE
+#define	HAVE_SCOPE
+#endif
+#ifdef	HAVE_SCOPE
+#define	SCOPEc			_zipscope->s_ctrl
+#define	SCOPE_DELAY		4
+#define	TRIGGER_SCOPE_NOW	((unsigned)(WBSCOPE_TRIGGER|SCOPE_DELAY))
+#define	PREPARE_SCOPE		SCOPE_DELAY
+#else
+#endif
 
 unsigned	zip_ucc(void);
 unsigned	zip_cc(void);
@@ -607,11 +613,6 @@ asm("\t.text\n\t.global\thard_mpyshi\n"
 	"\tRETN\n");
 
 void	debugmpy(char *str, int a, int b, int s, int r) {
-#ifdef	HAVE_SCOPE
-	// Trigger the scope, if it hasn't been triggered yet
-	// but ... dont reset it if it has been.
-	SCOPEc = TRIGGER_SCOPE_NOW;
-#endif
 	txstr("\r\n"); txstr(str); txhex(a);
 	txstr(" x "); txhex(b);
 	txstr(" = "); txhex(s);
@@ -1091,36 +1092,30 @@ void	wait(unsigned int msk) {
 
 asm("\n\t.text\nidle_task:\n\tWAIT\n\tBRA\tidle_task\n");
 
+#ifdef	_BOARD_HAS_BUSCONSOLE
+#define	_ZIP_HAS_WBUART
+#endif
+
 __attribute__((noinline))
 void	txchr(char v) {
-#ifdef	_BOARD_HAS_BUSCONSOLE
-	while(_uart->u_fifo & 0x010000)
+#ifdef	_ZIP_HAS_WBUART
+#define	TXBUSY	((_uart->u_fifo & 0x010000)==0)
+	while(TXBUSY)
 		;
 	uint8_t c = v;
 	_uart->u_tx = (unsigned)c;
-#else
-#ifdef	_ZIP_HAS_WBUART
-	while(_uart->u_fifo & 0x010000)
-		;
-	uint8_t c = v;
-	_uart->u_tx = (unsigned)c;
-#endif
-#endif
-/*
-*/
-}
-
-void	wait_for_uart_idle(void) {
-#ifdef	_BOARD_HAS_BUSCONSOLE
-	while(_uart->u_fifo & 0x100)	// While the FIFO is non-empty
-		;
-#else
-#ifdef	_ZIP_HAS_WBUART
-	while(_uart->u_fifo & 0x100)	// While the FIFO is non-empty
-		;
 #else
 #error "No uart defined"
 #endif
+	// asm("\tNOUT %0\n" : : "r"(v));
+}
+
+void	wait_for_uart_idle(void) {
+#ifdef	_ZIP_HAS_WBUART
+	while(TXBUSY)	// While the FIFO is non-empty
+		;
+#else
+#error "No uart defined"
 #endif
 }
 
@@ -1249,7 +1244,6 @@ void entry(void) {
 	int	user_stack[256], *user_stack_ptr = &user_stack[256];
 	int	start_time, i;
 	int	cc_fail, cis_insns = 0;
-
 
 	for(i=0; i<32; i++)
 		testlist[i] = -1;
@@ -1493,6 +1487,11 @@ void entry(void) {
 	asm("NEXIT 0");
 	zip_halt();
 }
+
+int	main(int argc, char **argv) {
+	entry();
+}
+
 
 // To build this:
 //	zip-gcc -O3 -Wall -Wextra -nostdlib -fno-builtin -T xula.ld -Wl,-Map,cputest.map cputest.cpp -o cputest

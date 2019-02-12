@@ -63,7 +63,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
-#if	defined(R_SYSCLK) || defined(R_HDMI_CLK) || defined(R_HDMI_OUTCLK)
+#if	defined(R_SYSCLK) || defined(R_HDMI_CLK) || defined(R_HDMI_OUTCLK) ||defined(R_NETCLOCKCTR)
 	FPGAOPEN(m_fpga);
 
 	if (argc != 1) {
@@ -80,7 +80,9 @@ int main(int argc, char **argv) {
 #ifdef	R_HDMI_OUTCLK
 	printclk(m_fpga, R_HDMI_OUTCLK, "HCLKOUT");
 #endif
-#ifdef	R_GENCLK
+#ifdef	R_NETCLOCKCTR
+	printclk(m_fpga, R_NETCLOCKCTR, "NETCLK ");
+#endif
 #ifdef	R_GENCLKFB
 	printclk(m_fpga, R_GENCLKFB, "GENCLK ");
 	{
@@ -111,11 +113,9 @@ int main(int argc, char **argv) {
 		}
 	}
 #endif
-#endif
 
 	delete	m_fpga;
 #else
-	printf("FPGA design was built without any clock support\n");
+	printf("FPGA design was built without any clock measurement support\n");
 #endif
 }
-

@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -72,6 +72,7 @@ endef
 
 define	build-depends
 	@echo "Building dependency file(s)"
+	$(mk-objdir)
 	@$(CC) $(CFLAGS) -MM $(LIBSRCS) > $(OBJDIR)/xdepends.txt
 	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
 	@rm $(OBJDIR)/xdepends.txt
@@ -82,7 +83,10 @@ tags: $(LIBSRCS) $(HEADERS)
 	@ctags $(LIBSRCS) $(HEADERS)
 
 .PHONY: depends
-depends:
+depends: tags
+	$(build-depends)
+
+$(OBJDIR)/depends.txt: $(SOURCES) $(HEADERS)
 	$(build-depends)
 
 -include $(OBJDIR)/depends.txt

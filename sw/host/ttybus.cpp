@@ -16,7 +16,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -71,7 +71,7 @@ const	unsigned TTYBUS::MAXRDLEN = 1024;
 const	unsigned TTYBUS::MAXWRLEN = 32;
 
 // #define	DBGPRINTF	printf
-#define	DBGPRINTF	filedump
+// #define	DBGPRINTF	filedump
 #ifndef	DBGPRINTF
 #define	DBGPRINTF	null
 #else
@@ -152,6 +152,12 @@ int	TTYBUS::lclreadcode(char *buf, int len) {
 	} return ret;
 }
 
+/*
+ * bufalloc
+ *
+ * Allocate a buffer of at least length (len).  This is similar to realloc().
+ *
+ */
 void	TTYBUS::bufalloc(int len) {
 	if ((m_buf)&&(m_buflen >= len))
 		return;
@@ -194,12 +200,34 @@ int	TTYBUS::decodehex(const char hx) const {
 		return 0;
 }
 
+/*
+ * writeio
+ *
+ * Write a single value to the debugging interface
+ */
 void	TTYBUS::writeio(const BUSW a, const BUSW v) {
 
 	writev(a, 0, 1, &v);
 	m_lastaddr = a; m_addr_set = true;
 }
 
+/*
+ * writev
+ *
+ * This internal write function.  This writes a buffer of information to our
+ * interface, and the place to study how a write works.
+ *
+ * Parameters:
+ *	a	is the address to write to
+ *	p	=1 to increment address, 0 otherwise
+ *	len	The number of values to write to the bus
+ *	buf	A memory pointer to the information to write
+ *
+ * Notice that this routine can only write complete 32-bit words.  It doesn't
+ * really have any 8-bit byte support, although you might be able to create such
+ * by readio()'ing a word, modifying it, and then calling writeio() to write the
+ * modified word back.
+ */
 void	TTYBUS::writev(const BUSW a, const int p, const int len, const BUSW *buf) {
 	char	*ptr;
 	int	nw = 0;
@@ -299,14 +327,38 @@ void	TTYBUS::writev(const BUSW a, const int p, const int len, const BUSW *buf) {
 	readidle();
 }
 
+/*
+ * writez
+ *
+ * Write a buffer of values to a single address.
+ */
 void	TTYBUS::writez(const BUSW a, const int len, const BUSW *buf) {
 	writev(a, 0, len, buf);
 }
 
+/*
+ * writei
+ *
+ * Write a buffer of values to a memory range.  Unlike writez, this function
+ * increments the address pointer after every memory write.
+ */
 void	TTYBUS::writei(const BUSW a, const int len, const BUSW *buf) {
 	writev(a, 1, len, buf);
 }
 
+/*
+ * readio
+ *
+ * Read a single value from the bus.
+ *
+ * If the bus returns an error, this routine will print a comment and throw
+ * the error up the chain.  If the address of the value read doesn't match
+ * the address requested (an internal check), then an error message will be
+ * sent to the log file and the interface will exit with an error condition.
+ * This should only happen if there are bugs in the interface, and hopefully
+ * I've gotten rid of all of those.
+ *
+ */
 TTYBUS::BUSW	TTYBUS::readio(const TTYBUS::BUSW a) {
 	BUSW	v;
 
@@ -330,6 +382,13 @@ TTYBUS::BUSW	TTYBUS::readio(const TTYBUS::BUSW a) {
 	return v;
 }
 
+/*
+ * encode_address
+ *
+ * Creates a message to be sent across the bus with a new address value
+ * in it.
+ *
+ */
 char	*TTYBUS::encode_address(const TTYBUS::BUSW a) {
 	TTYBUS::BUSW	addr = a>>2;
 	char	*ptr = m_buf;
@@ -369,7 +428,7 @@ char	*TTYBUS::encode_address(const TTYBUS::BUSW a) {
 		DBGPRINTF("DIF-ADDR: (%ld) \'%s\' encodes last_addr(0x%08x) %c %d(0x%08x)\n",
 			ptr-m_buf, m_buf,
 			m_lastaddr, (diffaddr<0)?'-':'+',
-			(diffaddr<<2), (diffaddr<<2)&0x0fffffffc);
+			diffaddr, diffaddr&0x0ffffffff);
 	}
 
 	{
@@ -435,6 +494,22 @@ char	*TTYBUS::readcmd(const int inc, const int len, char *buf) {
 	return ptr;
 }
 
+
+/*
+ * readv
+ *
+ * This is the main worker routine for read calls.  readio, readz, readi, all
+ * end up here.  readv() reads a buffer of data from the given address, and
+ * optionally increments (or not) the address after every read.
+ *
+ * Parameters:
+ *	a	The address to start reading from
+ *	inc	'1' if we want to increment the address following each read,
+ *		'0' otherwise
+ *	len	The number of words to read
+ *	buf	A memory buffer storage location to place the results into
+ * 
+ */
 void	TTYBUS::readv(const TTYBUS::BUSW a, const int inc, const int len, TTYBUS::BUSW *buf) {
 	const	int	READAHEAD = MAXRDLEN/2, READBLOCK=(MAXRDLEN/2>512)?512:MAXRDLEN/2;
 	int	cmdrd = 0, nread = 0;
@@ -486,26 +561,50 @@ void	TTYBUS::readv(const TTYBUS::BUSW a, const int inc, const int len, TTYBUS::B
 	DBGPRINTF("READV::COMPLETE\n");
 }
 
+/*
+ * readi
+ *
+ * Read a series of values from bus addresses starting at address a,
+ * incrementing the address to read from subsequent addresses along the way.
+ *
+ * Works by just calling readv to do the heavy lifting.
+ */
+
 void	TTYBUS::readi(const TTYBUS::BUSW a, const int len, TTYBUS::BUSW *buf) {
 	readv(a, 1, len, buf);
 }
 
+/*
+ * readi
+ *
+ * Read a series of values from the bus, with all the values coming from the
+ * same address: a.  The address is not incremented between individual word
+ * reads.
+ *
+ * Also calls readv to do the heavy lifting.
+ */
 void	TTYBUS::readz(const TTYBUS::BUSW a, const int len, TTYBUS::BUSW *buf) {
 	readv(a, 0, len, buf);
 }
 
+/*
+ * readword()
+ *
+ * Once the read command has been issued, readword() is called to read each
+ * word's response from the bus.  This also processes any out of bounds
+ * characters, such as interrupt notifications or bus error condition
+ * notifications.
+ */
 TTYBUS::BUSW	TTYBUS::readword(void) {
 	TTYBUS::BUSW	val = 0;
 	int		nr;
-	unsigned	sixbits, idle_counts = 0;
+	unsigned	sixbits;
 
 	DBGPRINTF("READ-WORD()\n");
 
-	bool	found_start = false, idle=false;
+	bool	found_start = false;
 	do {
 		// Blocking read (for now)
-		if ((!idle)&&(!m_dev->available()))
-			idle = true;
 		do {
 			nr = lclreadcode(&m_buf[0], 1);
 		} while (nr < 1);
@@ -519,11 +618,7 @@ TTYBUS::BUSW	TTYBUS::readword(void) {
 			;
 		} else if (sixbits < 6) {
 			switch(sixbits) {
-			case 0:
-				idle_counts++;
-				if (idle_counts >= 2)
-					throw BUSERR(0);
-				break; // Idle -- ignore
+			case 0:	break; // Idle -- ignore
 			case 1: break; // Idle, but the bus is busy
 			case 2: break; // Write acknowledgement, ignore it here
 			case 3:
@@ -636,6 +731,13 @@ TTYBUS::BUSW	TTYBUS::readword(void) {
 	return val;
 }
 
+/*
+ * readidle()
+ *
+ * Reads until the bus becomes idle.  This is called by writev to make sure
+ * any write acknowledgements are sufficiently flushed from the stream.  In
+ * case anything else is in the stream ... we mostly ignore that here too.
+ */
 void	TTYBUS::readidle(void) {
 	TTYBUS::BUSW	val = 0;
 	int		nr;
@@ -776,6 +878,12 @@ void	TTYBUS::readidle(void) {
 	}
 }
 
+/*
+ * usleep()
+ *
+ * Called to implement some form of time-limited wait on a response from the
+ * bus.
+ */
 void	TTYBUS::usleep(unsigned ms) {
 	if (m_dev->poll(ms)) {
 		int	nr;
@@ -806,6 +914,11 @@ void	TTYBUS::usleep(unsigned ms) {
 	}
 }
 
+/*
+ * wait()
+ *
+ * Wait for an interrupt condition.
+ */
 void	TTYBUS::wait(void) {
 	if (m_interrupt_flag)
 		DBGPRINTF("INTERRUPTED PRIOR TO WAIT()\n");

@@ -14,7 +14,7 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017, Gisselquist Technology, LLC
+## Copyright (C) 2017-2019, Gisselquist Technology, LLC
 ##
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of  the GNU General Public License as published
@@ -47,22 +47,31 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-DATA := global.txt bkram.txt buserr.txt clkcounter.txt			\
-	dlyarbiter.txt flash.txt gpio.txt icape.txt mdio.txt enet.txt	\
-	pic.txt pwrcount.txt rtcdate.txt rtcgps.txt spio.txt		\
-	version.txt wbmouse.txt wboledbw.txt wbpmic.txt wbuconsole.txt	\
-	zipmaster.txt gps.txt sdspi.txt hdmi.txt xdc.txt		\
-	xpander.txt sdvidram.txt genclk.txt vidarbiter.txt zipscope.txt
+BASE    := global.txt dlyarbiter.txt icape.txt
+AUX     := version.txt buserr.txt pic.txt pwrcount.txt xpander.txt vidarbiter.txt
+IO      := spio.txt gpio.txt
+RTC     := rtcgps.txt rtcdate.txt
+DBGBUS  := wbuconsole.txt
+MEMORY  := bkram.txt flash.txt sdvidram.txt
+CPU     := zipmaster.txt
+NETWORK := mdio.txt enet.txt
+GPS     := gps.txt
+SDCARD  := sdspi.txt
+GFX     := hdmi.txt # wboledbw.txt
+SCOPES  := cpuscope.txt enetscope.txt
+CLOCKS  := genclk.txt netclockctr.txt
+OTHER   := clkcounter.txt wbmouse.txt wbpmic.txt xdc.txt
+LDSCRIPT:= mem_bkram_only.txt mem_flash_bkram.txt
+DATA := $(CLOCKS) $(BASE) $(AUX) $(IO) $(RTC)				\
+	$(DBGBUS) $(MEMORY) $(CPU) $(NETWORK) $(GPS) $(SDCARD) $(GFX)	\
+	$(SCOPES) $(LDSCRIPT) $(OTHER)
 
-AUTOFPGA := ../../../autofpga/trunk/sw/autofpga
+AUTOFPGA := autofpga
+$(AUTOFPGA):
 
 .PHONY: data
 data: $(AUTOFPGA) $(DATA)
 	$(AUTOFPGA) -d -o . $(DATA)
-
-define	notify-on-change
-	@bash -c 'cmp $(1) $(2)/$(1); if [[ $$? != 0 ]]; then echo "Files $(1) and $(2)/$(1) differ"; fi'
-endef
 
 clean:
 	rm -f toplevel.v main.v regdefs.h regdefs.cpp board.h board.ld
