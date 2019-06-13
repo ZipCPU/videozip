@@ -1,0 +1,20 @@
+[tasks]
+prf
+cvr
+
+[options]
+prf: mode prove
+prf: depth 5
+cvr: mode cover
+cvr: depth 160
+
+[engines]
+smtbmc
+
+[script]
+read -formal txespeed.v
+hierarchy -top txespeed -chparam DEADOCTETS 5 -chparam CK10M 10
+prep -top txespeed
+
+[files]
+../../rtl/ethernet/txespeed.v

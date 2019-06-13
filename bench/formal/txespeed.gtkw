@@ -1,0 +1,69 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Tue Jun  4 23:38:47 2019
+[*]
+[dumpfile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/txespeed_cvr/engine_0/trace0.vcd"
+[dumpfile_mtime] "Tue Jun  4 23:35:41 2019"
+[dumpfile_size] 12333
+[savefile] "/home/dan/work/rnd/opencores/videozip/trunk/bench/formal/txespeed.gtkw"
+[timestart] 0
+[size] 1775 600
+[pos] -1 -1
+*-7.000000 0 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 196
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 155
+@29
+txespeed.f_past_valid
+@28
+txespeed.i_reset
+txespeed.i_clk
+@200
+-
+@28
+[color] 3
+txespeed.i_spd[1:0]
+[color] 3
+txespeed.i_v
+@22
+[color] 3
+txespeed.i_d[7:0]
+@200
+-
+@28
+[color] 2
+txespeed.o_ce
+txespeed.o_v
+@22
+txespeed.o_d[7:0]
+@28
+txespeed.o_ck[1:0]
+@200
+-
+@28
+txespeed.r_spd[1:0]
+txespeed.r_ce
+txespeed.r_busy
+@22
+txespeed.ck_counter[6:0]
+@28
+txespeed.halfway
+@200
+-
+@22
+txespeed.r_buf[3:0]
+txespeed.deadtime[3:0]
+@28
+txespeed.new_spd
+@200
+-
+@28
+txespeed.cvr_bits[1:0]
+txespeed.cvr_check
+@22
+txespeed.cvr_count[7:0]
+@28
+txespeed.cvr_interesting
+[pattern_trace] 1
+[pattern_trace] 0

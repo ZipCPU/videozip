@@ -1,11 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	flashdrvr.h
+// Filename: 	ipcksum.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	OpenArty, an entirely open SoC based upon the Arty platform
 //
-// Purpose:	Flash driver.  Encapsulates writing, both erasing sectors and
-//		the programming pages, to the flash device.
+// Purpose:	To calculate (and return) an IP checksum on a section of data.
+//		The data must be contiguous in memory, and the checksum field
+//	(which is usually a part of it) must be blank when calling this
+//	function.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -25,7 +27,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// with this program.  (It's in the $(ROOT)/doc directory, run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -36,39 +38,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-//
-#ifndef	FLASHDRVR_H
-#define	FLASHDRVR_H
+#ifndef	IPCKSUM_H
+#define	IPCKSUM_H
 
-#include "regdefs.h"
-
-class	FLASHDRVR {
-private:
-	DEVBUS	*m_fpga;
-	bool	m_debug;
-	unsigned	m_id; // ID of the flash device
-
-	//
-	void	take_offline(void);
-	void	place_online(void);
-	void	restore_dualio(void);
-	void	restore_quadio(void);
-	//
-	bool	verify_config(void);
-	void	set_config(void);
-	void	flwait(void);
-public:
-	FLASHDRVR(DEVBUS *fpga);
-	bool	erase_sector(const unsigned sector, const bool verify_erase=true);
-	bool	page_program(const unsigned addr, const unsigned len,
-			const char *data, const bool verify_write=true);
-	bool	write(const unsigned addr, const unsigned len,
-			const char *data, const bool verify=false);
-
-	unsigned	flashid(void);
-
-	static void take_offline(DEVBUS *fpga);
-	static void place_online(DEVBUS *fpga);
-};
+extern unsigned	ipcksum(int len, unsigned *ptr);
 
 #endif
+

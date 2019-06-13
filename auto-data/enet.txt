@@ -108,10 +108,11 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 	wire			w_net_rxctlp,
 				w_net_rxctln,
 				w_net_txctl;
+	wire	[1:0]		w_net_tx_clk;
 @TOP.MAIN=
 		o_net_reset_n,
 		i_net_rx_clk, w_net_rxctlp, w_net_rxd,
-		i_net_rx_clk, w_net_txctl, w_net_txd
+		w_net_tx_clk, w_net_txctl, w_net_txd
 @TOP.INSERT=
 
 	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
@@ -125,7 +126,7 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 	xoddr	tx2(i_net_rx_clk, { w_net_txd[2], w_net_txd[6] }, o_net_txd[2]);
 	xoddr	tx3(i_net_rx_clk, { w_net_txd[3], w_net_txd[7] }, o_net_txd[3]);
 	xoddr	txc(i_net_rx_clk, { w_net_txctl,  w_net_txctl  }, o_net_tx_ctl);
-	xoddr	txck(i_net_rx_clk,{ 1'b1,  1'b0  }, o_net_tx_clk);
+	xoddr	txck(s_clk_125mhz,{w_net_tx_clk[1],w_net_tx_clk[0]},o_net_tx_clk);
 
 
 @MAIN.PORTLIST=
@@ -141,14 +142,14 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 	input	wire		i_net_rx_clk, i_net_rx_ctl;
 	input	wire	[7:0]	i_net_rxd;
 	output	wire		o_net_tx_clk;
-	output	wire		o_net_tx_ctl;
+	output	wire	[1:0]	o_net_tx_ctl;
 	output	wire	[7:0]	o_net_txd;
 @MAIN.DEFNS=
 	//
 	wire	[31:0]	netp_debug;
 @MAWB= @$(netb.MEMORY_ADDRESS_WIDTH)
 @MAIN.INSERT=
-	assign	o_net_tx_clk = i_net_rx_clk;
+	assign	o_net_tx_clk = i_net_tx_clk;
 	enetpackets	#(.MEMORY_ADDRESS_WIDTH(@$(MAWB)))
 		netctrl(i_clk, i_reset,
 			wb_cyc,(wb_stb)&&((netp_sel)||(netb_sel)),
@@ -156,7 +157,7 @@ static volatile unsigned *const @$(BDEF.IONAME)tx = ((unsigned *)(@$[0x%08x](REG
 				netp_ack, netp_stall, netp_data,
 			o_net_reset_n,
 			i_net_rx_clk, i_net_rx_ctl, i_net_rxd,
-			o_net_tx_clk, o_net_tx_ctl, o_net_txd,
+			i_clk_125mhz, o_net_tx_clk, o_net_tx_ctl, o_net_txd,
 			netrx_int, nettx_int, netp_debug);
 
 @REGS.N=8

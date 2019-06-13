@@ -1,6 +1,6 @@
 /*******************************************************************************
 *
-* Filename:	board.ld
+* Filename:	bkram.ld
 *
 * Project:	VideoZip, a ZipCPU SoC supporting video functionality
 *
@@ -61,30 +61,28 @@ MEMORY
 _bkram    = ORIGIN(bkram);
 _flash    = ORIGIN(flash);
 _sdram    = ORIGIN(sdram);
-/* LD.DEFNS from zipmaster.txt */
+/* LD.DEFNS from mem_bkram_only */
 _kram  = 0; /* No high-speed kernel RAM */
 _ram   = ORIGIN(bkram);
-_rom   = ORIGIN(flash);
+_rom   = 0;
 _top_of_stack = ORIGIN(bkram) + LENGTH(bkram);
 
 
-/* LD.SCRIPT from zipmaster.txt */
+/* LD.SCRIPT from mem_bkram_only */
 SECTIONS
 {
-       .rocode 0x12400000 : ALIGN(4) {
+       .ramcode ORIGIN(bkram) : ALIGN(4) {
                _boot_address = .;
+               _kram_start = .;
+               _kram_end = .;
+       		_ram_image_start = . ;
                *(.start) *(.boot)
-       } > flash
-       _kram_start = . ;
-       _kram_end = . ;
-       _ram_image_start = . ;
-       .kernel : ALIGN_WITH_INPUT {
                *(.kernel)
                *(.text.startup)
                *(.text*)
                *(.rodata*) *(.strings)
                *(.data) *(COMMON)
-               }> bkram AT> flash
+               }> bkram
        _ram_image_end = . ;
        .bss : ALIGN_WITH_INPUT {
                *(.bss)

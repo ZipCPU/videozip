@@ -1,11 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	flashdrvr.h
+// Filename: 	arp.h
 //
-// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+// Project:	OpenArty, an entirely open SoC based upon the Arty platform
 //
-// Purpose:	Flash driver.  Encapsulates writing, both erasing sectors and
-//		the programming pages, to the flash device.
+// Purpose:	To encapsulate common functions associated with the ARP protocol
+//		and hardware (ethernet MAC) address resolution.
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -25,7 +26,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// with this program.  (It's in the $(ROOT)/doc directory, run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -36,39 +37,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-//
-#ifndef	FLASHDRVR_H
-#define	FLASHDRVR_H
+#ifndef	ARP_H
+#define	ARP_H
 
-#include "regdefs.h"
-
-class	FLASHDRVR {
-private:
-	DEVBUS	*m_fpga;
-	bool	m_debug;
-	unsigned	m_id; // ID of the flash device
-
-	//
-	void	take_offline(void);
-	void	place_online(void);
-	void	restore_dualio(void);
-	void	restore_quadio(void);
-	//
-	bool	verify_config(void);
-	void	set_config(void);
-	void	flwait(void);
-public:
-	FLASHDRVR(DEVBUS *fpga);
-	bool	erase_sector(const unsigned sector, const bool verify_erase=true);
-	bool	page_program(const unsigned addr, const unsigned len,
-			const char *data, const bool verify_write=true);
-	bool	write(const unsigned addr, const unsigned len,
-			const char *data, const bool verify=false);
-
-	unsigned	flashid(void);
-
-	static void take_offline(DEVBUS *fpga);
-	static void place_online(DEVBUS *fpga);
-};
+extern void	init_arp_table(void);
+extern	int	arp_lookup(unsigned ipaddr, unsigned long *mac);
+extern	void	arp_table_add(unsigned ipaddr, unsigned long mac);
+extern	void	send_arp_reply(unsigned machi, unsigned maclo, unsigned ipaddr);
 
 #endif
