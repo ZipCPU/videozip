@@ -261,7 +261,7 @@ int main(int argc, char **argv) {
 	v = m_fpga->readio(R_MDIO_PHYCR);
 	printf("     PHYCR  %04x\tPHY specific control register\n", v);
 	if (v&0x8000)
-		printf("                \tDisable RXC output\n");
+		printf("                \tRX clock output disabled\n");
 	if (v&0x0800)
 		printf("                \tAssert CRS on transmit (GMII)\n");
 	if (v&0x0400)
@@ -269,7 +269,7 @@ int main(int argc, char **argv) {
 	if (v&0x0040)
 		printf("                \tEnable Auto-crossover mechanism\n");
 	if (v&0x0010)
-		printf("                \tCLK125 toggling enabled\n");
+		printf("                \tCLK125 remains at logic low\n");
 	if (v&0x0001)
 		printf("                \tDisable jabber function\n");
 
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
 	if ((v&0x0400)==0)
 		printf("                \tLink is NOT okay\n");
 	if (v&0x0040)
-		printf("                \tMDI crossover\n");
+		printf("                \tMDI Crossover\n");
 	if ((v&0x0002)==0)
 		printf("                \tReceiver is NOT OK\n");
 	if (v&0x0001)
