@@ -133,15 +133,17 @@ int main(int argc, char **argv) {
 	else
 		printf("TX:\tUnknown speed\n");
 	printf("TX:\t%d byte buffer\n", 1<<((v>>24) & 0x0f));
-	if (v & 0x040000)
+	if (v & 0x0080000)
+		printf("TX:\t(Transmit debug output is built-in)\n");
+	if (v & 0x0040000)
 		printf("TX:\tHardware IP check  -- DISABLED\n");
-	if (v & 0x020000)
+	if (v & 0x0020000)
 		printf("TX:\tNETWORK IS IN RESET\n");
-	if (v & 0x010000)
+	if (v & 0x0010000)
 		printf("TX:\tHardware MAC check -- DISABLED\n");
-	if (v & 0x008000)
+	if (v & 0x0008000)
 		printf("TX:\tHardware CRC check -- DISABLED\n");
-	if (v & 0x000800)
+	if (v & 0x0004000)
 		printf("TX:\tTransmitter is busy\n");
 	printf("--");
 

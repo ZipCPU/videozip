@@ -1,0 +1,16 @@
+[tasks]
+prf
+
+[options]
+prf: mode prove
+prf: depth 12
+
+[engines]
+smtbmc
+
+[script]
+read -formal txeaddr.v
+prep -top txeaddr
+
+[files]
+../../rtl/ethernet/txeaddr.v

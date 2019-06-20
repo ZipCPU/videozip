@@ -109,7 +109,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2017, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -319,7 +319,8 @@ module	enetpackets(i_wb_clk, i_reset,
 			if (wr_sel[1:0] == 2'b11)
 			begin
 //		14'h0	| SW-CRCn |NET-RST|BUSY/CMD | 14 bit length(in octets)|
-				tx_len <= wr_data[(MAW+1):0];
+				if (!tx_cmd && !tx_busy)
+					tx_len <= wr_data[(MAW+1):0];
 			end
 		end 
 		tx_nzero_cmd <= ((pre_cmd)&&(tx_len != 0));
@@ -413,18 +414,28 @@ module	enetpackets(i_wb_clk, i_reset,
 	//
 	//
 	/////////////////////////////////////
-	wire	n_reset;
+	wire	n_tx_reset, n_rx_reset;
 `ifdef	VERILATOR
-	assign	n_reset = i_reset;
+	assign	n_tx_reset = i_reset;
+	assign	n_rx_reset = i_reset;
 `else
-	reg	[1:0]	q_reset;
+	reg	[1:0]	q_tx_reset, q_rx_reset;
+
 	always @(posedge i_net_rx_clk or posedge i_reset)
 	if(i_reset)
-		q_reset <= 2'b11;
+		q_rx_reset <= 2'b11;
 	else
-		q_reset <= { q_reset[0], 1'b0 };
+		q_rx_reset <= { q_rx_reset[0], 1'b0 };
 
-	assign	n_reset = q_reset[1];
+	assign	n_rx_reset = q_rx_reset[1];
+
+	always @(posedge i_net_tx_clk or posedge i_reset)
+	if(i_reset)
+		q_tx_reset <= 2'b11;
+	else
+		q_tx_reset <= { q_tx_reset[0], 1'b0 };
+
+	assign	n_tx_reset = q_tx_reset[1];
 `endif
 
 
@@ -439,9 +450,11 @@ module	enetpackets(i_wb_clk, i_reset,
 	/////////////////////////////////////
 	(* ASYNC_REG = "TRUE" *) reg	[(MAW+1):0]	n_tx_len;
 	(* ASYNC_REG = "TRUE" *) reg r_tx_cmd, r_tx_cancel;
-	reg		n_tx_cmd, n_tx_cancel;
+	reg		n_tx_cmd, n_tx_cancel, n_still_busy;
 	wire	[1:0]	n_tx_spd;
 	wire		tx_ce;
+	wire		w_memv, w_macen, w_paden, w_txcrcen, w_txprev;
+	wire	[7:0]	w_memd, w_macd,  w_padd,  w_txcrcd,  w_txpred;
 
 	initial	{ n_tx_cmd, r_tx_cmd } = 0;
 	initial	{ n_tx_cancel, r_tx_cancel } = 0;
@@ -454,79 +467,65 @@ module	enetpackets(i_wb_clk, i_reset,
 	tfrvalue #(.NB(2))
 	tfrtxspd(i_wb_clk, tx_spd, i_net_tx_clk, n_tx_spd);
 
-	wire	[(MAW-1):0]	rd_tx_addr;
-	assign	rd_tx_addr = n_tx_addr[MAW+1:2]+1'b1;
-
-	reg	[(MAW+2)-1:0]	n_tx_addr;
-	reg	[31:0]		n_tx_data, n_next_tx_data;
+	wire	[MAW-1:0]	n_tx_addr;
+	reg	[31:0]		n_tx_data;
 	reg			n_tx_complete;
 	(* ASYNC_REG = "TRUE" *) reg	n_tx_busy,
 					n_tx_config_hw_mac, n_tx_config_hw_crc;
 
-	reg		r_txd_en;
-	reg	[7:0]	r_txd;
-	initial	r_txd_en = 1'b0;
-
 	initial	n_tx_busy  = 1'b0;
 	initial	n_tx_complete  = 1'b0;
-	initial	n_tx_addr = 0;
 	always @(posedge i_net_tx_clk)
+	if (n_tx_reset || n_tx_cancel)
 	begin
-		n_next_tx_data  <= txmem[(!n_tx_busy)?0:rd_tx_addr];
-
-
-		if (n_tx_cancel)
-			n_tx_busy <= 1'b0;
-		else if (!n_tx_busy)
-			n_tx_busy <= (n_tx_cmd);
-		else if (tx_ce && (n_tx_addr >= n_tx_len))
-			n_tx_busy     <= 1'b0;
-
-		if (!n_tx_busy)
+		n_tx_busy <= 1'b0;
+		n_tx_complete <= 1'b0;
+	end else if (!n_tx_busy)
+	begin
+		if (n_tx_cmd)
 		begin
-			n_tx_addr  <= {{(MAW+1){1'b0}},1'b1};
-			n_tx_data <= { n_next_tx_data[23:0], 8'h0 };
-			if (n_tx_complete)
-				n_tx_complete <= (!n_tx_cmd);
-			r_txd_en <= (n_tx_cmd);
-			r_txd  <= n_next_tx_data[31:24];
-			n_tx_config_hw_mac <= config_hw_mac;
-			n_tx_config_hw_crc <= config_hw_crc;
-			n_tx_len <= tx_len;
-		end else if (tx_ce) begin
-			n_tx_addr <= n_tx_addr + 1'b1;
-			r_txd <= n_tx_data[31:24];
-			if (n_tx_addr[1:0] == 2'h3)
-				n_tx_data <= n_next_tx_data;
-			else
-				n_tx_data <= { n_tx_data[23:0], 8'h0 };
-			if (!r_txd_en)
-				r_txd_en <= 1'b1;
-			else begin
-				r_txd_en <= (n_tx_addr < n_tx_len);
-				if (n_tx_addr >= n_tx_len)
-					n_tx_complete <= 1'b1;
-			end
+			n_tx_busy     <= 1'b1;
+			n_tx_complete <= 1'b0;
 		end
+	end else if (tx_ce && o_net_tx_ctl && !w_txprev)
+	begin
+		n_tx_busy     <= 1'b0;
+		n_tx_complete <= 1'b1;
 	end
+
+	always @(posedge i_net_tx_clk)
+	if (!n_tx_busy)
+	begin
+		n_tx_config_hw_mac <= config_hw_mac;
+		n_tx_config_hw_crc <= config_hw_crc;
+		n_tx_len <= tx_len;
+	end
+
+	//
+	// Control the read address to the transmit memory when reading in order to transmit
+	//
+	txeaddr #(.LGNBYTES(MAW+2))
+	txeaddri(i_net_tx_clk, n_tx_reset || n_tx_cancel, tx_ce,
+		n_tx_cmd, n_tx_len, n_tx_addr, n_tx_data, w_memv, w_memd);
+
+	// Read from the transmit memory
+	always @(posedge i_net_tx_clk)
+		n_tx_data  <= txmem[n_tx_addr];
 
 	wire	n_tx_config_hw_preamble;
 	assign	n_tx_config_hw_preamble = 1'b1;
 
-	wire		w_macen, w_paden, w_txcrcen, w_txprev;
-	wire	[7:0]	w_macd,  w_padd,  w_txcrcd,  w_txpred;
-
 `ifndef	TX_BYPASS_HW_MAC
-	addemac	txmaci(i_net_tx_clk, ((n_reset)||(n_tx_cancel)), tx_ce,
+	addemac	txmaci(i_net_tx_clk, ((n_tx_reset)||(n_tx_cancel)), tx_ce,
 				n_tx_config_hw_mac, hw_mac,
-				r_txd_en, r_txd, w_macen, w_macd);
+				w_memv, w_memd, w_macen, w_macd);
 `else
-	assign	w_macen = r_txd_en;
-	assign	w_macd  = r_txd;
+	assign	w_macen = w_memv;
+	assign	w_macd  = w_memd;
 `endif
 
 `ifndef	TX_BYPASS_PADDING
-	addepad	txpadi(i_net_tx_clk, ((n_reset)||(n_tx_cancel)), tx_ce,
+	addepad	txpadi(i_net_tx_clk, ((n_tx_reset)||(n_tx_cancel)), tx_ce,
 				w_macen, w_macd, w_paden, w_padd);
 `else
 	assign	w_paden = w_macen;
@@ -534,7 +533,7 @@ module	enetpackets(i_wb_clk, i_reset,
 `endif
 
 `ifndef	TX_BYPASS_HW_CRC
-	addecrc	txcrci(i_net_tx_clk, ((n_reset)||(n_tx_cancel)), tx_ce,
+	addecrc	txcrci(i_net_tx_clk, ((n_tx_reset)||(n_tx_cancel)), tx_ce,
 				n_tx_config_hw_crc,
 				w_paden, w_padd, w_txcrcen, w_txcrcd);
 `else
@@ -543,21 +542,18 @@ module	enetpackets(i_wb_clk, i_reset,
 `endif
 
 	// wire	w_net_tx_ctl;
-	addepreamble txprei(i_net_tx_clk, ((n_reset)||(n_tx_cancel)), tx_ce,
+	addepreamble txprei(i_net_tx_clk, ((n_tx_reset)||(n_tx_cancel)), tx_ce,
 				n_tx_config_hw_preamble,
 				w_txcrcen, w_txcrcd, w_txprev, w_txpred);
-
-	// assign	w_net_tx_ctl = w_txprev | r_txd_en | n_tx_cmd;
 
 	//
 	// txespeed helps us support 10Mbps, 100Mbps, and 1Gbps
 	// without changing clock speed
 	//
-	txespeed txspdi(i_net_tx_clk, n_reset, n_tx_spd,
+	txespeed txspdi(i_net_tx_clk, n_tx_reset, n_tx_spd,
 			w_txprev, w_txpred,
 			o_net_tx_ctl, o_net_txd, tx_ce, o_net_tx_ck);
 
-	reg	n_still_busy;
 	initial	n_still_busy = 0;
 	always @(posedge i_net_tx_clk)
 		n_still_busy <= (n_tx_busy || o_net_tx_ctl || w_txcrcen || w_macen || w_paden);
@@ -603,7 +599,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	wire		w_minerr, w_rxcrcerr, w_macerr, w_broadcast, w_iperr;
 
 `ifndef	RX_BYPASS_HW_PREAMBLE
-	rxepreambl rxprei(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), 1'b1, 1'b1,
+	rxepreambl rxprei(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)), 1'b1, 1'b1,
 			i_net_rx_dv, i_net_rxd, w_npre, w_npred);
 `else
 	assign	w_npre  = i_net_rx_ctl; 
@@ -612,7 +608,7 @@ module	enetpackets(i_wb_clk, i_reset,
 
 `ifdef	RX_BYPASS_HW_MINLENGTH
 	// Insist on a minimum of 64-byte packets
-	rxemin	rxmini(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), 1'b1,
+	rxemin	rxmini(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)), 1'b1,
 			w_npre, w_minerr);
 `else
 	assign	w_minerr= 1'b0;
@@ -621,7 +617,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	assign	w_rxmind= w_npred;
 
 `ifndef	RX_BYPASS_HW_CRC
-	rxecrc	rxcrci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)), rx_ce,
+	rxecrc	rxcrci(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)), rx_ce,
 			n_rx_config_hw_crc,
 			w_rxmin, w_rxmind, w_rxcrc, w_rxcrcd, w_rxcrcerr);
 `else
@@ -631,7 +627,7 @@ module	enetpackets(i_wb_clk, i_reset,
 `endif
 
 `ifndef	RX_BYPASS_HW_RMMAC
-	rxehwmac rxmaci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+	rxehwmac rxmaci(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)),
 			rx_ce, n_rx_config_hw_mac, hw_mac,
 			w_rxcrc, w_rxcrcd,
 			w_rxmac, w_rxmacd,
@@ -645,7 +641,7 @@ module	enetpackets(i_wb_clk, i_reset,
 `ifdef	RX_HW_IPCHECK
 	// Check: if this packet is an IP packet, is the IP header checksum
 	// valid?
-	rxeipchk rxipci(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+	rxeipchk rxipci(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)),
 			rx_ce, n_rx_config_ip_check,
 			w_rxcrc, w_rxcrcd, w_iperr);
 `else
@@ -657,7 +653,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	wire	[31:0]		w_rxdata;
 	wire	[(MAW+1):0]	w_rxlen;
 
-	rxewrite #(MAW) rxememi(i_net_rx_clk, ((n_reset)||(n_rx_net_err)),
+	rxewrite #(MAW) rxememi(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)),
 			rx_ce, w_rxmac, w_rxmacd,
 			w_rxwr, w_rxaddr, w_rxdata, w_rxlen);
 
@@ -839,8 +835,7 @@ module	enetpackets(i_wb_clk, i_reset,
 			// 3 bits
 			n_tx_cmd, n_tx_complete, n_tx_busy,
 			// 9 bits
-			// r_txd_en, r_txd,
-			r_txd_en, o_net_tx_ck, r_txd[5:0],
+			w_memv, w_memd,
 			// 2 bits
 			w_macen, w_paden,
 			// 9-bits

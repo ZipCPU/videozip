@@ -81,9 +81,8 @@ HDMISRCS:= hdmisync.v hdmipixelsync.v hdmipxslip.v hdmihist.v		\
 	hdmigethmode.v hdmigetvmode.v hdmisync.v
 SCOPESRCS := wbscopc.v wbscope.v
 PERIPHERALS:= rtcdate.v rtcgps.v wbuart.v ufifo.v rxuart.v txuart.v	\
-	wbqspiflash.v llqspi.v flashconfig.v				\
 	wbicapetwo.v sdspi.v gpsclock_tb.v gpsclock.v wboledbw.v lloled.v \
-	memdev.v spio.v wbi2cslave.v wbi2cmaster.v lli2cm.v
+	memdev.v spio.v wbi2cslave.v wbi2cmaster.v lli2cm.v qflexpress.v
 BIGMATH:= bigadd.v bigsmpy.v bigsub.v
 SOURCES := main.v builddate.v $(SCOPESRCS)				\
 	$(CPUSOURCES) $(JTAGBUS) $(PERIPHERALS) $(BIGMATH) $(HDMISRCS)

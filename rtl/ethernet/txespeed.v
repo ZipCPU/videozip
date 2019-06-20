@@ -53,7 +53,6 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	parameter		CK10M  = 50;
 	parameter		CK100M =  5;
 	parameter		CK1G   =   1;
-	parameter		DEADOCTETS = 6;
 	localparam	[1:0]	SPD10M = 2'b10,
 				SPD100M= 2'b01,
 				SPD1G  = 2'b00;
@@ -70,19 +69,22 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	reg	[1:0]	r_spd;
 	reg	[6:0]	ck_counter;
 	reg	[3:0]	r_buf;
-	// reg	[3:0]	deadtime;
 
 	initial	r_spd = SPD1G;
 	always @(posedge i_clk)
 	if (i_reset)
 		r_spd <= SPD1G;
-	else if (!o_v)
+	else if (!o_v && ((r_spd == SPD1G) || (ck_counter == 1)))
 		r_spd <= i_spd;
 
 	initial	ck_counter = 0;
 	initial	r_ce = 1;
 	always @(posedge i_clk)
-	if (r_ce)
+	if (i_reset)
+	begin
+		r_ce <= 1;
+		ck_counter <= 0;
+	end else if (r_ce)
 	begin
 		case(r_spd)
 		SPD10M: begin
@@ -95,7 +97,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 			end
 		default: begin
 			// SPD1G:
-			r_ce <= 1;
+			r_ce <= (CK1G <= 1);
 			ck_counter <= CK1G-1;
 			end
 		endcase
@@ -110,22 +112,26 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 
 	initial	o_ck = 2'b10;
 	always @(posedge i_clk)
-	if (r_spd == SPD1G)
+	if (i_reset)
 		o_ck <= 2'b10;
+	else if (r_spd == SPD1G)
+		o_ck <= 2'b10;
+	else if (r_ce)
+		o_ck <= 2'b11;
 	else if (r_spd == SPD10M)
 	begin
-		if (ck_counter < HLF10M)
-			o_ck <= 2'b00;
-		else if (CK10M[0] && (ck_counter == HLF10M))
+		if (CK10M[0] && (ck_counter == HLF10M+1))
 			o_ck <= 2'b10;
+		else if (ck_counter <= HLF10M)
+			o_ck <= 2'b00;
 		else
 			o_ck <= 2'b11;
 	end else // if (r_spd == SPD100M)
 	begin
-		if (ck_counter < HLF100M)
-			o_ck <= 2'b00;
-		else if (CK100M[0] && (ck_counter == HLF100M))
+		if (CK100M[0] && (ck_counter == HLF100M+1))
 			o_ck <= 2'b10;
+		else if (ck_counter <= HLF100M)
+			o_ck <= 2'b00;
 		else
 			o_ck <= 2'b11;
 	end
@@ -134,9 +140,9 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	if (r_ce)
 		r_buf <= i_d[7:4];
 
-	initial	second_half = 0;
+	initial	second_half = 1;
 	always @(posedge i_clk)
-	if (r_spd == SPD1G)
+	if (i_reset || r_spd == SPD1G)
 		second_half <= 1;
 	else if (r_ce)
 		second_half <= !second_half;
@@ -145,14 +151,8 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	always @(posedge i_clk)
 	if (i_reset)
 		o_v <= 0;
-	else if (r_ce)
-	begin
+	else if (r_ce && (r_spd == SPD1G || !second_half))
 		o_v <= i_v;
-	//	if (o_v)
-	//		o_v <= (i_v || second_half);
-	//	else
-	//		o_v <= i_v && !r_busy;
-	end
 
 	initial	o_d = 0;
 	always @(posedge i_clk)
@@ -165,43 +165,22 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 			o_d <= { r_buf[3:0], r_buf[3:0] };
 		else
 			o_d <= { i_d[3:0], i_d[3:0] };
-	end
 
-
-	/*
-	initial	deadtime = 0;
-	initial	r_busy   = 1;
-	always @(posedge i_clk)
-	if (i_reset)
-	begin
-		deadtime <= 0;
-		r_busy   <= 1;
-	end else if (!r_busy && r_spd != i_spd)
-	begin
-		deadtime <= 0;
-		r_busy   <= 1;
-	end else if (r_ce)
-	begin
-		if (i_v)
+		if (!i_v && (!o_v || second_half))
 		begin
-			deadtime <= 0;
-			r_busy   <= 1;
-		end else if (r_busy && !o_v && second_half)
-			deadtime <= deadtime + 1;
-
-		if (deadtime >= DEADOCTETS)
-		begin
-			r_busy   <= 0;
-			deadtime <= 0;
+			{ o_d[4], o_d[0] } <= 2'b11;
+			case(r_spd)
+			SPD100M: { o_d[6:5], o_d[2:1] } <= {(2){ 2'b01 }};
+			 SPD10M: { o_d[6:5], o_d[2:1] } <= {(2){ 2'b00 }};
+			default: { o_d[6:5], o_d[2:1] } <= {(2){ 2'b10 }};
+			endcase
+			{ o_d[7], o_d[3] } <= 1;
 		end
 	end
-	*/
 
-	// initial	o_ce = 0;
-	// always @(posedge i_clk)
-	//	o_ce <= r_ce & (o_v || !r_busy) && (second_half);
-	always @(*)
-		o_ce = r_ce;
+	initial	o_ce = 0;
+	always @(posedge i_clk)
+		o_ce = i_reset || (r_ce && second_half);
 
 `ifdef	FORMAL
 	reg	f_past_valid, f_halfway;
@@ -210,7 +189,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		f_past_valid <= 1;
 
 	always @(*)
-	if (f_past_valid)
+	if (!f_past_valid)
 		assume(i_reset);
 
 	////////////////////////////////////////////////////////////////////////
@@ -222,26 +201,47 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		assume(!i_v);
 
 	always @(posedge i_clk)
-	if (f_past_valid && !$past(i_reset) && !$past(o_ce))
+	if (f_past_valid && !$past(i_reset) && $past(i_v && !o_ce))
 	begin
 		assume($stable(i_v));
 		assume($stable(i_d));
 	end
 
 	always @(posedge i_clk)
-	if (f_past_valid && $changed(i_spd))
-		assume(!$rose(i_v));
-
-	always @(posedge i_clk)
-	if (f_past_valid && ($past(i_v) || $past(r_busy)))
+	if (i_spd != r_spd)
 		assume($stable(i_spd));
 
 	always @(*)
 		assume(i_spd != 2'b11);
 
+	always @(*)
+	if (!i_reset && r_spd != i_spd)
+		assume(!i_v);
+
 	always @(posedge i_clk)
-	if (!$past(o_ce))
-		assume(!$fell(i_v));
+	if (f_past_valid && $past(o_v && !i_v))
+		assume(!i_v);
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Contract
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	always @(*)
+	if (r_spd == SPD1G)
+		assert(ck_counter == 0);
+	else if (r_spd == SPD100M)
+		assert(ck_counter < CK100M);
+	else if (r_spd == SPD10M)
+		assert(ck_counter < CK10M);
+	else
+		assert(r_spd != 2'b11);
+
+	always @(*)
+		assert(r_ce == (ck_counter == 0));
 
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -258,31 +258,28 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	begin
 		f_halfway = 1;
 		if (r_spd == SPD10M)
-			f_halfway = (ck_counter == HLF10M);
+			f_halfway = CK10M[0] && (ck_counter == HLF10M);
 		else if (r_spd == SPD100M)
-			f_halfway = (ck_counter == HLF100M);
+			f_halfway = CK100M[0] && (ck_counter == HLF100M);
 	end
 
 	always @(posedge i_clk)
-	if (f_past_valid && !$past(i_reset) && o_v) // $stable(r_spd))
+	if (f_past_valid && !$past(i_reset) && o_v && $stable(r_spd))
 	begin
-		if (r_spd == SPD10M)
+		if (f_halfway)
+			assert(o_ck == 2'b10);
+		else if (r_spd == SPD10M)
 		begin
 			assert(ck_counter < CK10M);
-			if (f_halfway || ck_counter > HLF10M)
+			if (ck_counter >= HLF10M)
 				assert(o_ck == 2'b11);
-			else if ($past(f_halfway) && CK100M[0])
-				assert(o_ck == 2'b10);
 			else
 				assert(o_ck == 2'b00);
 		end else if (r_spd == SPD100M)
 		begin
 			assert(ck_counter < CK100M);
-			assert(f_halfway == (ck_counter == HLF100M));
-			if (f_halfway || ck_counter > HLF100M)
+			if (ck_counter >= HLF100M)
 				assert(o_ck == 2'b11);
-			else if ($past(f_halfway) && CK100M[0])
-				assert(o_ck == 2'b10);
 			else
 				assert(o_ck == 2'b00);
 		end else if (r_spd == SPD1G)
@@ -293,34 +290,26 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		end
 	end
 
+	always @(*)
+		assert(o_ck != 2'b01);
+	always @(posedge i_clk)
+	if (f_past_valid && $past(r_spd == SPD1G) && (r_spd == SPD1G))
+		assert(o_ck == 2'b10);
+	else if (f_past_valid && r_spd != SPD1G && $past(r_spd != SPD1G))
+		assert(o_ck != 2'b10 || $changed(o_ck));
+
+
+
 	//
 	// Nothing changes, save on the positive edge of a clock
 	//
 	always @(posedge i_clk)
-	if (f_past_valid && !$rose(o_ck[1]) && r_spd != SPD1G)
+	if (f_past_valid && !$rose(o_ck[1]) && r_spd != SPD1G && $past(r_spd != SPD1G))
 	begin
 		assert($stable(o_v));
-		assert($stable(o_d));
+		assert(!o_v || $stable(o_d));
 	end
 
-
-	//
-	// Busy / dead time
-	//
-	always @(*)
-	if (o_v)
-		assert(r_busy);
-
-	always @(*)
-		assert(deadtime <= DEADOCTETS);
-
-	always @(*)
-	if (!r_busy)
-		assert(deadtime == 0);
-
-	always @(posedge i_clk)
-	if ((deadtime > 0)&&(!o_ce))
-		assert(!o_v);
 
 	//
 	// r_ce
@@ -328,46 +317,9 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	if (f_past_valid && !$past(r_ce))
 		assert($stable(o_d));
 
-	//
-	// Transmit sequence
-	(* anyconst *)	reg	[7:0]	f_special_data;
-	reg	txseq;
-
-	initial	txseq = 0;
 	always @(posedge i_clk)
-	if (i_reset)
-		txseq <= 0;
-	else begin
-		txseq <= txseq << 1;
-
-		if (f_past_valid && i_v && (o_v || !r_busy) && $stable(r_spd)
-				&& i_d == f_special_data)
-			txseq[0] <= 1;
-
-		txseq[1] <= 0;
-		if ((r_spd == SPD1G)&&(txseq[0]))
-			assert(o_v && o_d == f_special_data);
-		else if ((r_spd != SPD1G)&&(txseq[0]))
-		begin
-			assert(o_v && o_d[7:4] == f_special_data[7:4]);
-			txseq[1] <= 1;
-		end
-
-		// txseq[2] <= txseq[1];
-		if (txseq[1] || txseq[2])
-		begin
-			if (!r_ce)
-				txseq[3] <= 0;
-			else
-				txseq[3:2] <= 2'b10;
-
-			assert(o_v && o_d == {(2){f_special_data[7:4]}});
-		end
-
-		if (txseq[3])
-			assert(o_v && o_d == {(2){f_special_data[3:0]}});
-	end
-		
+	if (f_past_valid && $past(i_reset))
+		assert(!o_v);
 
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -376,19 +328,20 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	reg	[7:0]	cvr_count;
 	reg		cvr_check;
 	reg	[1:0]	cvr_bits;
+	reg		cvr_interesting;
 
-	initial	cvr_count = 8'h40;
+	initial	cvr_count = 8'he0;
 	always @(posedge i_clk)
 	if (i_reset)
-		cvr_count <= 8'h40;
-	else if ((i_v || r_busy) && o_ce)
+		cvr_count <= 8'he0;
+	else if (i_v && o_ce)
 		cvr_count <= cvr_count + 1;
 
 	initial	cvr_check = 1;
 	always @(posedge i_clk)
 	if (i_reset)
-		cvr_check <= 0;
-	else if ((i_v || r_busy) && o_ce && i_d != cvr_count)
+		cvr_check <= 1;
+	else if (i_v && o_ce && i_d != cvr_count)
 		cvr_check <= 0;
 
 	initial	cvr_bits = 0;
@@ -398,24 +351,21 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	else if (o_ce && o_v && (!(&cvr_bits)))
 		cvr_bits <= cvr_bits + 1;
 
-	reg	cvr_interesting;
 	always @(*)
 		cvr_interesting = f_past_valid && cvr_check && (&cvr_bits);
 
-	//
-	// Doesn't get reached inside 160 steps
-	//
-	// always @(posedge i_clk)
-	//	cover($fell(r_busy) && !$past(i_reset) && (r_spd == SPD10M)
-	//		&& cvr_interesting && ($past(o_d) > 8'h3));
+
+	/////////////////
 
 	always @(posedge i_clk)
-		cover($fell(r_busy) && !$past(i_reset) && (r_spd == SPD100M)
-			&& cvr_interesting && ($past(o_d) > 8'h3));
+	if (f_past_valid)
+		cover($fell(o_v) && !$past(i_reset) && (r_spd == SPD100M)
+			&& cvr_interesting);		// !
 
 	always @(posedge i_clk)
-		cover($fell(r_busy) && !$past(i_reset) && (r_spd == SPD1G)
-			&& cvr_interesting && ($past(o_d) > 8'h3));
+	if (f_past_valid)
+		cover($fell(o_v) && !$past(i_reset) && (r_spd == SPD1G)
+			&& cvr_interesting);		// !
 
 `endif
 endmodule

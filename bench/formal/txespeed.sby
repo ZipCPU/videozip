@@ -4,16 +4,16 @@ cvr
 
 [options]
 prf: mode prove
-prf: depth 5
+prf: depth 4
 cvr: mode cover
-cvr: depth 160
+cvr: depth 60
 
 [engines]
 smtbmc
 
 [script]
 read -formal txespeed.v
-hierarchy -top txespeed -chparam DEADOCTETS 5 -chparam CK10M 10
+hierarchy -top txespeed -chparam CK10M 10
 prep -top txespeed
 
 [files]

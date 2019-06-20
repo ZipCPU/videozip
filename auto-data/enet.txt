@@ -252,4 +252,6 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_cancel*}]       -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_cancel*}]        8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/n_still_busy*}]    -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_busy*}]          8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/txspdi/o_ck*}]    -to [get_cells -hier -filter {NAME=~*txck/ODDRi*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_tx_reset*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_rx_reset*}]          8.0
 #
