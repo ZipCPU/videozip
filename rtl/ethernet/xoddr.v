@@ -47,12 +47,9 @@ module	xoddr(i_clk, i_v, o_pin);
 	output	wire		o_pin;
 
 	wire	w_internal;
-	reg	last;
-
-	always @(posedge i_clk)
-		last <= i_v[1];
 
 	ODDR #(
+		// Data arrives aligned with the positive edge of the clock
 		.DDR_CLK_EDGE("SAME_EDGE"),
 		.INIT(1'b0),
 		.SRTYPE("SYNC")
@@ -60,7 +57,7 @@ module	xoddr(i_clk, i_v, o_pin);
 		.Q(o_pin),
 		.C(i_clk),
 		.CE(1'b1),
-		.D1(last),	// Negative clock edge (goes first)
+		.D1(i_v[1]),	// Negative clock edge (goes first)
 		.D2(i_v[0]),	// Positive clock edge
 		.R(1'b0),
 		.S(1'b0));

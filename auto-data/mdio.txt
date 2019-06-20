@@ -73,7 +73,7 @@
 @MAIN.ALT=
 	assign	o_mdclk = 1'b1;
 	assign	o_mdio  = 1'b1;
-	assign	o_mdwe  = 1'b0;;
+	assign	o_mdwe  = 1'b0;
 @REGS.NOTE= // Ethernet configuration (MDIO) port
 @REGS.N=30
 @REGS.0=  0 R_MDIO_BMCR  	BMCR

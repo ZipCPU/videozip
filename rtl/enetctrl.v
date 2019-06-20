@@ -2,7 +2,7 @@
 //
 // Filename: 	enetctrl
 //
-// Project:	Ethernet cores, a set of ethernet cores for RM interfaces
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This module translates wishbone commands, whether they be read
 //		or write commands, to MIO commands operating on an Ethernet
@@ -46,7 +46,7 @@ module	enetctrl(i_clk, i_reset,
 			o_wb_ack, o_wb_stall, o_wb_data,
 		o_mdclk, o_mdio, i_mdio, o_mdwe,
 		o_debug);
-	parameter	CLKBITS=3; // = 3 for 200MHz source clock, 2 for 100 MHz
+	parameter	CLKBITS=2; // = 3 for 200MHz source clock, 2 for 100 MHz
 	parameter [4:0]	PHYADDR = 5'h01;
 `ifdef	FORMAL
 	parameter [0:0]		F_OPT_COVER =  1'b0;
@@ -110,7 +110,7 @@ module	enetctrl(i_clk, i_reset,
 	// Step 3: Read from our input port
 	// 	Note: I read on the falling edge, he changes on the rising edge
 	always @(posedge i_clk)
-	if (zclk)
+	if (zclk && !zreg_pos)
 		read_reg <= { read_reg[14:0], i_mdio };
 	always @(posedge i_clk)
 		zreg_pos <= (reg_pos == 0);

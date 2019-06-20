@@ -98,8 +98,9 @@ check-gpp:
 #
 .PHONY: datestamp
 datestamp: check-perl
-	@bash -c 'if [ ! -e $(YYMMDD)-build.v ]; then rm -f 20??????-build.v; perl mkdatev.pl > $(YYMMDD)-build.v; rm -f rtl/builddate.v; fi'
-	@bash -c 'if [ ! -e rtl/builddate.v ]; then cd rtl; cp ../$(YYMMDD)-build.v builddate.v; fi'
+	@bash -c 'perl mkdatev.pl > lastbuild.v'
+	$(call copyif-changed,lastbuild.v,rtl/builddate.v)
+	@grep "^.define" rtl/builddate.v
 
 #
 #
@@ -116,7 +117,7 @@ archive:
 # Build our main (and toplevel) Verilog files via autofpga
 #
 .PHONY: autodata
-autodata: check-autofpga
+autodata: datestamp check-autofpga
 	$(SUBMAKE) auto-data
 	$(call copyif-changed,auto-data/toplevel.v,rtl/toplevel.v)
 	$(call copyif-changed,auto-data/main.v,rtl/main.v)
@@ -138,7 +139,7 @@ autodata: check-autofpga
 # simulation class library that we can then use for simulation
 #
 .PHONY: verilated
-verilated: datestamp check-verilator
+verilated: check-verilator
 	+@$(SUBMAKE) rtl
 
 .PHONY: rtl

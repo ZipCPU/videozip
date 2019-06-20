@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest # readhist readframe # helloworld
+PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest simple_ping helloworld
 all:	$(PROGRAMS)
 #
 #
@@ -51,7 +51,7 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c memtest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c
+SOURCES := cputest.c memtest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c simple_ping.c arp.c zipcpu.c ipcksum.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 INCS    := -I../zlib -I../../rtl -I.
 # LDSCRIPT:= -Tboard.ld
@@ -102,45 +102,45 @@ cputest: $(OBJDIR)/cputest.o bkram.ld
 cputestcis: $(OBJDIR)/cputestcis.o bkram.ld
 	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputestcis.map $(OBJDIR)/cputestcis.o -o $@
 
-memtest: $(OBJDIR)/memtest.o boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@
+memtest: $(OBJDIR)/memtest.o bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@
 
 I2CDBGOBJS := $(addprefix $(OBJDIR)/,i2cdbg.o txfns.o)
 $(OBJDIR)/i2cdbg.o: i2cdbg.c
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-i2cdbg: $(I2CDBGOBJS) boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/i2cdbg.map $(I2CDBGOBJS) -o $@
+i2cdbg: $(I2CDBGOBJS) bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/i2cdbg.map $(I2CDBGOBJS) -o $@
 	echo $(I2CDBGOBJS)
 
 HDMISTARTOBJS:= $(addprefix $(OBJDIR)/,hdmistart.o txfns.o)
 $(OBJDIR)/hdmistart.o: hdmistart.c
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistart: $(HDMISTARTOBJS) boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
+hdmistart: $(HDMISTARTOBJS) bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
 
 HDMISTESTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
 $(OBJDIR)/hdmistest.o: hdmistest.c
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistest: $(HDMISTESTOBJS) boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
+hdmistest: $(HDMISTESTOBJS) bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
 
 READHISTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
 $(OBJDIR)/readhist.o: readhist.c
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-readhist: $(READHISTOBJS) boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/readhist.map $(READHISTOBJS) -o $@
+readhist: $(READHISTOBJS) bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/readhist.map $(READHISTOBJS) -o $@
 
 READFRAMEOBJS:= $(addprefix $(OBJDIR)/,readframe.o txfns.o)
 $(OBJDIR)/readframe.o: readframe.c
 	$(CC) -c $(CFLAGS) -Wa,-cis -fno-builtin $< -o $@
-readframe: $(READFRAMEOBJS) boardram.ld
-	$(CC) $(CFLAGS) -Tboardram.ld -Wl,-Map=$(OBJDIR)/readframe.map $(READFRAMEOBJS) -o $@
+readframe: $(READFRAMEOBJS) bkram.ld
+	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/readframe.map $(READFRAMEOBJS) -o $@
 
 helloworld: $(OBJDIR)/helloworld.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
 simple_ping: $(OBJDIR)/simple_ping.o $(OBJDIR)/zipcpu.o
-simple_ping: $(OBJDIR)/arp.o $(OBJDIR)/ipcksum.o $(OBJDIR)/ipcksum.o
+simple_ping: $(OBJDIR)/arp.o $(OBJDIR)/ipcksum.o
 	$(CC) -Wl,-Map=simple_ping.map $(CFLAGS) $(LFLAGS) $^ -o $@
 
 

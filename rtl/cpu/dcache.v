@@ -83,15 +83,13 @@ module	dcache(i_clk, i_reset, i_pipe_stb, i_lock,
 	);
 	parameter	LGCACHELEN = 12,
 			ADDRESS_WIDTH=30,
-			LGNLINES=(LGCACHELEN-4), // Log of the number of separate cache lines
+			LGNLINES=(LGCACHELEN-3), // Log of the number of separate cache lines
 			NAUX=5;	// # of aux d-wires to keep aligned w/memops
 	parameter [0:0]	OPT_LOCAL_BUS=1'b1;
 	parameter [0:0]	OPT_PIPE=1'b1;
 	parameter [0:0]	OPT_LOCK=1'b1;
 	parameter [0:0]	OPT_DUAL_READ_PORT=1'b1;
 	parameter 	OPT_FIFO_DEPTH = 4;
-	parameter	F_LGDEPTH=1 + (((!OPT_PIPE)||(LS > OPT_FIFO_DEPTH))
-					? LS : OPT_FIFO_DEPTH);
 	localparam	AW = ADDRESS_WIDTH; // Just for ease of notation below
 	localparam	CS = LGCACHELEN; // Number of bits in a cache address
 	localparam	LS = CS-LGNLINES; // Bits to spec position w/in cline
@@ -412,6 +410,9 @@ module	dcache(i_clk, i_reset, i_pipe_stb, i_lock,
 		always @(*)
 			o_wreg = req_data[(NAUX+4-1):4];
 
+		always @(*)
+			gie = i_oreg[NAUX-1];
+
 		/*
 		always @(*)
 		o_debug = { i_pipe_stb, state, cyc, stb,	//  5b
@@ -421,8 +422,11 @@ module	dcache(i_clk, i_reset, i_pipe_stb, i_lock,
 				r_svalid, r_dvalid, r_rd_pending };
 		*/
 
+		// verilator lint_off UNUSED
+		wire	unused_no_fifo;
+		assign	unused_no_fifo = gie;
+		// verilator lint_on  UNUSED
 	end endgenerate
-		
 
 
 	initial	r_wb_cyc_gbl = 0;

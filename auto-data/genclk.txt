@@ -49,11 +49,12 @@
 	// Definitions for the clock generation circuit
 	wire		s_@$(PREFIX)_clk, w_@$(PREFIX)_pll_locked,
 			w_@$(PREFIX)_ce;
+	wire	[7:0]	w_@$(PREFIX)_word;
+@GENBASE_DECL=
 	wire		s_clk4x, s_clk4x_unbuffered,
 			s_clksync, s_clksync_unbuffered;
-	wire	[7:0]	w_@$(PREFIX)_word;
-@TOP.INSERT=
-/*
+@GENBASE_CLOCK=
+
 	PLLE2_BASE #(
 		.CLKFBOUT_MULT(8),
 		.CLKFBOUT_PHASE(0.0),
@@ -67,10 +68,11 @@
 			.CLKFBOUT(sysclk_feedback),
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
-*/
+
 	BUFG	clksync_buf(.I(s_clksync_unbuffered), .O(s_clksync));
 	BUFG	clk4x_buf(.I(s_clk4x_unbuffered), .O(s_clk4x));
 
+@TOP.INSERT=
 	xgenclk x@$(PREFIX)i(s_clksync, s_clk4x, w_@$(PREFIX)_ce, w_@$(PREFIX)_word,
 			o_unused_fan_pwm,
 			s_@$(PREFIX)_clk, w_@$(PREFIX)_pll_locked);

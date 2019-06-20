@@ -4,7 +4,14 @@
 //
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	To take a set of parameters, and cross them from one clock
+//		domain to another all the while guaranteeing that the parameters
+//	arrive in the new clock domain coherent--that is, the outgoing
+//	parameter value will only ever equal the old value or the new value
+//	and never anything in between.
+//
+//	The sister core tfrvalue.v has been formally verified.  It's not clear
+//	to what extent this core remains valuable.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -71,6 +78,6 @@ module	crossclkparam(i_a_clk, i_b_clk, i_params, o_params);
 
 	initial	o_params = 0;
 	always @(posedge i_b_clk)
-		if ((b_send[1])&&(!b_ack))
-			o_params <= r_params;
+	if ((b_send[1])&&(!b_ack))
+		o_params <= r_params;
 endmodule

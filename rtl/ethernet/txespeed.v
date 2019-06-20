@@ -66,24 +66,20 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	output	reg		o_ce;
 	output	reg	[1:0]	o_ck;
 
-	reg		r_busy, r_ce, halfway, new_spd, second_half;
+	reg		r_ce, second_half;
 	reg	[1:0]	r_spd;
 	reg	[6:0]	ck_counter;
 	reg	[3:0]	r_buf;
-	reg	[3:0]	deadtime;
+	// reg	[3:0]	deadtime;
 
 	initial	r_spd = SPD1G;
 	always @(posedge i_clk)
 	if (i_reset)
 		r_spd <= SPD1G;
-	else if (!r_busy)
+	else if (!o_v)
 		r_spd <= i_spd;
 
-	always @(*)
-		new_spd = (!r_busy && r_spd != i_spd);
-
 	initial	ck_counter = 0;
-	initial	halfway = 0;
 	initial	r_ce = 1;
 	always @(posedge i_clk)
 	if (r_ce)
@@ -92,30 +88,25 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		SPD10M: begin
 			r_ce <= 0;
 			ck_counter <= CK10M-1;
-			halfway <= (CK10M<=2);
 			end
 		SPD100M: begin
 			r_ce <= 0;
 			ck_counter <= CK100M-1;
-			halfway <= (CK100M<=2);
 			end
 		default: begin
 			// SPD1G:
 			r_ce <= 1;
 			ck_counter <= CK1G-1;
-			halfway <= 1;
 			end
 		endcase
 
 	end else begin
 		r_ce       <= (ck_counter <= 1);
 		ck_counter <= (ck_counter - 1);
-		halfway    <= 0;
-		if (r_spd == SPD10M)
-			halfway <= (ck_counter == (CK10M/2)+1);
-		else if (r_spd == SPD100M)
-			halfway <= (ck_counter == (CK100M/2)+1);
 	end
+
+	localparam [6:0] HLF10M  = { 1'b0, CK10M[6:1]  };
+	localparam [6:0] HLF100M = { 1'b0, CK100M[6:1] };
 
 	initial	o_ck = 2'b10;
 	always @(posedge i_clk)
@@ -123,17 +114,17 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		o_ck <= 2'b10;
 	else if (r_spd == SPD10M)
 	begin
-		if (ck_counter < (CK10M-CK10M[0])/2)
+		if (ck_counter < HLF10M)
 			o_ck <= 2'b00;
-		else if (CK10M[0] && (ck_counter == (CK10M-1)/2))
+		else if (CK10M[0] && (ck_counter == HLF10M))
 			o_ck <= 2'b10;
 		else
 			o_ck <= 2'b11;
 	end else // if (r_spd == SPD100M)
 	begin
-		if (ck_counter < (CK100M-CK100M[0])/2)
+		if (ck_counter < HLF100M)
 			o_ck <= 2'b00;
-		else if (CK100M[0] && (ck_counter == (CK100M-1)/2))
+		else if (CK100M[0] && (ck_counter == HLF100M))
 			o_ck <= 2'b10;
 		else
 			o_ck <= 2'b11;
@@ -152,14 +143,15 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 
 	initial	o_v = 0;
 	always @(posedge i_clk)
-	if (i_reset || new_spd)
+	if (i_reset)
 		o_v <= 0;
 	else if (r_ce)
 	begin
-		if (o_v)
-			o_v <= (i_v || second_half);
-		else
-			o_v <= i_v && !r_busy;
+		o_v <= i_v;
+	//	if (o_v)
+	//		o_v <= (i_v || second_half);
+	//	else
+	//		o_v <= i_v && !r_busy;
 	end
 
 	initial	o_d = 0;
@@ -176,6 +168,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	end
 
 
+	/*
 	initial	deadtime = 0;
 	initial	r_busy   = 1;
 	always @(posedge i_clk)
@@ -202,13 +195,16 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 			deadtime <= 0;
 		end
 	end
+	*/
 
-	initial	o_ce = 0;
-	always @(posedge i_clk)
-		o_ce <= r_ce & (o_v || !r_busy) && (second_half);
+	// initial	o_ce = 0;
+	// always @(posedge i_clk)
+	//	o_ce <= r_ce & (o_v || !r_busy) && (second_half);
+	always @(*)
+		o_ce = r_ce;
 
 `ifdef	FORMAL
-	reg	f_past_valid;
+	reg	f_past_valid, f_halfway;
 	initial	f_past_valid = 0;
 	always @(posedge i_clk)
 		f_past_valid <= 1;
@@ -258,26 +254,34 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 	always @(*)
 		assert(r_spd != 2'b11);
 
+	always @(*)
+	begin
+		f_halfway = 1;
+		if (r_spd == SPD10M)
+			f_halfway = (ck_counter == HLF10M);
+		else if (r_spd == SPD100M)
+			f_halfway = (ck_counter == HLF100M);
+	end
+
 	always @(posedge i_clk)
 	if (f_past_valid && !$past(i_reset) && o_v) // $stable(r_spd))
 	begin
 		if (r_spd == SPD10M)
 		begin
 			assert(ck_counter < CK10M);
-			assert(halfway == (ck_counter == (CK10M/2)));
-			if (halfway || ck_counter > CK10M/2)
+			if (f_halfway || ck_counter > HLF10M)
 				assert(o_ck == 2'b11);
-			else if ($past(halfway) && CK100M[0])
+			else if ($past(f_halfway) && CK100M[0])
 				assert(o_ck == 2'b10);
 			else
 				assert(o_ck == 2'b00);
 		end else if (r_spd == SPD100M)
 		begin
 			assert(ck_counter < CK100M);
-			assert(halfway == (ck_counter == (CK100M/2)));
-			if (halfway || ck_counter > CK100M/2)
+			assert(f_halfway == (ck_counter == HLF100M));
+			if (f_halfway || ck_counter > HLF100M)
 				assert(o_ck == 2'b11);
-			else if ($past(halfway) && CK100M[0])
+			else if ($past(f_halfway) && CK100M[0])
 				assert(o_ck == 2'b10);
 			else
 				assert(o_ck == 2'b00);
@@ -285,7 +289,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		begin
 			assert(o_ck == 2'b10);
 			assert(ck_counter < CK1G);
-			assert(halfway);
+			assert(f_halfway);
 		end
 	end
 
@@ -389,7 +393,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 
 	initial	cvr_bits = 0;
 	always @(posedge i_clk)
-	if (i_reset || new_spd)
+	if (i_reset || (r_spd != i_spd))
 		cvr_bits <= 0;
 	else if (o_ce && o_v && (!(&cvr_bits)))
 		cvr_bits <= cvr_bits + 1;

@@ -2,7 +2,7 @@
 //
 // Filename: 	zipsys.h
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	Declare the capabilities and memory structure of the ZipSystem
 //		for programs that must interact with it.
@@ -12,7 +12,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2016, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -25,7 +25,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -100,7 +100,7 @@ typedef	struct	{
 #define	ALTINT_MTC	ALTINT(7)
 #endif
 
-#define	INT_ENABLE	0x80000000
+#define	INT_ENABLE	0x80008000
 #define	EINT(A)	(INT_ENABLE|((A)<<16))
 #define	DINT(A)	((A)<<16)
 #define	CLEARPIC	0x7fff7fff
@@ -110,11 +110,11 @@ typedef	struct	{
 static	volatile ZIPSYS *const _zip = (ZIPSYS *)(ZIPSYS_ADDR);
 
 static inline void	DISABLE_INTS(void) {
-	_zip->z_pic = 0;
+	_zip->z_pic = DINT(INTNOW);
 }
 
 static inline void	ENABLE_INTS(void) {
-	_zip->z_pic = 0x80000000;
+	_zip->z_pic = EINT(INTNOW);
 }
 
 typedef	struct	{

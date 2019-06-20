@@ -2,7 +2,7 @@
 ##
 ## Filename: 	scope.txt
 ##
-## Project:	OpenArty, an entirely open SoC based upon the Arty platform
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	A generic scope description, from which other internal wbscopes
 ##		may depend upon

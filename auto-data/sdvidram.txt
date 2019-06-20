@@ -59,7 +59,7 @@
 @BUS.NAME=sdr
 @$BUS.WIDTH=128
 @BUS.CLOCK=clk
-@ERROR.WIRE=@$(PREFIX)_err;
+@ERROR.WIRE=@$(PREFIX)_err
 # 8-bit byte accesses
 @LD.PERM=wx
 @TOP.PORTLIST=
@@ -102,9 +102,6 @@
 			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_idata
 @TOP.INSERT=
 	wire	[31:0]	@$(PREFIX)_debug;
-	wire	i_clk_buffered;
-
-	BUFG @$(PREFIX)clkbufi(.I(i_clk), .O(i_clk_buffered));
 
 	migsdram #(.AXIDWIDTH(5), .WBDATAWIDTH(@$(BUS.WIDTH)),
 			.DDRWIDTH(16),
@@ -112,7 +109,8 @@
 		.i_clk(i_clk_buffered),
 		.i_clk_200mhz(s_clk_200mhz),
 		.o_sys_clk(s_clk),
-		.i_rst(!i_cpu_resetn),
+		// .i_rst(!i_cpu_resetn),
+		.i_rst(upper_plls_stable[3:2]!=2'b11),
 		.o_sys_reset(s_reset),
 		.i_wb_cyc(@$(PREFIX)_cyc),
 		.i_wb_stb(@$(PREFIX)_stb),

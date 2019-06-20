@@ -44,16 +44,26 @@
 #
 @PREFIX=masterclk
 @TOP.DEFNS=
-	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
+	wire	s_clk_200mhz,  s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback,
-		s_clk_125mhz, s_clk_125_unbuffered,
+		s_clk_125mhz,  s_clk_125_unbuffered,
+		s_clk_125d,    s_clk_125d_unbuffered,
+		s_clksync,     s_clksync_unbuffered,
+		s_clk4x,       s_clk4x_unbuffered,
 		netclk_locked, netclk_feedback;
+	wire	i_clk_buffered;
+	wire	clocks_locked;
+	reg	[3:0]	sysclk_stable, netclk_stable,
+			upper_plls_stable;
 @TOP.PORTLIST=
 @TOP.IODECL=
 @TOP.MAIN=
 		// PLL generated clocks
 		s_clk_200mhz, s_clk_125mhz
 @TOP.INSERT=
+	// Buffer the incoming clock
+	BUFG @$(PREFIX)clkbufi(.I(i_clk), .O(i_clk_buffered));
+
 	// But ... the delay controller requires a 200 MHz reference clock,
 	// the generic clock generator requires a 400MHz clock and a clock
 	// synchronized to it
@@ -65,7 +75,7 @@
 		.CLKOUT1_DIVIDE(2),	// 400 MHz
 		.CLKOUT2_DIVIDE(8))	// 100 MHz
 		gen_sysclk(
-			.CLKIN1(i_clk),
+			.CLKIN1(i_clk_buffered),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
 			.CLKOUT1(s_clk4x_unbuffered),
 			.CLKOUT2(s_clksync_unbuffered),
@@ -74,24 +84,52 @@
 			.CLKFBIN(sysclk_feedback),
 			.LOCKED(sysclk_locked));
 
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
+	BUFG	sysbuf(     .I(s_clk_200mhz_unbuffered),.O(s_clk_200mhz));
+	BUFG	clksync_buf(.I(s_clksync_unbuffered),   .O(s_clksync));
+	BUFG	clk4x_buf(  .I(s_clk4x_unbuffered),     .O(s_clk4x));
+
+	initial	sysclk_stable = 0;
+	always @(posedge s_clksync, negedge sysclk_locked)
+	if (!sysclk_locked)
+		sysclk_stable <= 4'h0;
+	else
+		sysclk_stable <= { sysclk_stable[2:0], 1'b1 };
 
 	// The ethernet MAC requires a 125MHz clock
 	PLLE2_BASE #(
 		.CLKFBOUT_MULT(10),
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(8))	// 125 MHz
+		.CLKOUT0_DIVIDE(8),	// 125 MHz
+		.CLKOUT0_PHASE(0),
+		.CLKOUT1_DIVIDE(8),	// 125 MHz
+		.CLKOUT1_PHASE(45))
 		gen_netclk(
-			.CLKIN1(i_clk),
+			.CLKIN1(i_clk_buffered),
 			.CLKOUT0(s_clk_125_unbuffered),
+			.CLKOUT1(s_clk_125d_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(netclk_feedback),
 			.CLKFBIN(netclk_feedback),
 			.LOCKED(netclk_locked));
 
 	BUFG	netbuf(.I(s_clk_125_unbuffered), .O(s_clk_125mhz));
+	BUFG	netbfd(.I(s_clk_125d_unbuffered),.O(s_clk_125d));
 
+	assign	clocks_locked = (netclk_locked && sysclk_locked);
+
+	initial	netclk_stable = 0;
+	always @(posedge s_clksync, negedge netclk_locked)
+	if (!netclk_locked)
+		netclk_stable <= 4'h0;
+	else
+		netclk_stable <= { netclk_stable[2:0], 1'b1 };
+
+
+	initial	upper_plls_stable = 4'h0;
+	always @(posedge i_clk_buffered)
+		upper_plls_stable <= { upper_plls_stable[2:0],
+			(netclk_stable & sysclk_stable) };
 @MAIN.PORTLIST=
 		// Extra clocks
 		i_clk_200mhz, i_clk_125mhz

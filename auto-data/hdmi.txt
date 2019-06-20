@@ -73,14 +73,12 @@
 	wire	[4:0]	w_hdmi_in_delay, w_hdmi_in_actual_delay_r,
 			w_hdmi_in_actual_delay_g, w_hdmi_in_actual_delay_b;
 	//
-	wire	s_clk_200mhz, s_clk_200mhz_unbuffered,
-		sysclk_locked, sysclk_feedback;
 	wire		w_hdmi_in_pll_locked;
 @TOP.MAIN=
 		// HDMI input clock
 		w_hdmi_in_logic_clk,
 		w_hdmi_in_red, w_hdmi_in_green, w_hdmi_in_blue,
-		w_hdmi_in_hsclk, s_clk_200mhz,
+		w_hdmi_in_hsclk,
 		// HDMI input (sink) delay
 		w_hdmi_in_actual_delay_r, w_hdmi_in_actual_delay_g,
 		w_hdmi_in_actual_delay_b, w_hdmi_in_delay
@@ -129,37 +127,17 @@
 	*/
 	IDELAYCTRL dlyctrl(.REFCLK(s_clk_200mhz), .RDY(), .RST(delay_reset));
 
-	// But ... the delay controller requires a 200 MHz reference clock,
-	// so ... let's create one
-	PLLE2_BASE #(
-		.CLKFBOUT_MULT(8),
-		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(10),
-		.CLKOUT0_DIVIDE(4),
-		.CLKOUT1_DIVIDE(2),
-		.CLKOUT2_DIVIDE(8)) gen_sysclk(
-			.CLKIN1(i_clk),
-			.CLKOUT0(s_clk_200mhz_unbuffered),
-			.CLKOUT1(s_clk4x_unbuffered),
-			.CLKOUT2(s_clksync_unbuffered),
-			.PWRDWN(1'b0), .RST(1'b0),
-			.CLKFBOUT(sysclk_feedback),
-			.CLKFBIN(sysclk_feedback),
-			.LOCKED(sysclk_locked));
-
-	BUFG	sysbuf(.I(s_clk_200mhz_unbuffered), .O(s_clk_200mhz));
-
 
 @MAIN.PORTLIST=
 		// HDMI input ports
 		i_hdmi_in_clk,
 		i_hdmi_in_r, i_hdmi_in_g, i_hdmi_in_b,
-		i_hdmi_in_hsclk, i_clk_200mhz,
+		i_hdmi_in_hsclk,
 		// HDMI input delay control
 		i_hdmi_in_actual_delay_r, i_hdmi_in_actual_delay_g,
 		i_hdmi_in_actual_delay_b, o_hdmi_in_delay
-@CLOCK.NAME=hdmi_in_clk hdmi_in_hsclk clk_200mhz
-@CLOCK.FREQUENCY=148500000 1485000000 200000000
+@CLOCK.NAME=hdmi_in_clk hdmi_in_hsclk
+@CLOCK.FREQUENCY=148500000 1485000000
 @MAIN.IODECL=
 	// HDMI input ports
 	input	wire		i_hdmi_in_clk;
@@ -167,7 +145,6 @@
 	// verilator lint_off UNUSED
 	input	wire		i_hdmi_in_hsclk;
 	// verilator lint_on  UNUSED
-	input	wire		i_clk_200mhz;
 	// Sub-pixel delay control
 	input	wire	[4:0]	i_hdmi_in_actual_delay_r;
 	input	wire	[4:0]	i_hdmi_in_actual_delay_g;

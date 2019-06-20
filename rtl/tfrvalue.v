@@ -40,79 +40,181 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype none
+//
 module	tfrvalue(i_aclk, i_value, i_bclk, o_value);
 	parameter	NB = 16;
-	parameter	METHOD = "GRAYCODE";
 	input	wire			i_aclk, i_bclk;
 	input	wire	[(NB-1):0]	i_value;
 	output	wire	[(NB-1):0]	o_value;
 
-/*
-	genvar	k, j;
-	generate
-	if (METHOD == "GRAYCODE")
+	(* ASYNC_REG = "TRUE" *) reg	q_tfr, q_ack;
+	reg			r_atfr, r_btfr;
+	reg			r_aack, r_back;
+	reg	[(NB-1):0]	r_aval;
+	(* ASYNC_REG = "TRUE" *) reg [(NB-1):0]	r_value;
+
+	initial	r_atfr = 0;
+	initial	r_aval = 0;
+	always @(posedge i_aclk)
+	if (!r_atfr && !r_aack)
 	begin
-		// Convert the input to gray code
-		reg	[(NB-1):0]	r_agray, q_bgray, r_bgray, r_value;
+		r_aval <= i_value;
+		if (i_value != r_aval)
+			r_atfr <= 1'b1;
+	end else if (r_aack)
+		r_atfr <= 1'b0;
 
-		always @(posedge i_aclk)
-			r_agray <=  { 1'b0, i_value[(NB-1):1] } ^ i_value[(NB-1):0];
 
-		always @(posedge i_bclk)
-			q_bgray <= r_agray;
+	initial	{ r_btfr, q_tfr } = 0;
+	always @(posedge i_bclk)
+		{ r_btfr, q_tfr } <= { q_tfr, r_atfr };
 
-		always @(posedge i_bclk)
-			r_bgray <= q_bgray;
-
-		always @(posedge i_bclk)
-		begin
-			for(k=0; k<NB; k=k+1)
-			begin
-				r_value[k] = r_bgray[k];
-				for(j=k+1; j<NB; j=j+1)
-					r_value[k] = r_value[k] ^ r_bgray[j];
-			end
-		end
-	end else if (METHOD == "FLAGGED")
+	initial	r_value = 0;
+	initial	r_back = 0;
+	always @(posedge i_bclk)
+	if ((r_btfr)&&(!r_back))
 	begin
-*/
+		r_value <= r_aval;
+		r_back <= 1'b1;
+	end else if (!r_btfr)
+		r_back <= 1'b0;
 
-		reg			r_atfr, q_tfr, r_btfr;
-		reg			r_aack, q_ack, r_back;
-		reg	[(NB-1):0]	r_aval, r_value;
-		always @(posedge i_aclk)
-			if ((!r_atfr)&&(!r_aack))
-			begin
-				r_aval <= i_value;
-				if (i_value != r_aval)
-					r_atfr <= 1'b1;
-			end else if (r_aack)
-				r_atfr <= 1'b0;
+	initial	{ r_aack, q_ack } = 0;
+	always @(posedge i_aclk)
+		{ r_aack, q_ack } <= { q_ack, r_back };
 
+	assign	o_value = r_value;
 
-		always @(posedge i_bclk)
-			q_tfr <= r_atfr;
-		always @(posedge i_bclk)
-			r_btfr <= q_tfr;
+`ifdef	FORMAL
+	(* gclk *)	reg		gbl_clk;
+	localparam	CKBITS = 4;
+	(* anyconst *) reg [CKBITS-1:0]	f_astep, f_bstep;
+	reg		[CKBITS-1:0]	f_acount, f_bcount;
 
-		always @(posedge i_bclk)
-			if ((r_btfr)&&(!r_back))
-			begin
-				r_value <= r_aval;
-				r_back <= 1'b1;
-			end else if (!r_btfr)
-				r_back <= 1'b0;
+	always @(*) assume(f_astep <= { 1'b1, {(CKBITS-1){1'b0}} });
+	always @(*) assume(f_bstep <= { 1'b1, {(CKBITS-1){1'b0}} });
+	always @(*) assume(f_astep > 0);
+	always @(*) assume(f_bstep > 0);
 
-		always @(posedge i_aclk)
-			q_ack <= r_back;
-		always @(posedge i_aclk)
-			r_aack <= q_ack;
+	always @(posedge gbl_clk)
+	begin
+		f_acount <= f_acount + f_astep;
+		f_bcount <= f_bcount + f_bstep;
+	end
 
-		assign	o_value = i_value;
-/*
-	end else
-		assign	o_value = i_value;
-	endgenerate
-*/
+	always @(*)
+	begin
+		assume(i_aclk == f_acount[CKBITS-1]);
+		assume(i_bclk == f_bcount[CKBITS-1]);
+	end
+
+	//
+	// Valids
+	//
+	reg	f_past_valida, f_past_validb, f_past_validg;
+	initial { f_past_valida, f_past_validb, f_past_validg } = 0;
+
+	always @(posedge gbl_clk)
+		f_past_validg <= 1;
+	always @(posedge i_aclk)
+		f_past_valida <= 1;
+	always @(posedge i_bclk)
+		f_past_validb <= 1;
+
+	//
+	// Contract
+	//
+	always @(posedge gbl_clk)
+	if (f_past_validg && $changed(r_aval))
+	begin
+		assert(r_aval == $past(i_value));
+		assert($past({ r_btfr, q_tfr }) == 0);
+		assert($past({ r_aack, q_ack }) == 0);
+	end
+
+	always @(posedge i_bclk)
+	if (f_past_validb && $changed(o_value))
+	begin
+		assert(o_value == r_aval);
+		assert($stable(r_aval));
+	end
+
+	//
+	// Synchronous
+	//
+	always @(posedge gbl_clk)
+	if (f_past_validg && !$rose(i_aclk))
+	begin
+		assume($stable(i_value));
+		assert($stable(r_atfr));
+		//
+		assert($stable(q_ack));
+		assert($stable(r_aack));
+	end
+
+	always @(posedge gbl_clk)
+	if (f_past_validg && !$rose(i_bclk))
+	begin
+		assert($stable(o_value));
+		assert($stable(r_back));
+		//
+		assert($stable(q_tfr));
+		assert($stable(r_btfr));
+	end
+	//
+	// Induction
+	//
+	always @(*)
+	if (!r_atfr && !r_aack)
+		assert({q_tfr, r_btfr, q_ack, r_back} == 0);
+	always @(*)
+	if (r_atfr && r_aack)
+		assert({q_tfr, r_btfr, q_ack, r_back} == 4'hf);
+
+	always @(*)
+		assert(({ r_btfr, q_tfr, r_atfr } == 0)
+			||({ r_btfr, q_tfr, r_atfr } == 3'b001)
+			||({ r_btfr, q_tfr, r_atfr } == 3'b011)
+			||({ r_btfr, q_tfr, r_atfr } == 3'b111)
+			||({ r_btfr, q_tfr, r_atfr } == 3'b110)
+			||({ r_btfr, q_tfr, r_atfr } == 3'b100));
 		
+	always @(*)
+		assert(({ r_aack, q_ack, r_back } == 0)
+			||({ r_aack, q_ack, r_back } == 3'b001)
+			||({ r_aack, q_ack, r_back } == 3'b011)
+			||({ r_aack, q_ack, r_back } == 3'b111)
+			||({ r_aack, q_ack, r_back } == 3'b110)
+			||({ r_aack, q_ack, r_back } == 3'b100));
+		
+	always @(*)
+	if (r_atfr && ({ r_btfr, q_tfr} != 2'b11))
+		assert({ r_aack, q_ack, r_back } == 3'b000);
+
+	always @(*)
+	if (r_back && ({ r_aack, q_ack} != 2'b11))
+		assert({ r_btfr, q_tfr, r_atfr } == 3'b111);
+
+	//
+	// Cover
+	//
+	reg	[1:0]	f_cvr_changes;
+
+	initial	f_cvr_changes = 0;
+	always @(posedge i_bclk)
+	if (f_past_validb && $changed(o_value) && !(&f_cvr_changes))
+		f_cvr_changes <= f_cvr_changes + 1;
+
+	// Takes about 19 clock steps per transfer, or 10 original clocks
+	// per transfer
+	always @(*)
+		cover((f_cvr_changes > 0) && ({ r_atfr, r_aack } == 0));
+
+	always @(*)
+		cover((&f_cvr_changes)&& ({ r_atfr, r_aack } ==0));
+
+	// Subcover
+
+`endif
 endmodule

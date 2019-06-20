@@ -168,12 +168,12 @@ set_property -dict { PACKAGE_PIN AB16  IOSTANDARD LVCMOS25 } [get_ports { i_net_
 set_property -dict { PACKAGE_PIN AA15  IOSTANDARD LVCMOS25 } [get_ports { i_net_rxd[1] }]; #IO_L4P_T0_13 Sch=eth_rxd[1]
 set_property -dict { PACKAGE_PIN AB15  IOSTANDARD LVCMOS25 } [get_ports { i_net_rxd[2] }]; #IO_L4N_T0_13 Sch=eth_rxd[2]
 set_property -dict { PACKAGE_PIN AB11  IOSTANDARD LVCMOS25 } [get_ports { i_net_rxd[3] }]; #IO_L7P_T1_13 Sch=eth_rxd[3]
-set_property -dict { PACKAGE_PIN AA14  IOSTANDARD LVCMOS25 } [get_ports { o_net_tx_clk }]; #IO_L5N_T0_13 Sch=eth_txck
-set_property -dict { PACKAGE_PIN V10   IOSTANDARD LVCMOS25 } [get_ports { o_net_tx_ctl }]; #IO_L10P_T1_13 Sch=eth_txctl
-set_property -dict { PACKAGE_PIN Y12   IOSTANDARD LVCMOS25 } [get_ports { o_net_txd[0] }]; #IO_L11N_T1_SRCC_13 Sch=eth_txd[0]
-set_property -dict { PACKAGE_PIN W12   IOSTANDARD LVCMOS25 } [get_ports { o_net_txd[1] }]; #IO_L12N_T1_MRCC_13 Sch=eth_txd[1]
-set_property -dict { PACKAGE_PIN W11   IOSTANDARD LVCMOS25 } [get_ports { o_net_txd[2] }]; #IO_L12P_T1_MRCC_13 Sch=eth_txd[2]
-set_property -dict { PACKAGE_PIN Y11   IOSTANDARD LVCMOS25 } [get_ports { o_net_txd[3] }]; #IO_L11P_T1_SRCC_13 Sch=eth_txd[3]
+set_property -dict { PACKAGE_PIN AA14  IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_tx_clk }]; #IO_L5N_T0_13 Sch=eth_txck
+set_property -dict { PACKAGE_PIN V10   IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_tx_ctl }]; #IO_L10P_T1_13 Sch=eth_txctl
+set_property -dict { PACKAGE_PIN Y12   IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_txd[0] }]; #IO_L11N_T1_SRCC_13 Sch=eth_txd[0]
+set_property -dict { PACKAGE_PIN W12   IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_txd[1] }]; #IO_L12N_T1_MRCC_13 Sch=eth_txd[1]
+set_property -dict { PACKAGE_PIN W11   IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_txd[2] }]; #IO_L12P_T1_MRCC_13 Sch=eth_txd[2]
+set_property -dict { PACKAGE_PIN Y11   IOSTANDARD LVCMOS25 SLEW FAST } [get_ports { o_net_txd[3] }]; #IO_L11P_T1_SRCC_13 Sch=eth_txd[3]
 
 
 ## Fan PWM
@@ -320,6 +320,30 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 ## Adding in any XDC_INSERT tags
 
 ## From enetscope
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scope*/*br_*}] -to [get_cells -hier -filter {NAME=~*scope*/*q_*}] 12.3
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scope*/*br_*}] -to [get_cells -hier -filter {NAME=~*scope*/*dr_*}] 12.3
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *scopei*/*waddr*}] -to [get_cells -hier -filter {NAME=~*scopei*/*this_addr*}] 12.3
+#//
+#// NETSCOPE: WB-Bus to scope data
+#// Chosen maximum delay is 8
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*br_*}]            -to [get_cells -hier -filter {NAME=~*enetscopei*/*q_*}] 8
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*br_*}]            -to [get_cells -hier -filter {NAME=~*enetscopei*/*dr_*}] 8
+#//
+#// NETSCOPE: Scope data to WB-bus clock
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei/r_reset_complete*}] -to [get_cells -hier -filter {NAME=~*enetscopei*/q_*}] 8
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei/dr_*}]              -to [get_cells -hier -filter {NAME=~*enetscopei*/q_*}] 8
+#//
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*waddr*}]          -to [get_cells -hier -filter {NAME=~*enetscopei*/*this_addr*}] 8
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/*}]                     -to [get_cells -hier -filter {NAME=~*enetscopei*/o_bus_data*}] 8
+## From netp
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx*}]              -to [get_cells -hier -filter {NAME=~*netctrl/n_tx*}]               8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/hw_mac*}]          -to [get_cells -hier -filter {NAME=~*netctrl/txmaci/r_hw*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tfrtxspd/r_aval*}] -to [get_cells -hier -filter {NAME=~*netctrl/tfrtxspd/r_val*}]     8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/config_hw_mac*}]   -to [get_cells -hier -filter {NAME=~*netctrl/n_tx_config_hw_mac*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/config_hw_crc*}]   -to [get_cells -hier -filter {NAME=~*netctrl/n_tx_config_hw_crc*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tfrtxspd/r_*}]     -to [get_cells -hier -filter {NAME=~*netctrl/tfrtxspd/q_*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_cmd*}]          -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_cmd*}]           8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx_cancel*}]       -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_cancel*}]        8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/n_still_busy*}]    -to [get_cells -hier -filter {NAME=~*netctrl/r_tx_busy*}]          8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/txspdi/o_ck*}]    -to [get_cells -hier -filter {NAME=~*txck/ODDRi*}]          8.0
+## From netrxctr
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetrxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknetrxctrctr/q_*}]        8
+## From nettxctr
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknettxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknettxctrctr/q_*}]        8

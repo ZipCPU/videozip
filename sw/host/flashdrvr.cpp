@@ -68,7 +68,6 @@
 #endif
 #define	CFG_WEDIR	(1<<9)
 #define	CFG_USER_CS_n	(1<<8)
-#define	NDUMMY		6
 
 static const unsigned	F_RESET = (CFG_USERMODE|0x0ff),
 			F_EMPTY = (CFG_USERMODE|0x000),
@@ -161,7 +160,6 @@ void	FLASHDRVR::restore_dualio(void) {
 
 void	FLASHDRVR::restore_quadio(void) {
 #ifdef	QSPI_FLASH
-	//static const	uint32_t	DUAL_IO_READ     = CFG_USERMODE|0xbb;
 	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE|0xeb;
 
 	m_fpga->writeio(R_FLASHCFG, F_END);
@@ -186,11 +184,11 @@ void	FLASHDRVR::restore_quadio(void) {
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
 	// Mode byte
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0);
+	// Read NDUMMY clocks worth
+	for(int k=0; k<(FLASH_NDUMMY-2)/2; k++)
+		m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
 	// Read a dummy byte
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
-	// Read NDUMMY clocks worth
-	for(int k=0; k<NDUMMY; k++)
-		m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
 	// Close the interface
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE);
 	m_fpga->writeio(R_FLASHCFG, CFG_USER_CS_n);
@@ -307,9 +305,9 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	// Write the page
 	//
 
-	// Issue the command
+	// Issue the page program command
 	m_fpga->writeio(R_FLASHCFG, F_PP);
-	// The address
+	// The address of the page to be programmed
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>>16)&0x0ff));
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>> 8)&0x0ff));
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr    )&0x0ff));
@@ -325,8 +323,10 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	else
 		printf("\n");
 
+	// Wait for the write to complete
 	flwait();
 
+	// Turn quad-mode read back on, so we can verify the program
 	place_online();
 	if (verify_write) {
 		// printf("Attempting to verify page\n");

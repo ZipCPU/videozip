@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
 "access\n\n");
 	exit(EXIT_FAILURE);
 #else
-	bool	config_hw_mac = true, config_hw_crc = false,
+	bool	config_hw_mac = false, config_hw_crc = false,
 		config_loopback = true;
 	FPGA::BUSW	txstat;
 	int	argn;
@@ -278,9 +278,9 @@ int main(int argc, char **argv) {
 	smac[3] = 0xe8; smac[4] = 0xb0; smac[5] = 0x96;
 
 	// Similarly with the destination IP of the computer I wish to test with
-	dip[0] = 192; dip[1] = 168; dip[2] = 10; dip[3] = 1;
+	dip[0] = 192; dip[1] = 168; dip[2] = 15; dip[3] = 1;
 	// and let's pick a source IP just ... somewhere on that network
-	sip[0] = 192; sip[1] = 168; sip[2] = 10; sip[3] = 22;
+	sip[0] = 192; sip[1] = 168; sip[2] = 15; sip[3] = 22;
 
 	if (config_loopback) {
 		for(int k=0; k<6; k++)
@@ -430,7 +430,13 @@ int main(int argc, char **argv) {
 
 		// And give it the transmit command
 		SETSCOPE;
-		m_fpga->writeio(R_NET_TXCMD, ENET_TXGO|ENET_NOHWMAC|(ln<<2)|((config_hw_crc)?0:ENET_NOHWCRC));
+		{ unsigned cmd;
+		cmd = ENET_TXGO | ENET_NOHWMAC;
+		cmd |= (config_hw_crc) ? 0: ENET_NOHWCRC;
+		cmd |= (ln<<2);
+		m_fpga->writeio(R_NET_TXCMD, cmd);
+		printf("Sent TX command: 0x%x\n", cmd);
+		}
 	}
 
 	// First, we need to look for any ARP requests, and we'll need to

@@ -2,7 +2,7 @@
 //
 // Filename: 	simple-ping.c
 //
-// Project:	OpenArty, an entirely open SoC based upon the Arty platform
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To exercise the network port by ...
 //
@@ -63,7 +63,7 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
 //
@@ -130,18 +130,23 @@ unsigned	pkt_id = 0;
 //
 ///////////
 
-#define	LED_STARTUP	0x0f05
-#define	LED_CLEAR	0x0f00
-#define	LED_TXACTIVE	0x0101
-#define	LED_RXACTIVE	0x0202
-#define	LED_TXCLEAR	0x0100
-#define	LED_RXCLEAR	0x0200
-#define	LED_RXARPACK	0x0404
+#define	LED_STARTUP	0xff05
+#define	LED_CLEAR	0xff00
+#define	LED_TXACTIVE	0xf101
+#define	LED_RXACTIVE	0xf202
+#define	LED_TXCLEAR	0xf100
+#define	LED_RXCLEAR	0xf200
+#define	LED_RXARPACK	0xf404
 #define	LED_RXPINGACK	0x0000
 #define	LED_RXPINGRX	0x0000
-#define	LED_USERMODE	0x0800
-#define	LED_GIEMODE	0x0808
-#define	LED_FAULT	0x0f0f
+#define	LED_USERMODE	0x8000
+#define	LED_BUSY	0x2020
+#define	LED_NOTBUSY	0x2000
+#define	LED_CANRX	0x1010
+#define	LED_MAC		0x4000
+#define	LED_NOMAC	0x4040
+#define	LED_GIEMODE	0x8080
+#define	LED_FAULT	0xffff
 
 //
 // We'll give our user 64kW of global variables
@@ -256,7 +261,6 @@ void	user_task(void) {
 				unsigned icmp_type = ippayload[0]>>24;
 				if (icmp_type == ICMP_ECHOREPLY) {
 					// We got our ping response
-					// _clrled[3] = LEDC_GREEN;
 					*_spio = LED_RXPINGACK;
 					ping_rx_count++;
 				} else if (icmp_type == ICMP_ECHO) {
@@ -286,6 +290,7 @@ void	user_task(void) {
 				sip = (epayload[3]<<16)|(epayload[4]>>16);
 				arp_requests_received++;
 				send_arp_reply(sha[0], sha[1], sip);
+				printf("ARP reply sent\n");
 			} else if ((epayload[1] == 0x06040002) // Reply
 				&&((rxcmd & ENET_RXBROADCAST)==0)
 				&&(epayload[6] == my_ip_addr)) {
@@ -298,6 +303,7 @@ void	user_task(void) {
 				if (sip == ping_ip_addr)
 					ping_mac_addr = sha;
 				arp_table_add(sip, sha);
+printf("ARP reply received\n");
 			}
 		}
 	}
@@ -318,14 +324,17 @@ void	send_ping(void) {
 
 	// If we don't know our destination MAC address yet, just return
 	if (ping_mac_addr==0) {
-		// _clrled[1] = LEDC_YELLOW;
+		*_spio = LED_NOMAC;
 		return;
 	}
+	*_spio = LED_MAC;
 
 	// If the network is busy transmitting, wait for it to finish
 	if (_netp->n_txcmd & ENET_TXBUSY) {
+		*_spio = LED_BUSY;
 		while(_netp->n_txcmd & ENET_TXBUSY)
 			;
+		*_spio = LED_NOTBUSY;
 	}
 
 	// Form a packet to transmit
@@ -370,10 +379,6 @@ int main(int argc, char **argv) {
 
 	// Turn all LED's off initially
 	*_spio = LED_CLEAR;
-	// _clrled[0] = 0;
-	// _clrled[1] = 0;
-	// _clrled[2] = 0;
-	// _clrled[3] = 0;
 
 	for(int i=0; i<16; i++)
 		user_context[i] = 0;
@@ -384,8 +389,6 @@ int main(int argc, char **argv) {
 
 	init_arp_table();
 
-	for(int i=0; i<4; i++)
-		// _clrled[i] = LEDC_BRIGHTRED;
 	*_spio = LED_STARTUP;
 
 	// Start up the network interface
@@ -401,7 +404,6 @@ int main(int argc, char **argv) {
 	// Turn off our right-hand LED, first part of startup is complete
 	*_spio = LED_CLEAR;
 	// Turn our first CLR LED green as well
-	// _clrled[0] = LEDC_GREEN;
 
 	// Set our timer to have us send a ping 1/sec
 	_zip->z_tma = CLKFREQHZ | TMR_INTERVAL;
@@ -419,20 +421,27 @@ int main(int argc, char **argv) {
 		bmsr = _mdio->e_v[MDIO_BMSR];
 		if ((bmsr & 4)==0) {
 			// Link is down, do nothing this time through
-			// _clrled[1] = LEDC_BRIGHTRED;
-			// _clrled[2] = LEDC_BRIGHTRED;
-			// _clrled[3] = LEDC_BRIGHTRED;
+			printf("Link is down\n");
 		} else {
-			// _clrled[1] = LEDC_GREEN;
+			printf("Sending a ping\n");
 			send_ping();
-			// _clrled[2] = LEDC_BRIGHTRED; // Have we received a response?
-			// _clrled[3] = LEDC_BRIGHTRED; // Was it our ping response?
+			printf("Ping sent\n");
 		}
 
 		// Clear any timer or PPS interrupts, disable all others
 		_zip->z_pic = DALLPIC;
 		_zip->z_pic = EINT(SYSINT_TMA|SYSINT_PPS|SYSINT_ENETRX);
+		_zip->z_pic = EINT(SYSINT_TMA|SYSINT_PPS|SYSINT_ENETRX);
+		_zip->z_pic = EINT(SYSINT_TMA|SYSINT_PPS|SYSINT_ENETRX);
+		if ((_zip->z_pic & DINT(INTNOW))==0) {
+			*_spio = LED_FAULT & -2;
+			zip_halt();
+		}
 		do {
+			if ((_zip->z_pic & DINT(INTNOW))==0) {
+				*_spio = LED_FAULT;
+				zip_halt();
+			}
 			if ((_zip->z_pic & INTNOW)==0) {
 				// Run the user process if no
 				// interrupts are pending
@@ -445,16 +454,12 @@ int main(int argc, char **argv) {
 			picv = _zip->z_pic;
 			gbl_picv = picv;
 
-			// Clear the ints we just saw.  Warning, though, we'll
-			// need to re-enable them later
-			_zip->z_pic = (picv & 0x0ffff);
+			// Clear any interrupts that have triggered
+			// We'll process those now
+			_zip->z_pic = (picv & 0x07fff);
 
 			if (zip_ucc() & CC_FAULT) {
-				*_spio = 0x0f0f;
-				// _clrled[0] = LEDC_BRIGHTRED;
-				// _clrled[1] = LEDC_BRIGHTRED;
-				// _clrled[2] = LEDC_BRIGHTRED;
-				// _clrled[3] = LEDC_BRIGHTRED;
+				*_spio = LED_FAULT;
 				printf("Sub-process fault\n");
 				zip_halt();
 			} else if (zip_ucc() & CC_TRAP) {
@@ -473,6 +478,7 @@ int main(int argc, char **argv) {
 					for(int i=0; i<(ln+3)>>2; i++)
 						_netbtx[i] = *sptr++;
 					*_spio = LED_TXACTIVE;
+printf("Send packet\n");
 					_netp->n_txcmd = ENET_TXCMD(ln);
 
 					user_tx_packets++;
@@ -487,28 +493,19 @@ int main(int argc, char **argv) {
 				user_context[14] &= ~CC_TRAP;
 				restore_context(user_context);
 			} else if ((picv & INTNOW)==0) {
-				*_spio = 0x0f0f;
-				// _clrled[0] = LEDC_BRIGHTRED;
-				// _clrled[1] = LEDC_WHITE;
-				// _clrled[2] = LEDC_BRIGHTRED;
-				// _clrled[3] = LEDC_BRIGHTRED;
-				printf("Too many interrupts! ??\n");
-				zip_halt();
+				 *_spio = LED_FAULT;
+				 printf("How did we get here?\n");
+				 printf("On an interrupt?  But none are active??\n");
+				 zip_halt();
 			} else if ((picv & DINT(SYSINT_TMA))==0) {
-				*_spio = 0x0f0f;
-				// _clrled[0] = LEDC_BRIGHTRED;
-				// _clrled[1] = LEDC_BRIGHTRED;
-				// _clrled[2] = LEDC_WHITE;
-				// _clrled[3] = LEDC_BRIGHTRED;
+				*_spio = LED_FAULT;
 				printf("Timer-A interrupt (FAULT)\n");
+				printf("-- It's supposed to be set and it is not\n");
 				zip_halt();
 			} else if ((picv & DINT(SYSINT_PPS))==0) {
-				*_spio = 0x0f0f;
-				// _clrled[0] = LEDC_BRIGHTRED;
-				// _clrled[1] = LEDC_BRIGHTRED;
-				// _clrled[2] = LEDC_BRIGHTRED;
-				// _clrled[3] = LEDC_WHITE;
+				*_spio = LED_FAULT;
 				printf("PPS Interrupt (FAULT)\n");
+				printf("-- It's supposed to be set and it is not\n");
 				zip_halt();
 			} if (picv & SYSINT_ENETRX) {
 				// This will not clear until the packet has
@@ -517,8 +514,7 @@ int main(int argc, char **argv) {
 				// has been disabled.
 				if (picv&(DINT(SYSINT_ENETRX))) {
 					_zip->z_pic = DINT(SYSINT_ENETRX);
-					*_spio = LED_RXACTIVE;
-					// _clrled[2] = LEDC_GREEN;
+					*_spio = LED_RXACTIVE | LED_CANRX;
 				}
 			} else
 				_zip->z_pic = EINT(SYSINT_ENETRX);

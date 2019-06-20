@@ -2,7 +2,7 @@
 ##
 ## Filename: 	cpuscope.txt
 ##
-## Project:	OpenArty, an entirely open SoC based upon the Arty platform
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Describes how to integrate a wishbone scope, focused on the
 ##		ZipCPU, into our platform.  This is good for debugging things

@@ -13,7 +13,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2017, Gisselquist Technology, LLC
+// Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -80,8 +80,11 @@ int main(int argc, char **argv) {
 #ifdef	R_HDMI_OUTCLK
 	printclk(m_fpga, R_HDMI_OUTCLK, "HCLKOUT");
 #endif
-#ifdef	R_NETCLOCKCTR
-	printclk(m_fpga, R_NETCLOCKCTR, "NETCLK ");
+#ifdef	R_NETRXCLK
+	printclk(m_fpga, R_NETRXCLK, "NETRXCK");
+#endif
+#ifdef	R_NETTXCLK
+	printclk(m_fpga, R_NETTXCLK, "NETTXCK");
 #endif
 #ifdef	R_GENCLKFB
 	printclk(m_fpga, R_GENCLKFB, "GENCLK ");

@@ -46,7 +46,12 @@ CXX	:= g++
 OBJDIR	:= obj-pc
 RTLD	:= ../../rtl
 VOBJDR	:= $(RTLD)/obj_dir
+ifneq ($(VERILATOR_ROOT),)
+VERILATOR:=$(VERILATOR_ROOT)/bin/verilator
+else
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
+endif
+export	$(VERILATOR)
 VROOT   := $(VERILATOR_ROOT)
 VDEFS   := $(shell ./vversion.sh)
 VINCD   := $(VROOT)/include
@@ -54,11 +59,11 @@ VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR) -I.
 INCS	:= -I../../sw/host -I$(RTLD) $(VINC)
 GFXFLAGS:= `pkg-config gtkmm-3.0 --cflags`
 GFXLIBS := `pkg-config gtkmm-3.0 --cflags --libs`
-CFLAGS	:= -Og -g -Wall $(INCS)
+CFLAGS	:= -Og -g -Wall $(VDEFS) $(INCS)
 #
 # A list of our sources and headers
 #
-SIMSOURCES:= qspiflashsim.cpp zipelf.cpp i2csim.cpp	\
+SIMSOURCES:= flashsim.cpp zipelf.cpp i2csim.cpp	\
 	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp dbluartsim.cpp	\
 	hdmiinsim.cpp enetctrlsim.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
@@ -135,4 +140,6 @@ tags:	$(SOURCES) $(HEADERS)
 	@ctags $(SOURCES) $(HEADERS)
 
 
+ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
+endif

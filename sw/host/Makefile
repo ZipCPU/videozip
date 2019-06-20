@@ -38,8 +38,8 @@
 ##
 .PHONY: all
 PROGRAMS := wbregs netuart rdclocks mkedid zipload zipstate zipdbg cpedid \
-	rdsync getframe manping rdmdio
-SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope erxscope etxscope
+	rdsync getframe manping flashid readmdio netstat
+SCOPES := edidrxscope edidtxscope rawdscope tmdscope zipscope erxscope etxscope flashscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
@@ -48,7 +48,8 @@ SOURCES := wbregs.cpp netuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	 mkedid.cpp $(BUSSRCS)	edidrxscope.cpp	edidtxscope.cpp		\
 	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
 	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp manping.cpp	\
-	erxscope.cpp etxscope.cpp
+	erxscope.cpp etxscope.cpp flashscope.cpp flashid.cpp		\
+	readmdio.cpp mdioscope.cpp netstat.cpp
 	# wbsettime.cpp
 HEADERS := llcomms.h port.h ttybus.h devbus.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
@@ -78,10 +79,14 @@ $(OBJDIR)/edidrxscope.o: edidrxscope.cpp scopecls.h
 $(OBJDIR)/edidtxscope.o: edidtxscope.cpp scopecls.h
 $(OBJDIR)/rawdscope.o:   rawdscope.cpp   scopecls.h
 $(OBJDIR)/tmdscope.o:    tmdscope.cpp    scopecls.h
-$(OBJDIR)/dumpflash.o:   dumpflash.cpp   regdefs.h
-# $(OBJDIR)/readmdio.o:    readmdio.cpp    regdefs.h
 $(OBJDIR)/erxscope.o:    erxscope.cpp    scopecls.h
 $(OBJDIR)/etxscope.o:    etxscope.cpp    scopecls.h
+$(OBJDIR)/flashscope.o:  flashscope.cpp  scopecls.h
+$(OBJDIR)/mdioscope.o:   mdioscope.cpp   scopecls.h
+#
+$(OBJDIR)/dumpflash.o:   dumpflash.cpp   regdefs.h
+$(OBJDIR)/readmdio.o:    readmdio.cpp    regdefs.h
+$(OBJDIR)/netstat.o:     netstat.cpp     scopecls.h
 
 netuart: $(OBJDIR)/netuart.o
 	$(CXX) $(CFLAGS) $^ -o $@
@@ -91,8 +96,6 @@ netuart: $(OBJDIR)/netuart.o
 #manping: $(OBJDIR)/manping.o $(BUSOBJS)
 #	$(CXX) $(CFLAGS) $^ -o $@
 zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
-	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
-rdmdio: $(OBJDIR)/rdmdio.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 wbregs: $(OBJDIR)/wbregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
@@ -112,8 +115,12 @@ getframe: $(OBJDIR)/getframe.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
 manping: $(OBJDIR)/manping.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ -o $@
-# readmdio: $(OBJDIR)/readmdio.o $(BUSOBJS)
-#	$(CXX) $(CFLAGS) $^ -o $@
+flashid: $(OBJDIR)/flashid.o $(BUSOBJS) $(OBJDIR)/flashdrvr.o
+	$(CXX) $(CFLAGS) $^ -o $@
+readmdio: $(OBJDIR)/readmdio.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
+netstat: $(OBJDIR)/netstat.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ -o $@
 
 #
 # Programs that depend upon not just the bus objects, but the flash driver
@@ -141,6 +148,10 @@ erxscope: $(OBJDIR)/erxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 etxscope: $(OBJDIR)/etxscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
+flashscope: $(OBJDIR)/flashscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+mdioscope: $(OBJDIR)/mdioscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
 
 #
 DBGSRCS  := zopcodes.cpp twoc.cpp
@@ -155,7 +166,7 @@ endef
 define	build-depends
 	@echo "Building dependency file(s)"
 	$(mk-objdir)
-	$(CXX) $(CPPFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
+	$(CXX) $(CFLAGS) -MM $(SOURCES) > $(OBJDIR)/xdepends.txt
 	@sed -e 's/^.*.o: /$(OBJDIR)\/&/' < $(OBJDIR)/xdepends.txt > $(OBJDIR)/depends.txt
 	@rm $(OBJDIR)/xdepends.txt
 endef

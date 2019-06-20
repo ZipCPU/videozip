@@ -118,6 +118,7 @@ module	xhdmiout(i_clk, i_hsclk, i_ce, i_word, o_hs_wire);
 		.SERDES_MODE("MASTER"),
 		.TRISTATE_WIDTH(1)	// Really ... this is unused
 		) lowserdes(
+			// Verilator lint_off PINCONNECTEMPTY
 			.OCE(sync_ce),	.OFB(),
 			.TCE(1'b0),	.TFB(), .TQ(),
 			.CLK(i_hsclk),	// HS clock
@@ -136,6 +137,7 @@ module	xhdmiout(i_clk, i_hsclk, i_ce, i_word, o_hs_wire);
 			.T1(1'b0), .T2(1'b0), .T3(1'b0), .T4(1'b0),
 			.SHIFTIN1(slave_to_master[0]), .SHIFTIN2(slave_to_master[1]),
 			.SHIFTOUT1(), .SHIFTOUT2()
+			// Verilator lint_on  PINCONNECTEMPTY
 		);
 
 	OSERDESE2	#(
@@ -145,6 +147,7 @@ module	xhdmiout(i_clk, i_hsclk, i_ce, i_word, o_hs_wire);
 		.SERDES_MODE("SLAVE"),
 		.TRISTATE_WIDTH(1)	// Really ... this is unused
 		) hiserdes(
+			// Verilator lint_off PINCONNECTEMPTY
 			.OCE(sync_ce),	.OFB(), .OQ(),
 			.TCE(1'b0),	.TFB(), .TQ(),
 			.CLK(i_hsclk),	// HS clock
@@ -162,6 +165,7 @@ module	xhdmiout(i_clk, i_hsclk, i_ce, i_word, o_hs_wire);
 			.T1(1'b0), .T2(1'b0), .T3(1'b0), .T4(1'b0),
 			.SHIFTIN1(1'b0), .SHIFTIN2(1'b0),
 			.SHIFTOUT1(slave_to_master[0]), .SHIFTOUT2(slave_to_master[1])
+			// Verilator lint_on  PINCONNECTEMPTY
 		);
 `endif
 

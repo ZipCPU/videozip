@@ -43,4 +43,8 @@ erxscope
 etxscope
 rdmdio
 readmdio
-readmdio.cpp
+mdioscope
+flashscope
+frames/
+netstat
+flashid

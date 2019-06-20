@@ -2,7 +2,7 @@
 //
 // Filename:	cputest.c
 //
-// Project:	Zip CPU -- a small, lightweight, RISC CPU soft core
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To test the CPU, it's instructions, cache, and pipeline, to make
 //		certain that it works.  This includes testing that each of the
@@ -12,7 +12,7 @@
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 // Copyright (C) 2015-2019, Gisselquist Technology, LLC
 //
@@ -35,7 +35,7 @@
 //		http://www.gnu.org/licenses/gpl.html
 //
 //
-///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //
 #include <stdint.h>

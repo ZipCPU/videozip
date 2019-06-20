@@ -35,11 +35,24 @@
 ################################################################################
 ##
 ##
-@PREFIX=netclockctr
-@DEVID=NETCLOCKCTR
+@PREFIX=netrxctr
+@DEVID=NETRXCLK
 @ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=ETHERNET_ACCESS GPSTRK_ACCESS
+@DEPENDS=ETHERNET_ACCESS
 @TSTCLOCK=i_net_rx_clk
 @REGS.NOTE = // Network RX clock counter (measures clock speed)
 @BDEF.IONAME=_@$(PREFIX)
 @INCLUDEFILE=clkcounter.txt
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clk@$(PREFIX)ctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clk@$(PREFIX)ctr/q_*}]        8
+##
+@PREFIX=nettxctr
+@DEVID=NETTXCLK
+@ACCESS=@$(DEVID)_ACCESS
+@DEPENDS=ETHERNET_ACCESS
+@TSTCLOCK=i_clk_125mhz
+@REGS.NOTE = // Network TX clock counter (measures clock speed)
+@BDEF.IONAME=_@$(PREFIX)
+@INCLUDEFILE=clkcounter.txt
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clk@$(PREFIX)ctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clk@$(PREFIX)ctr/q_*}]        8

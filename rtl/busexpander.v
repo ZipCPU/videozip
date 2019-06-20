@@ -181,7 +181,6 @@ module	busexpander(i_clk,
 			r_stb <= 0;
 			o_m_stb <= 1'b0;
 			o_s_err <= 1'b0;
-			o_s_ack <= 1'b0;
 		end
 	end
 
@@ -205,6 +204,9 @@ module	busexpander(i_clk,
 	always @(*)
 		subaddr = fifo[r_last];
 	always @(posedge i_clk)
+	if (i_reset || !i_s_cyc)
+		o_s_ack <= 1'b0;
+	else
 		o_s_ack <= i_m_ack;
 
 `ifdef	FORMAL
