@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	etxscope.cpp
+// Filename: 	erxscope.cpp
 //
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -61,66 +61,83 @@ void	closeup(int v) {
 	exit(0);
 }
 
-class	ETXSCOPE : public SCOPE {
+class	ERXSCOPE : public SCOPE {
 public:
-	ETXSCOPE(FPGA *fpga, unsigned addr, bool vecread = true)
+	ERXSCOPE(FPGA *fpga, unsigned addr, bool vecread = true)
 		: SCOPE(fpga, addr, false, vecread) {};
-	~ETXSCOPE(void) {}
+	~ERXSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
-		int	txcmd, complete, txbusy, txden, txd,
-			macen, paden, crcen, crcd, txctl, otx;
+		int	trigger, neop, macerr, bcast, clear, miss, rxerr,
+			rxvalid, rxbusy, wr, npre, minv, crcv, crcd, crcerr,
+			macv, dv, rxd;
 
-		txcmd   = (val>>31)&1;
-		complete= (val>>30)&1;
-		txbusy  = (val>>29)&1;
-		txden   = (val>>28)&1;
-		txd     = (val>>20)&0x0ff;
-		macen   = (val>>19)&1;
-		paden   = (val>>18)&1;
-		crcen   = (val>>17)&1;
-		crcd    = (val>> 9)&0x0ff;
-		txctl   = (val>> 8)&1;
-		otx     = (val>> 0)&0x0ff;
+		trigger= (val>>31)&1;
+		neop   = (val>>30)&1;
+		macerr = (val>>29)&1;
+		bcast  = (val>>28)&1;
+		clear  = (val>>27)&1;
+		miss   = (val>>26)&1;
+		rxerr  = (val>>25)&1;
+		rxvalid= (val>>24)&1;
+		rxbusy = (val>>23)&1;
+		wr     = (val>>22)&1;
+		npre   = (val>>21)&1;
+		minv   = (val>>20)&1;
+		crcv   = (val>>19)&1;
+		crcd   = (val>>11)&0x0ff;
+		crcerr = (val>>10)&1;
+		macv   = (val>> 9)&1;
+		dv     = (val>> 8)&1;
+		rxd    = (val    )&0x0ff;
 
-		printf("%s[%s%s]",
-			(txcmd)?"TR":"  ",
-			(complete)?"DONE":"    ",
-			(txbusy)?"BUSY":"    ");
-
-		if (txden)
-			printf(" T[%02x]", txd);
-		else
-			printf("      ");
-
-		printf(" %s%s",
+		printf("%s[%s%s%s%s%s%s%s%s%s%s%s%s%s]",
+			(trigger)?"TR":"  ",
+			(clear)?"CLR":"",
+			(bcast)?"BC":"  ",
 			//
-			(macen)?"MAC":"   ",
-			(paden)?"P":" ");
+			(rxbusy)?"BSY":"   ",
+			(npre)?"P":" ",
+			(macv)?"MAC":"   ",
+			(minv)?"MN":"  ",
+			(wr)?"WR":"  ",
+			(neop)?"EOP":"   ",
+			(rxvalid)?"VALID":"     ",
+			//
+			(macerr)?"MACER":"",
+			(crcerr)?"CRCER":"",
+			(rxerr)?"RXER":"",
+			(miss)?"MISS":"");
 
-		if (crcen)
-			printf(" C[%02x]", crcd);
+		if (dv)
+			printf("I:%02x ", rxd);
 		else
-			printf("      ");
+			printf("%4s ","");
 
-		if (txctl)
-			printf(" O[%02x]", otx);
+		if (crcv)
+			printf("C:%02x", crcd);
 		else
-			printf("      ");
+			printf("%4s","");
 	}
 
 	virtual	void	define_traces(void) {
 		// trigger= (val>>31)&1;
-		register_trace("n_tx_cmd",1,31);
-		register_trace("n_tx_complete",1,30);
-		register_trace("n_tx_busy",1,29);
-		register_trace("r_txd_en",1,28);
-		register_trace("r_txd",8,20);
-		register_trace("w_macen",1,19);
-		register_trace("w_paden",1,18);
-		register_trace("w_txcrcen",1,17);
-		register_trace("w_txcrcd",8,9);
-		register_trace("o_net_tx_ctl",1,8);
-		register_trace("o_net_txd",8,0);
+		register_trace("EOP",1,30);
+		register_trace("w_macerr",1,29);
+		register_trace("w_broadcast",1,28);
+		register_trace("n_rx_clear",1,27);
+		register_trace("n_rx_miss",1,26);
+		register_trace("n_rx_net_err",1,25);
+		register_trace("n_rx_valid",1,24);
+		register_trace("n_rx_busy",1,23);
+		register_trace("w_rxwr",1,22);
+		register_trace("w_npre",1,21);
+		register_trace("w_rxmin",1,20);
+		register_trace("w_rxcrc",1,19);
+		register_trace("w_rxcrcd",8,11);
+		register_trace("w_rxcrcerr",1,10);
+		register_trace("w_rxmac",1,9);
+		register_trace("i_net_rx_ctl",1,8);
+		register_trace("i_net_rxd",8,0);
 	}
 };
 
@@ -133,7 +150,7 @@ int main(int argc, char **argv) {
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	ETXSCOPE *scope = new ETXSCOPE(m_fpga, WBSCOPE);
+	ERXSCOPE *scope = new ERXSCOPE(m_fpga, WBSCOPE);
 	// scope->set_clkfreq_hz(ENETCLKFREQHZ);
 	scope->set_clkfreq_hz(125000000);
 	if (!scope->ready()) {
@@ -141,7 +158,7 @@ int main(int argc, char **argv) {
 		scope->decode_control();
 	} else {
 		scope->print();
-		scope->writevcd("etxscope.vcd");
+		scope->writevcd("erxscope.vcd");
 	}
 	delete	m_fpga;
 #endif

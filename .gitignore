@@ -28,3 +28,5 @@ design.h
 builddate.v
 octave-workspace
 autofpga.dbg
+vivado.jou
+vivado.log

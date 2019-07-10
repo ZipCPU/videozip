@@ -26,7 +26,7 @@
 // Copyright (C) 2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -180,7 +180,7 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 
 	initial	o_ce = 0;
 	always @(posedge i_clk)
-		o_ce = i_reset || (r_ce && second_half);
+		o_ce <= i_reset || (r_ce && second_half);
 
 `ifdef	FORMAL
 	reg	f_past_valid, f_halfway;

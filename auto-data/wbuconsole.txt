@@ -68,7 +68,7 @@
 	//
 	// Baudrate : @$[%9d](BAUDRATE)
 	// Clock    : @$[%9d](CLOCK.FREQUENCY)
-	localparam [23:0] BUSUART = @$SETUP;	// @$BAUDRATE baud
+	localparam [23:0] BUSUART = @$SETUP;	// @$[%9d](BAUDRATE) baud
 	wire	[7:0]	@$(PREFIX)_rx_data, @$(PREFIX)_tx_data;
 	wire		@$(PREFIX)_rx_stb;
 	wire		@$(PREFIX)_tx_stb, @$(PREFIX)_tx_busy;

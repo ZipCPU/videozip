@@ -1,6 +1,7 @@
 cputest
-i2cdbg
 hdmistart
+helloworld
+i2cdbg
 readframe
 readhist
 framedata.32t

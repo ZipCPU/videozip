@@ -341,8 +341,8 @@ module	qflexpress(i_clk, i_reset,
 		//
 		integer k;
 		initial if (OPT_STARTUP_FILE != 0)
-			$readmemh(OPT_STARTUP_FILE, m_cmd_word); else
-		begin
+			$readmemh(OPT_STARTUP_FILE, m_cmd_word);
+		else begin
 		for(k=0; k<(1<<M_LGADDR); k=k+1)
 			m_cmd_word[k] = -1;
 		// cmd_word= m_ctr_flag, m_mod[1:0],

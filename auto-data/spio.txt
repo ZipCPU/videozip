@@ -79,7 +79,7 @@
 	assign	o_led = w_led;
 
 @MAIN.ALT=
-	assign	w_btn    = h0;
+	assign	w_btn = 0;
 	assign	o_led = 0;
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)

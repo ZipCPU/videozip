@@ -238,7 +238,7 @@ typedef	struct ENETPACKET_S {
 @RTL.MAKE.FILES= enetpackets.v
 	addecrc.v addemac.v addepad.v addepreamble.v
 	rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v
-	xiddr.v xoddr.v
+	xiddr.v xoddr.v txespeed.v txeaddr.v
 @CLOCK.NAME=net_rx_clk
 @$CLOCK.FREQUENCY=125000000
 @XDC.INSERT=
