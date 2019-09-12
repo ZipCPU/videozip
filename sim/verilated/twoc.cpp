@@ -38,8 +38,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-#include <stdio.h>
-#include <assert.h>
 #include "twoc.h"
 
 long	sbits(const long val, const int bits) {

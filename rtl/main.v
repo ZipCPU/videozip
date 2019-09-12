@@ -384,7 +384,7 @@ module	main(i_clk, i_reset,
 	//
 	// Baudrate :   2000000
 	// Clock    : 100000000
-	localparam [23:0] BUSUART = 24'h32;	// 2000000 baud
+	localparam [23:0] BUSUART = 24'h32;	//   2000000 baud
 	wire	[7:0]	wbu_rx_data, wbu_tx_data;
 	wire		wbu_rx_stb;
 	wire		wbu_tx_stb, wbu_tx_busy;
@@ -1197,6 +1197,7 @@ module	main(i_clk, i_reset,
 	//
 	// BUS-LOGIC for zip
 	//
+		// Only one peripheral attached
 	assign	zip_none_sel = 1'b0;
 	always @(*)
 		zip_many_ack = 1'b0;
@@ -1289,6 +1290,7 @@ module	main(i_clk, i_reset,
 	//
 	// BUS-LOGIC for xpand_bus
 	//
+		// Only one peripheral attached
 	assign	xpand_bus_none_sel = 1'b0;
 	always @(*)
 		xpand_bus_many_ack = 1'b0;
@@ -1301,6 +1303,7 @@ module	main(i_clk, i_reset,
 	//
 	// BUS-LOGIC for sdr
 	//
+		// Only one peripheral attached
 	assign	sdr_none_sel = 1'b0;
 	always @(*)
 		sdr_many_ack = 1'b0;
@@ -1313,6 +1316,7 @@ module	main(i_clk, i_reset,
 	//
 	// BUS-LOGIC for vid
 	//
+		// Only one peripheral attached
 	assign	vid_none_sel = 1'b0;
 	always @(*)
 		vid_many_ack = 1'b0;
@@ -1979,8 +1983,8 @@ module	main(i_clk, i_reset,
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	buspici(i_clk, 1'b0,
-			(wb_stb)&&(buspic_sel), wb_we, wb_data,
+	icontrol #(15)	buspici(i_clk, 1'b0, (wb_stb)&&(buspic_sel),
+			wb_we, wb_data,
 			buspic_ack, buspic_stall, buspic_data,
 			bus_int_vector, w_bus_int);
 `else	// BUSPIC_ACCESS
@@ -2320,7 +2324,7 @@ module	main(i_clk, i_reset,
 	assign	o_led = w_led;
 
 `else	// SPIO_ACCESS
-	assign	w_btn    = h0;
+	assign	w_btn = 0;
 	assign	o_led = 0;
 
 	// In the case that there is no spio peripheral responding on the wb bus

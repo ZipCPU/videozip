@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename: 	nflash.txt
+## Filename: 	flash.txt
 ##
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##

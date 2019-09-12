@@ -436,7 +436,7 @@ static volatile WBMOUSE *const _mouse = ((WBMOUSE *)285212704);
 static volatile unsigned *const _edin = ((unsigned *)285212928);
 #endif	// HDMI_IN_EDID_ACCESS
 #define	_BOARD_HAS_ZIPSCOPE
-static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)150994944);
+static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)0x09000000);
 #ifdef	SDSPI_SCOPE
 #define	_BOARD_HAS_SDSPI_SCOPE
 static volatile WBSCOPE *const _scope_sdcard = ((WBSCOPE *)0x08000000);

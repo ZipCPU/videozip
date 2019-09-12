@@ -85,7 +85,7 @@ static const unsigned	F_RESET = (CFG_USERMODE|0x0ff),
 
 const	bool	HIGH_SPEED = false;
 
-#ifdef	R_FLASHSCOPE // Scope for the eqspi flash driver
+#ifdef	R_FLASHSCOPE // Scope for the flash driver
 # define SETSCOPE m_fpga->writeio(R_FLASHSCOPE, 8180)
 #else
 # define SETSCOPE
