@@ -5,7 +5,7 @@
 // Project:	Ethernet cores, a set of ethernet cores for RM interfaces
 //
 // Purpose:	To communicate between the Ethernet PHY, and thus to coordinate
-//		(and direct/arrange for) the transmission, and receiption, of 
+//		(and direct/arrange for) the transmission, and receiption, of
 //	packets via the Ethernet interface.
 //
 //
@@ -50,12 +50,12 @@
 //		The Fourth word will begin user data.
 //
 //		You can also turn off the automatic insertion of the FCS, or
-//		ethernet CRC.  Doing this means that you will need to both 
+//		ethernet CRC.  Doing this means that you will need to both
 //		guarantee for yourself that the packet has a minimum of 64
 //		bytes in length, and that the last four bytes contain the
 //		CRC.
 //
-//	To Receive: 
+//	To Receive:
 //		The receiver is always on.  Receiving is really just a matter
 //		of pulling the received packet from the interface, and resetting
 //		the interface for the next packet.
@@ -65,7 +65,7 @@
 //		interface to accept the next packet.
 //
 //		If a packet with a CRC error is received, the CRC error bit
-//		will be set.  Likewise if a packet has been missed, usually 
+//		will be set.  Likewise if a packet has been missed, usually
 //		because the buffer was full when it started, the miss bit
 //		will be set.  Finally, if an error occurrs while receiving
 //		a packet, the error bit will be set.  These bits may be cleared
@@ -136,10 +136,16 @@
 `default_nettype	none
 //
 module	enetpackets(i_wb_clk, i_reset,
-	i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-		o_wb_ack, o_wb_stall, o_wb_data,
 	//
-	o_net_reset_n, 
+	// The packet memory interface
+	i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
+		o_wb_stall, o_wb_ack, o_wb_data,
+	//
+	// The network control interface
+	i_ctrl_cyc, i_ctrl_stb, i_ctrl_we, i_ctrl_addr, i_ctrl_data, i_ctrl_sel,
+		o_ctrl_stall, o_ctrl_ack, o_ctrl_data,
+	//
+	o_net_reset_n,
 	i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
 	i_net_tx_clk, o_net_tx_ck, o_net_tx_ctl, o_net_txd,
 	//
@@ -154,7 +160,7 @@ module	enetpackets(i_wb_clk, i_reset,
 	// effectively defines the maximum packet size as well.
 	parameter	MEMORY_ADDRESS_WIDTH = 12; // Log_2 octet width:11..14
 	//
-	// MAW is roughly 
+	// MAW is roughly
 	localparam	MAW =((MEMORY_ADDRESS_WIDTH>14)? 14: // width of words
 			((MEMORY_ADDRESS_WIDTH<11)? 11:MEMORY_ADDRESS_WIDTH))-2;
 	//
@@ -164,15 +170,27 @@ module	enetpackets(i_wb_clk, i_reset,
 
 	input	wire		i_wb_clk, i_reset;
 	//
-	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[(MAW+1):0]	i_wb_addr; // 1-bit for ctrl/data, 1 for tx/rx
+	// The memory interface
+	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
+	input	wire	[MAW:0]	i_wb_addr; // +1-bit for tx/rx
 	input	wire	[31:0]		i_wb_data;
 	input	wire	[3:0]		i_wb_sel;
 	//
-	output	reg		o_wb_ack;
-	output	wire		o_wb_stall;
-	output	reg	[31:0]	o_wb_data;
+	output	wire			o_wb_stall;
+	output	reg			o_wb_ack;
+	output	reg	[31:0]		o_wb_data;
 	//
+	// The control interface
+	input	wire		i_ctrl_cyc, i_ctrl_stb, i_ctrl_we;
+	input	wire	[2:0]	i_ctrl_addr; // 1-bit for ctrl/data, 1 for tx/rx
+	input	wire	[31:0]	i_ctrl_data;
+	input	wire	[3:0]	i_ctrl_sel;
+	//
+	output	wire		o_ctrl_stall;
+	output	reg		o_ctrl_ack;
+	output	reg	[31:0]	o_ctrl_data;
+	//
+	// The network interface
 	output	reg		o_net_reset_n;
 	//
 	input	wire		i_net_rx_clk, i_net_rx_dv, i_net_rx_err;
@@ -188,19 +206,6 @@ module	enetpackets(i_wb_clk, i_reset,
 	output	wire		o_debug_clk;
 	output	wire	[31:0]	o_debug;
 
-	reg		wr_ctrl;
-	reg	[2:0]	wr_addr;
-	reg	[31:0]	wr_data;
-	reg	[3:0]	wr_sel;
-	always @(posedge i_wb_clk)
-	begin
-		wr_ctrl<=((i_wb_stb)&&(i_wb_we)
-				&&(i_wb_addr[(MAW+1):MAW] == 2'b00));
-		wr_addr <= i_wb_addr[2:0];
-		wr_data <= i_wb_data;
-		wr_sel  <= i_wb_sel;
-	end
-
 	reg	[31:0]	txmem	[0:((1<<MAW)-1)];
 	reg	[31:0]	rxmem	[0:((1<<MAW)-1)];
 
@@ -209,14 +214,13 @@ module	enetpackets(i_wb_clk, i_reset,
 	(* ASYNC_REG = "TRUE" *) reg	rx_broadcast;
 	(* ASYNC_REG = "TRUE" *) reg	[(MAW+1):0]	rx_len;
 
-	reg	tx_cmd, tx_cancel;
-	reg	tx_busy;
-	reg	config_hw_crc, config_hw_mac, config_hw_ip_check;
-	reg	rx_crcerr, rx_err, rx_miss, rx_clear;
-	reg	rx_valid, rx_busy;
-	reg	rx_wb_valid, pre_ack, pre_cmd, tx_nzero_cmd;
-	reg	[4:0]	caseaddr;
-	reg	[31:0]	rx_wb_data, tx_wb_data;
+	reg		tx_cmd, tx_cancel, txsel;
+	reg		tx_busy;
+	reg		config_hw_crc, config_hw_mac, config_hw_ip_check;
+	reg		rx_crcerr, rx_err, rx_miss, rx_clear;
+	reg		rx_valid, rx_busy;
+	reg		rx_wb_valid, pre_cmd, tx_nzero_cmd;
+	reg	[31:0]	tx_wb_data, rx_wb_data;
 	reg		rx_err_stb, rx_miss_stb, rx_crc_stb;
 
 	reg	[47:0]	hw_mac;
@@ -241,23 +245,88 @@ module	enetpackets(i_wb_clk, i_reset,
 	initial	rx_err    = 1'b0;
 	initial	rx_miss   = 1'b0;
 	initial	rx_clear  = 1'b0;
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// The memory interface
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	always @(posedge i_wb_clk)
+	if (i_wb_stb && i_wb_we && i_wb_addr[MAW])
+	begin
+		if (i_wb_sel[3])
+			txmem[i_wb_addr[(MAW-1):0]][31:24] <= i_wb_data[31:24];
+		if (i_wb_sel[2])
+			txmem[i_wb_addr[(MAW-1):0]][23:16] <= i_wb_data[23:16];
+		if (i_wb_sel[1])
+			txmem[i_wb_addr[(MAW-1):0]][15:8] <= i_wb_data[15:8];
+		if (i_wb_sel[0])
+			txmem[i_wb_addr[(MAW-1):0]][7:0] <= i_wb_data[7:0];
+	end
+
+	//
+	// This is a read-only interface.  Writes to receive memory
+	// are not allowed here.
+	//
+	always @(posedge i_wb_clk)
+		rx_wb_data  <= rxmem[i_wb_addr[(MAW-1):0]];
+
+	always @(posedge i_wb_clk)
+		tx_wb_data  <= txmem[i_wb_addr[(MAW-1):0]];
+
+	always @(posedge i_wb_clk)
+		txsel <= i_wb_addr[MAW];
+
+	initial	rx_wb_valid = 0;
+	always @(posedge i_wb_clk)
+	if (rx_busy || i_wb_addr[MAW]
+			||(i_wb_addr[(MAW-1):0] <= { rx_len[(MAW+1):2] }))
+		rx_wb_valid <= 0;
+	else
+		rx_wb_valid <= 1'b1;
+
+	always @(*)
+		o_wb_data = txsel ? tx_wb_data
+				: ((rx_wb_valid) ? rx_wb_data : 0);
+
+	initial	o_wb_ack = 0;
+	always @(posedge i_wb_clk)
+	if (i_reset)
+		o_wb_ack <= 1'b0;
+	else
+		o_wb_ack <= i_wb_stb;
+
+	assign	o_wb_stall = 0;
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// The control interface
+	//
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+	reg		wr_ctrl;
+	reg	[2:0]	wr_addr;
+	reg	[31:0]	wr_data;
+	reg	[3:0]	wr_sel;
+	initial	wr_ctrl = 0;
+
 	always @(posedge i_wb_clk)
 	begin
-		// if (i_wb_addr[(MAW+1):MAW] == 2'b10)
-			// Writes to rx memory not allowed here
-		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_addr[(MAW+1):MAW] == 2'b11)
-				&&(i_wb_sel[3]))
-			txmem[i_wb_addr[(MAW-1):0]][31:24] <= i_wb_data[31:24];
-		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_addr[(MAW+1):MAW] == 2'b11)
-				&&(i_wb_sel[2]))
-			txmem[i_wb_addr[(MAW-1):0]][23:16] <= i_wb_data[23:16];
-		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_addr[(MAW+1):MAW] == 2'b11)
-				&&(i_wb_sel[1]))
-			txmem[i_wb_addr[(MAW-1):0]][15:8] <= i_wb_data[15:8];
-		if ((i_wb_stb)&&(i_wb_we)&&(i_wb_addr[(MAW+1):MAW] == 2'b11)
-				&&(i_wb_sel[0]))
-			txmem[i_wb_addr[(MAW-1):0]][7:0] <= i_wb_data[7:0];
+		wr_ctrl <=(i_ctrl_stb)&&(i_ctrl_we);
+		wr_addr <= i_ctrl_addr[2:0];
+		wr_data <= i_ctrl_data;
+		wr_sel  <= i_ctrl_sel;
 
+		if (i_reset)
+			wr_ctrl <= 1'b0;
+	end
+
+	initial	{ rx_err, rx_miss, rx_crcerr } = 0;
+	always @(posedge i_wb_clk)
+	begin
 		// Set the err bits on these conditions (filled out below)
 		if (rx_err_stb)
 			rx_err <= 1'b1;
@@ -266,6 +335,12 @@ module	enetpackets(i_wb_clk, i_reset,
 		if (rx_crc_stb)
 			rx_crcerr <= 1'b1;
 
+		////////////////////////////////////////////////////////////////
+		//
+		// RX Control
+		//
+		////////////////////////////////////////////////////////////////
+		//
 		if ((wr_ctrl)&&(wr_addr==3'b000))
 		begin // RX command register
 			if (wr_sel[2])
@@ -292,6 +367,13 @@ module	enetpackets(i_wb_clk, i_reset,
 		if (!tx_busy)
 			tx_cancel <= 1'b0;
 		pre_cmd <= 1'b0;
+
+		////////////////////////////////////////////////////////////////
+		//
+		// TX Control
+		//
+		////////////////////////////////////////////////////////////////
+		//
 		if ((wr_ctrl)&&(wr_addr==3'b001))
 		begin // TX command register
 
@@ -322,7 +404,7 @@ module	enetpackets(i_wb_clk, i_reset,
 				if (!tx_cmd && !tx_busy)
 					tx_len <= wr_data[(MAW+1):0];
 			end
-		end 
+		end
 		tx_nzero_cmd <= ((pre_cmd)&&(tx_len != 0));
 		if (tx_nzero_cmd)
 			tx_cmd <= 1'b1;
@@ -366,7 +448,7 @@ module	enetpackets(i_wb_clk, i_reset,
 			rx_busy, (rx_valid)&&(!rx_clear),
 			{(14-MAW-2){1'b0}}, rx_len };
 
-	assign	w_tx_ctrl = { tx_spd, 2'b00, w_maw, {(24-20){1'b0}}, 
+	assign	w_tx_ctrl = { tx_spd, 2'b00, w_maw, {(24-20){1'b0}},
 			((RXSCOPE) ? 1'b0:1'b1),
 			!config_hw_ip_check,
 			!o_net_reset_n,!config_hw_mac,
@@ -381,28 +463,23 @@ module	enetpackets(i_wb_clk, i_reset,
 
 	// Reads from the bus ... always done, regardless of i_wb_we
 	always @(posedge i_wb_clk)
-	begin
-		rx_wb_data  <= rxmem[i_wb_addr[(MAW-1):0]];
-		rx_wb_valid <= (i_wb_addr[(MAW-1):0] <= { rx_len[(MAW+1):2] });
-		tx_wb_data  <= txmem[i_wb_addr[(MAW-1):0]];
-		pre_ack  <= (i_wb_stb)&&(!i_reset);
-		caseaddr <= {i_wb_addr[(MAW+1):MAW], i_wb_addr[2:0] };
+	casez(i_ctrl_addr[2:0])
+	3'h0: o_ctrl_data <= w_rx_ctrl;
+	3'h1: o_ctrl_data <= w_tx_ctrl;
+	3'h2: o_ctrl_data <= {16'h00, hw_mac[47:32] };
+	3'h3: o_ctrl_data <= hw_mac[31:0];
+	3'h4: o_ctrl_data <= counter_rx_miss;
+	3'h5: o_ctrl_data <= counter_rx_err;
+	3'h6: o_ctrl_data <= counter_rx_crc;
+	3'h7: o_ctrl_data <= 32'h00;
+	default: o_ctrl_data <= 32'h00;
+	endcase
 
-		casez(caseaddr)
-		5'h00: o_wb_data <= w_rx_ctrl;
-		5'h01: o_wb_data <= w_tx_ctrl;
-		5'h02: o_wb_data <= {16'h00, hw_mac[47:32] };
-		5'h03: o_wb_data <= hw_mac[31:0];
-		5'h04: o_wb_data <= counter_rx_miss;
-		5'h05: o_wb_data <= counter_rx_err;
-		5'h06: o_wb_data <= counter_rx_crc;
-		5'h07: o_wb_data <= 32'h00;
-		5'b10???: o_wb_data <= (rx_wb_valid)?rx_wb_data:32'h00;
-		5'b11???: o_wb_data <= tx_wb_data;
-		default: o_wb_data <= 32'h00;
-		endcase
-		o_wb_ack <= (pre_ack)&&(i_wb_cyc)&&(!i_reset);
-	end
+	initial	o_ctrl_ack = 1'b0;
+	always @(posedge i_wb_clk)
+		o_ctrl_ack <= (i_ctrl_stb)&&(!i_reset);
+
+	assign	o_ctrl_stall = 1'b0;
 
 
 	/////////////////////////////////////
@@ -602,8 +679,8 @@ module	enetpackets(i_wb_clk, i_reset,
 	rxepreambl rxprei(i_net_rx_clk, ((n_rx_reset)||(n_rx_net_err)), 1'b1, 1'b1,
 			i_net_rx_dv, i_net_rxd, w_npre, w_npred);
 `else
-	assign	w_npre  = i_net_rx_ctl; 
-	assign	w_npred = 1'b0; 
+	assign	w_npre  = i_net_rx_ctl;
+	assign	w_npred = 1'b0;
 `endif
 
 `ifdef	RX_BYPASS_HW_MINLENGTH
@@ -750,6 +827,12 @@ module	enetpackets(i_wb_clk, i_reset,
 
 	reg	[3:0]	rx_err_pipe, rx_miss_pipe, rx_crc_pipe;
 
+	initial	rx_err_pipe  = 0;
+	initial	rx_miss_pipe = 0;
+	initial	rx_crc_pipe  = 0;
+	initial	rx_err_stb   = 0;
+	initial	rx_miss_stb  = 0;
+	initial	rx_crc_stb   = 0;
 	always @(posedge i_wb_clk)
 	begin
 		rx_err_pipe  <= { rx_err_pipe[ 2:0],(n_rx_err)  };
@@ -760,19 +843,21 @@ module	enetpackets(i_wb_clk, i_reset,
 		rx_crc_stb   <= (rx_crc_pipe[ 3:2] == 2'b01);
 	end
 
-
+	initial	counter_rx_miss = 0;
 	always @(posedge i_wb_clk)
 	if (o_net_reset_n)
 		counter_rx_miss <= 32'h0;
 	else if (rx_miss_stb)
 		counter_rx_miss <= counter_rx_miss + 32'h1;
 
+	initial	counter_rx_err = 0;
 	always @(posedge i_wb_clk)
 	if (o_net_reset_n)
 		counter_rx_err <= 32'h0;
 	else if (rx_err_stb)
 		counter_rx_err <= counter_rx_err + 32'h1;
 
+	initial	counter_rx_crc = 0;
 	always @(posedge i_wb_clk)
 	if (o_net_reset_n)
 		counter_rx_crc <= 32'h0;
@@ -781,7 +866,6 @@ module	enetpackets(i_wb_clk, i_reset,
 
 	assign	o_tx_int = !tx_busy;
 	assign	o_rx_int = (rx_valid)&&(!rx_clear);
-	assign	o_wb_stall = 1'b0;
 
 	generate if (RXSCOPE)
 	begin : RXSCOPE_DEF
@@ -845,4 +929,8 @@ module	enetpackets(i_wb_clk, i_reset,
 		};
 	end endgenerate
 
+	// verilator lint_off UNUSED
+	wire	bus_unused;
+	assign	bus_unused = &{ 1'b0, i_ctrl_cyc, i_wb_cyc };
+	// verilator lint_on  UNUSED
 endmodule

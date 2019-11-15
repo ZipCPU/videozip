@@ -132,7 +132,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		o_wb_gbl_cyc, o_wb_gbl_stb,
 			o_wb_lcl_cyc, o_wb_lcl_stb,
 			o_wb_we, o_wb_addr, o_wb_data, o_wb_sel,
-			i_wb_ack, i_wb_stall, i_wb_data,
+			i_wb_stall, i_wb_ack, i_wb_data,
 			i_wb_err,
 		// Accounting/CPU usage interface
 		o_op_stall, o_pf_stall, o_i_count
@@ -221,7 +221,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 	output	wire	[31:0]	o_wb_data;
 	output	wire	[3:0]	o_wb_sel;
 	// Wishbone interface -- inputs
-	input	wire		i_wb_ack, i_wb_stall;
+	input	wire		i_wb_stall, i_wb_ack;
 	input	wire	[31:0]	i_wb_data;
 	input	wire		i_wb_err;
 	// Accounting outputs ... to help us count stalls and usage
@@ -277,7 +277,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 	wire	clear_pipeline;
 
 	reg			dcd_stalled;
-	wire			pf_cyc, pf_stb, pf_we, pf_ack, pf_stall, pf_err;
+	wire			pf_cyc, pf_stb, pf_we, pf_stall, pf_ack, pf_err;
 	wire	[(AW-1):0]	pf_addr;
 	wire	[31:0]		pf_data;
 	wire	[31:0]		pf_instruction;
@@ -363,6 +363,8 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 `ifdef	VERILATOR
 	reg		op_sim		/* verilator public_flat */;
 	reg	[22:0]	op_sim_immv	/* verilator public_flat */;
+	reg		alu_sim		/* verilator public_flat */;
+	reg	[22:0]	alu_sim_immv	/* verilator public_flat */;
 `else
 	wire	op_sim = 1'b0;
 `endif
@@ -391,7 +393,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 
 	wire			mem_ce, mem_stalled;
 	wire			mem_pipe_stalled;
-	wire			mem_valid, mem_ack, mem_stall, mem_err, bus_err,
+	wire			mem_valid, mem_stall, mem_ack, mem_err, bus_err,
 				mem_cyc_gbl, mem_cyc_lcl, mem_stb_gbl, mem_stb_lcl, mem_we;
 	wire	[4:0]		mem_wreg;
 
@@ -663,7 +665,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 				pf_instruction, pf_instruction_pc,
 					pf_valid, pf_illegal,
 				pf_cyc, pf_stb, pf_we, pf_addr, pf_data,
-				pf_ack, pf_stall, pf_err, i_wb_data);
+				pf_stall, pf_ack, pf_err, i_wb_data);
 	//}}}
 `else
 `ifdef	OPT_DOUBLE_FETCH
@@ -676,7 +678,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 				pf_instruction, pf_instruction_pc,
 					pf_valid,
 				pf_cyc, pf_stb, pf_we, pf_addr, pf_data,
-					pf_ack, pf_stall, pf_err, i_wb_data,
+					pf_stall, pf_ack, pf_err, i_wb_data,
 				pf_illegal);
 	//}}}
 
@@ -691,7 +693,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 				pf_request_address,
 				pf_instruction, pf_instruction_pc, pf_valid,
 				pf_cyc, pf_stb, pf_we, pf_addr, pf_data,
-					pf_ack, pf_stall, pf_err, i_wb_data,
+					pf_stall, pf_ack, pf_err, i_wb_data,
 				pf_illegal);
 	//}}}
 `else
@@ -702,7 +704,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 					(new_pc)?pf_pc:dcd_branch_pc,
 					pf_instruction, pf_instruction_pc, pf_valid,
 				pf_cyc, pf_stb, pf_we, pf_addr, pf_data,
-					pf_ack, pf_stall, pf_err, i_wb_data,
+					pf_stall, pf_ack, pf_err, i_wb_data,
 				(mem_cyc_lcl)||(mem_cyc_gbl),
 				pf_illegal);
 	//}}}
@@ -1118,14 +1120,39 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 	begin
 		op_sim      = dcd_sim;
 		op_sim_immv = dcd_sim_immv;
+
+		alu_sim = op_sim;
+		alu_sim_immv = op_sim_immv;
 	end
 `else
 	always @(posedge i_clk)
-		if (op_ce)
-		begin
-			op_sim      <= dcd_sim;
-			op_sim_immv <= dcd_sim_immv;
-		end
+	if (op_ce)
+	begin
+		op_sim      <= dcd_sim;
+		op_sim_immv <= dcd_sim_immv;
+	end else if (adf_ce_unconditional)
+		op_sim <= 1'b0;
+
+	//
+	// We need an extra ALU sim stage.
+	//
+	// It's not quite true that all instructions leaving the OP stage
+	// are committed.  ALU instructions aren't committed until the next
+	// cycle.  That way they don't need to wait to determine if a branch
+	// was taken or not.
+	always @(posedge i_clk)
+	begin
+		if (adf_ce_unconditional)
+			alu_sim <= op_sim && op_valid_alu;
+		else
+			alu_sim <= 1'b0;
+
+		if (adf_ce_unconditional)
+			alu_sim_immv <= op_sim_immv;
+
+		if (i_reset || clear_pipeline)
+			alu_sim <= 1'b0;
+	end
 `endif
 `endif
 
@@ -1604,7 +1631,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 			.LGNLINES(OPT_LGDCACHE-3), .OPT_LOCAL_BUS(WITH_LOCAL_BUS),
 			.OPT_PIPE(OPT_MEMPIPE),
 			.OPT_LOCK(OPT_LOCK)
-			) docache(i_clk, i_reset,
+			) docache(i_clk, i_reset, w_clear_icache,
 		///{{{
 				(mem_ce)&&(set_cond), bus_lock,
 				(op_opn[2:0]), op_Bv, op_Av, op_R,
@@ -1613,7 +1640,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 			mem_cyc_gbl, mem_cyc_lcl,
 				mem_stb_gbl, mem_stb_lcl,
 				mem_we, mem_addr, mem_data, mem_sel,
-				mem_ack, mem_stall, mem_err, i_wb_data
+				mem_stall, mem_ack, mem_err, i_wb_data
 				// , o_dcache_debug
 			);
 		///}}}
@@ -1633,7 +1660,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 			mem_cyc_gbl, mem_cyc_lcl,
 				mem_stb_gbl, mem_stb_lcl,
 				mem_we, mem_addr, mem_data, mem_sel,
-				mem_ack, mem_stall, mem_err, i_wb_data
+				mem_stall, mem_ack, mem_err, i_wb_data
 			);
 		//}}}
 	end else begin : MEM
@@ -1650,7 +1677,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 			mem_cyc_gbl, mem_cyc_lcl,
 				mem_stb_gbl, mem_stb_lcl,
 				mem_we, mem_addr, mem_data, mem_sel,
-				mem_ack, mem_stall, mem_err, i_wb_data
+				mem_stall, mem_ack, mem_err, i_wb_data
 			);
 		//}}}
 		assign	mem_pipe_stalled = 1'b0;
@@ -1669,7 +1696,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		// Memory access to the arbiter, priority position
 		mem_cyc_gbl, mem_cyc_lcl, mem_stb_gbl, mem_stb_lcl,
 			mem_we, mem_addr, mem_data, mem_sel,
-			mem_ack, mem_stall, mem_err,
+			mem_stall, mem_ack, mem_err,
 		// Prefetch access to the arbiter
 		//
 		// At a first glance, we might want something like:
@@ -1681,11 +1708,11 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		// mem_sel) can be shared with the memory in order to ease
 		// timing and LUT usage.
 		pf_cyc,1'b0,pf_stb, 1'b0, pf_we, pf_addr, mem_data, mem_sel,
-			pf_ack, pf_stall, pf_err,
+			pf_stall, pf_ack, pf_err,
 		// Common wires, in and out, of the arbiter
 		o_wb_gbl_cyc, o_wb_lcl_cyc, o_wb_gbl_stb, o_wb_lcl_stb,
 			o_wb_we, o_wb_addr, o_wb_data, o_wb_sel,
-			i_wb_ack, i_wb_stall, i_wb_err
+			i_wb_stall, i_wb_ack, i_wb_err
 		);
 		//}}}
 
@@ -1705,15 +1732,15 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 		// mem_sel) can be shared with the memory in order to ease
 		// timing and LUT usage.
 		pf_cyc,1'b0,pf_stb, 1'b0, pf_we, pf_addr, mem_data, mem_sel,
-			pf_ack, pf_stall, pf_err,
+			pf_stall, pf_ack, pf_err,
 		// Memory access to the arbiter
 		mem_cyc_gbl, mem_cyc_lcl, mem_stb_gbl, mem_stb_lcl,
 			mem_we, mem_addr, mem_data, mem_sel,
-			mem_ack, mem_stall, mem_err,
+			mem_stall, mem_ack, mem_err,
 		// Common wires, in and out, of the arbiter
 		o_wb_gbl_cyc, o_wb_lcl_cyc, o_wb_gbl_stb, o_wb_lcl_stb,
 			o_wb_we, o_wb_addr, o_wb_data, o_wb_sel,
-			i_wb_ack, i_wb_stall, i_wb_err
+			i_wb_stall, i_wb_ack, i_wb_err
 		);
 		//}}}
 	end endgenerate

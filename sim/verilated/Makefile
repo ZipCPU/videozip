@@ -100,6 +100,16 @@ main_tb: $(VOBJS) $(VOBJDR)/Vmain__ALL.a
 	$(CXX) $(GFXLIBS) $(INCS) $^ $(VOBJDR)/Vmain__ALL.a $(GFXLIBS) -lelf -o $@
 
 #
+# Build a 64M SD-card image file that we can use for testing
+sdcard.img:
+	dd if=/dev/zero of=$@ bs=512 count=131072
+	mkfs.fat -F 16 $@
+
+.PHONY: mount
+mount: sdcard.img
+	@mkdir -p sdmount
+	mount -o uid=1000,loop sdcard.img sdmount
+#
 # The "clean" target, removing any and all remaining build products
 #
 .PHONY: clean

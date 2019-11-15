@@ -67,13 +67,15 @@ public:
 				const uchar wb_we,
 			const BUSW wb_addr, const uint32_t *wb_data,
 				const short wb_sel,
-			uchar &o_ack, uchar &o_stall, uint32_t *o_data);
+			uchar &o_stall, uchar &o_ack, uint32_t *o_data);
 	void	operator()(const uchar wb_cyc, const uchar wb_stb,
 				const uchar wb_we,
 			const BUSW wb_addr, const uint32_t *wb_data,
 				const short wb_sel,
-			uchar &o_ack, uchar &o_stall, uint32_t *o_data) {
-		apply(wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel, o_ack, o_stall, o_data);
+			uchar &o_stall, uchar &o_ack, uint32_t *o_data) {
+
+		apply(wb_cyc, wb_stb, wb_we, wb_addr, wb_data, wb_sel,
+			o_stall, o_ack, o_data);
 	}
 	BUSW &operator[](const BUSW addr) { return m_mem[addr&m_mask]; }
 };

@@ -36,10 +36,13 @@
 ##
 ##
 @PREFIX=iclock
+@ACCESS=ALLCLOCKS_PRESENT
 @CLOCK.NAME=clk
 @CLOCK.WIRE=i_clk
 @CLOCK.FREQUENCY=100000000
 @CLOCK.TOP=i_clk
+@BDEFS.DEFN=
+#define	CLOCK_FREQUENCY_HZ	@$(CLOCK.iFREQUENCY)
 #
 #
 @PREFIX=masterclk
@@ -49,7 +52,7 @@
 		s_clk_125mhz,  s_clk_125_unbuffered,
 		s_clk_125d,    s_clk_125d_unbuffered,
 		s_clksync,     s_clksync_unbuffered,
-		s_clk4x,       s_clk4x_unbuffered,
+		s_clk_400mhz,  s_clk_400mhz_unbuffered,
 		netclk_locked, netclk_feedback;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
@@ -77,7 +80,7 @@
 		gen_sysclk(
 			.CLKIN1(i_clk_buffered),
 			.CLKOUT0(s_clk_200mhz_unbuffered),
-			.CLKOUT1(s_clk4x_unbuffered),
+			.CLKOUT1(s_clk_400mhz_unbuffered),
 			.CLKOUT2(s_clksync_unbuffered),
 			.PWRDWN(1'b0), .RST(1'b0),
 			.CLKFBOUT(sysclk_feedback),
@@ -86,10 +89,10 @@
 
 	BUFG	sysbuf(     .I(s_clk_200mhz_unbuffered),.O(s_clk_200mhz));
 	BUFG	clksync_buf(.I(s_clksync_unbuffered),   .O(s_clksync));
-	BUFG	clk4x_buf(  .I(s_clk4x_unbuffered),     .O(s_clk4x));
+	BUFG	clk4x_buf(  .I(s_clk_400mhz_unbuffered),.O(s_clk_400mhz));
 
 	initial	sysclk_stable = 0;
-	always @(posedge s_clksync, negedge sysclk_locked)
+	always @(posedge i_clk_buffered, negedge sysclk_locked)
 	if (!sysclk_locked)
 		sysclk_stable <= 4'h0;
 	else
@@ -119,7 +122,7 @@
 	assign	clocks_locked = (netclk_locked && sysclk_locked);
 
 	initial	netclk_stable = 0;
-	always @(posedge s_clksync, negedge netclk_locked)
+	always @(posedge i_clk_buffered, negedge netclk_locked)
 	if (!netclk_locked)
 		netclk_stable <= 4'h0;
 	else
@@ -130,12 +133,35 @@
 	always @(posedge i_clk_buffered)
 		upper_plls_stable <= { upper_plls_stable[2:0],
 			(netclk_stable & sysclk_stable) };
+
+	reg	[4:0]	pre_reset_counter;
+	reg		pre_reset;
+	initial pre_reset_counter = -1;
+
+	always @(posedge i_clk_buffered)
+	if (upper_plls_stable[3:2] != 2'b11)
+		pre_reset_counter <= -1;
+	else if (pre_reset_counter > 0)
+		pre_reset_counter <= pre_reset_counter - 1;
+
+
+	initial	pre_reset = 1;
+	always @(posedge i_clk_buffered)
+	if ((upper_plls_stable[3:2] != 2'b11)
+			||(!netclk_stable[3])||(!sysclk_stable[3]))
+		pre_reset <= 1'b1;
+	else if (pre_reset_counter == 0)
+		pre_reset <= 1'b0;
+	
+	
 @MAIN.PORTLIST=
 		// Extra clocks
 		i_clk_200mhz, i_clk_125mhz
 @MAIN.IODECL=
-		// Extra clocks
+	// Extra clocks
+	// Verilator lint_off UNUSED
 	input	wire		i_clk_200mhz, i_clk_125mhz;
+	// Verilator lint_on  UNUSED
 @MAIN.DEFNS=
 	wire	i_net_tx_clk;
 @MAIN.INSERT=

@@ -16,7 +16,7 @@
 //		This is the number of clocks (minus one) between SPI clock
 //		transitions.  Hence a '0' (not tested, doesn't work) would
 //		result in a SPI clock that alternated on every input clock
-//		equivalently dividing the input clock by two, whereas a '1' 
+//		equivalently dividing the input clock by two, whereas a '1'
 //		would divide the input clock by four.
 //
 //		In general, the SPI clock frequency will be given by the
@@ -44,7 +44,7 @@
 //		The value of the byte coming in.
 //
 //	o_idle
-//		True if this low-level device handler is ready to accept a 
+//		True if this low-level device handler is ready to accept a
 //		byte from the incoming interface, false otherwise.
 //
 //	i_bus_grant
@@ -87,17 +87,40 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`define	LLSDSPI_IDLE	4'h0
-`define	LLSDSPI_HOTIDLE	4'h1
-`define	LLSDSPI_WAIT	4'h2
-`define	LLSDSPI_START	4'h3
+`default_nettype	none
 //
-module	llsdspi(i_clk, i_speed, i_cs, i_stb, i_byte, 
+module	llsdspi(i_clk, i_reset, i_speed, i_cs, i_stb, i_byte,
 		o_cs_n, o_sclk, o_mosi, i_miso,
 		o_stb, o_byte, o_idle, i_bus_grant);
-	parameter	SPDBITS = 7;
+	parameter	SPDBITS = 7,
+			// Minimum startup clocks
+			STARTUP_CLOCKS = 150,
+			// System clocks to wait before the startup clock
+			// sequence
+			POWERUP_IDLE = 1000;
 	//
-	input	wire		i_clk;
+	// This core was originally developed for a shared SPI bus
+	// implementation on a XuLA2-LX25 board--one that shared flash with
+	// the SD-card.  Few cards support such an implementation any more,
+	// since per protocol CS high (inactive) and clock and data pins
+	// toggling could well put the SD card into it's SD mode instead of
+	// SPI mode.
+	parameter [0:0]	OPT_SPI_ARBITRATION = 1'b0;
+	//
+	//
+	localparam [0:0]	CSN_ON_STARTUP = 1'b1;
+	//
+	// The MOSI INACTIVE VALUE *MUST* be 1'b1 to be compliant
+	localparam [0:0]	MOSI_INACTIVE_VALUE = 1'b1;
+	//
+	// Normally, an SPI transaction shuts the clock down when finished.
+	// If OPT_CONTINUOUS_CLOCK is set, the clock will be continuous.
+	// This also means that any driving program must be ready when the
+	// SDSPI is idle.
+	parameter [0:0]	OPT_CONTINUOUS_CLOCK = 1'b0;
+
+	//
+	input	wire		i_clk, i_reset;
 	// Parameters/setup
 	input	wire	[(SPDBITS-1):0]	i_speed;
 	// The incoming interface
@@ -110,121 +133,261 @@ module	llsdspi(i_clk, i_speed, i_cs, i_stb, i_byte,
 	// The outgoing interface
 	output	reg		o_stb;
 	output	reg	[7:0]	o_byte;
-	output	wire		o_idle;
+	output	reg		o_idle;
 	// And whether or not we actually own the interface (yet)
 	input	wire		i_bus_grant;
 
+	localparam [3:0]	LLSDSPI_IDLE    = 4'h0,
+				LLSDSPI_HOTIDLE	= 4'h1,
+				LLSDSPI_WAIT	= 4'h2,
+				LLSDSPI_START	= 4'h3,
+				LLSDSPI_END	= 4'hb;
+//
 	reg			r_z_counter;
 	reg	[(SPDBITS-1):0]	r_clk_counter;
 	reg			r_idle;
 	reg		[3:0]	r_state;
 	reg		[7:0]	r_byte, r_ireg;
+	wire			byte_accepted;
+	reg			restart_counter;
 
-	wire	byte_accepted;
+	wire			bus_grant;
+
+	assign	bus_grant = (OPT_SPI_ARBITRATION ? i_bus_grant : 1'b1);
+
+`ifdef	FORMAL
+	reg	f_past_valid;
+`endif
+
+	reg	startup_hold, powerup_hold;
+
+	generate if (POWERUP_IDLE > 0)
+	begin : WAIT_FOR_POWERUP
+
+		localparam	POWERUP_BITS = $clog2(POWERUP_IDLE);
+		reg	[POWERUP_BITS-1:0]	powerup_counter;
+
+		initial powerup_counter = POWERUP_IDLE[POWERUP_BITS-1:0];
+		initial	powerup_hold = 1;
+		always @(posedge i_clk)
+		if (i_reset)
+		begin
+			powerup_counter <= POWERUP_IDLE;
+			powerup_hold    <= 1;
+		end else if (powerup_hold)
+		begin
+			if (|powerup_counter)
+				powerup_counter <= powerup_counter - 1;
+			powerup_hold <= (powerup_counter > 0);
+		end
+
+	end else begin
+
+		always @(*)
+			powerup_hold = 0;
+	end endgenerate
+
+	generate if (STARTUP_CLOCKS > 0)
+	begin : WAIT_FOR_STARTUP
+		localparam	STARTUP_BITS = $clog2(STARTUP_CLOCKS);
+		reg	[STARTUP_BITS-1:0]	startup_counter;
+
+		initial startup_counter = STARTUP_CLOCKS[STARTUP_BITS-1:0];
+		initial	startup_hold = 1;
+		always @(posedge i_clk)
+		if (i_reset || powerup_hold)
+		begin
+			startup_counter <= STARTUP_CLOCKS;
+			startup_hold    <= 1;
+		end else if (startup_hold && r_z_counter && !o_sclk)
+		begin
+			if (|startup_counter)
+				startup_counter <= startup_counter - 1;
+			startup_hold <= (startup_counter > 0);
+		end
+	end else begin
+
+		always @(*)
+			startup_hold = 0;
+
+	end endgenerate
+
 	assign	byte_accepted = (i_stb)&&(o_idle);
 
-	initial	r_clk_counter = 7'h0;
-	always @(posedge i_clk)
-	begin
-		if ((!i_cs)||(!i_bus_grant))
-			r_clk_counter <= 0;
-		else if (byte_accepted)
-			r_clk_counter <= i_speed;
-		else if (!r_z_counter)
-			r_clk_counter <= (r_clk_counter - {{(SPDBITS-1){1'b0}},1'b1});
-		else if ((r_state != `LLSDSPI_IDLE)&&(r_state != `LLSDSPI_HOTIDLE))
-			r_clk_counter <= (i_speed);
-		// else 
-		//	r_clk_counter <= 16'h00;
-	end
-
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Clock divider and speed control
+	//
+	initial	r_clk_counter = 0;
 	initial	r_z_counter = 1'b1;
-	always @(posedge i_clk)
-	begin
-		if ((!i_cs)||(!i_bus_grant))
-			r_z_counter <= 1'b1;
-		else if (byte_accepted)
-			r_z_counter <= 1'b0;
-		else if (!r_z_counter)
-			r_z_counter <= (r_clk_counter == 1);
-		else if ((r_state != `LLSDSPI_IDLE)&&(r_state != `LLSDSPI_HOTIDLE))
-			r_z_counter <= 1'b0;
+
+	always @(*)
+	if (OPT_CONTINUOUS_CLOCK || powerup_hold)
+		restart_counter = !powerup_hold;
+	else begin
+		restart_counter = 1'b0;
+
+		if (startup_hold || !i_cs)
+			restart_counter = 1'b1;
+		else if (!OPT_SPI_ARBITRATION && byte_accepted)
+			restart_counter = 1'b1;
+		else if (OPT_SPI_ARBITRATION && r_state == LLSDSPI_IDLE)
+			restart_counter = 1'b0;
+		else if (OPT_SPI_ARBITRATION && r_state == LLSDSPI_WAIT
+				&& !bus_grant)
+			restart_counter = 1'b0;
+		else if (OPT_SPI_ARBITRATION && byte_accepted)
+			restart_counter = 1'b1;
+		else
+			restart_counter = !r_idle;
 	end
 
-	initial	r_state = `LLSDSPI_IDLE;
 	always @(posedge i_clk)
 	begin
-		o_stb <= 1'b0;
-		o_cs_n <= !i_cs;
-		if (!i_cs)
+		if (!r_z_counter)
 		begin
-			r_state <= `LLSDSPI_IDLE;
-			r_idle <= 1'b0;
-			o_sclk <= 1'b1;
-		end else if (!r_z_counter)
+			r_clk_counter <= (r_clk_counter - 1);
+			r_z_counter <= (r_clk_counter == 1);
+		end else if (restart_counter)
 		begin
-			r_idle <= 1'b0;
-			if (byte_accepted)
-			begin // Will only happen within a hot idle state
-				r_byte <= { i_byte[6:0], 1'b1 };
-				r_state <= `LLSDSPI_START+1;
-				o_mosi <= i_byte[7];
-			end
-		end else if (r_state == `LLSDSPI_IDLE)
-		begin
-			o_sclk <= 1'b1;
-			if (byte_accepted)
-			begin
-				r_byte <= i_byte[7:0];
-				r_state <= (i_bus_grant)?`LLSDSPI_START:`LLSDSPI_WAIT;
-				r_idle <= 1'b0;
-				o_mosi <= i_byte[7];
-			end else begin
-				r_idle <= 1'b1;
-			end
-		end else if (r_state == `LLSDSPI_WAIT)
-		begin
-			r_idle <= 1'b0;
-			if (i_bus_grant)
-				r_state <= `LLSDSPI_START;
-		end else if (r_state == `LLSDSPI_HOTIDLE)
-		begin
-			// The clock is low, the bus is granted, we're just
-			// waiting for the next byte to transmit
-			o_sclk <= 1'b0;
-			if (byte_accepted)
-			begin
-				r_byte <= i_byte[7:0];
-				r_state <= `LLSDSPI_START;
-				r_idle <= 1'b0;
-				o_mosi <= i_byte[7];
-			end else
-				r_idle <= 1'b1;
-		// end else if (r_state == `LLSDSPI_START)
-		// begin
-			// o_sclk <= 1'b0;
-			// r_state <= r_state + 1;
-		end else if (o_sclk)
-		begin
-			o_mosi <= r_byte[7];
-			r_byte <= { r_byte[6:0], 1'b1 };
-			r_state <= r_state + 1;
-			o_sclk <= 1'b0;
-			if (r_state >= `LLSDSPI_START+8)
-			begin
-				r_state <= `LLSDSPI_HOTIDLE;
-				r_idle <= 1'b1;
-				o_stb <= 1'b1;
-				o_byte <= r_ireg;
-			end else
-				r_state <= r_state + 1;
-		end else begin
-			r_ireg <= { r_ireg[6:0], i_miso };
-			o_sclk <= 1'b1;
+			r_clk_counter <= i_speed;
+			r_z_counter <= (i_speed == 0);
 		end
 	end
 
-	assign o_idle = (r_idle)&&( (i_cs)&&(i_bus_grant) );
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Control o_stb, o_cs_n, and o_mosi
+	//
+	initial	o_cs_n = CSN_ON_STARTUP;
+	initial	r_state = LLSDSPI_IDLE;
+	always @(posedge i_clk)
+	if (i_reset || (!CSN_ON_STARTUP && startup_hold))
+	begin
+		o_cs_n <= CSN_ON_STARTUP;
+		r_state <= LLSDSPI_IDLE;
+	end else if (r_z_counter)
+	begin
+		if (!i_cs)
+		begin
+			// No request for action.  If anything, a request
+			// to close up/seal up the bus for the next transaction
+			// Expect to lose arbitration here.
+			r_state <= LLSDSPI_IDLE;
+			o_cs_n <= 1'b1;
+		end else if (r_state == LLSDSPI_IDLE)
+		begin
+			if (byte_accepted)
+			begin
+				o_cs_n <= 1'b0;
+				if (OPT_SPI_ARBITRATION)
+					// Wait for arbitration
+					r_state <= LLSDSPI_WAIT;
+				else
+					r_state <= LLSDSPI_START + (OPT_CONTINUOUS_CLOCK ? 1:0);
+			end
+		end else if (r_state == LLSDSPI_WAIT)
+		begin
+			if (bus_grant)
+				r_state <= LLSDSPI_START;
+		end else if (byte_accepted)
+			r_state <= LLSDSPI_START+1;
+		else if (o_sclk && r_state >= LLSDSPI_START)
+		begin
+			r_state <= r_state + 1;
+			if (r_state >= LLSDSPI_END)
+				r_state <= LLSDSPI_HOTIDLE;
+		end
+
+		if (startup_hold)
+			o_cs_n <= 1;
+	end
+
+	always @(posedge i_clk)
+	if (r_z_counter && !o_sclk)
+		r_ireg <= { r_ireg[6:0], i_miso };
+
+	always @(posedge i_clk)
+	if (r_z_counter && o_sclk && r_state == LLSDSPI_END)
+		o_byte <= r_ireg;
+
+	initial	r_idle  = 0;
+	always @(posedge i_clk)
+	if (startup_hold || i_reset)
+		r_idle <= 0;
+	else if (r_z_counter)
+	begin
+		if (byte_accepted)
+			r_idle <= 1'b0;
+		else if ((r_state == LLSDSPI_END)
+				||(r_state == LLSDSPI_HOTIDLE))
+			r_idle <= 1'b1;
+		else if (r_state == LLSDSPI_IDLE)
+			r_idle <= 1'b1;
+		else
+			r_idle <= 1'b0;
+	end
+
+	initial	o_sclk = 1;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_sclk <= 1;
+	else if (r_z_counter)
+	begin
+		if (OPT_CONTINUOUS_CLOCK)
+			o_sclk <= !o_sclk;
+		else if (restart_counter
+			&& (startup_hold || (i_cs && !o_cs_n) || !o_sclk))
+			o_sclk <= (r_state == LLSDSPI_WAIT) || !o_sclk;
+	end
+
+	initial	r_byte = -1;
+	initial	o_mosi = MOSI_INACTIVE_VALUE;
+	always @(posedge i_clk)
+	if (i_reset)
+	begin
+		r_byte <= {(8){MOSI_INACTIVE_VALUE}};
+		o_mosi <= MOSI_INACTIVE_VALUE;
+	end else if (r_z_counter)
+	begin
+		if (byte_accepted)
+		begin
+			o_mosi <= MOSI_INACTIVE_VALUE;
+			if (o_cs_n && !OPT_CONTINUOUS_CLOCK)
+				r_byte <= i_byte[7:0];
+			else begin
+				r_byte <= { i_byte[6:0], MOSI_INACTIVE_VALUE };
+				o_mosi <= i_byte[7];
+			end
+		end else if (o_sclk && (!OPT_SPI_ARBITRATION
+				|| (bus_grant && r_state != LLSDSPI_WAIT)))
+		begin
+			r_byte <= { r_byte[6:0], MOSI_INACTIVE_VALUE };
+			if (r_state >= LLSDSPI_START && r_state < LLSDSPI_END)
+				o_mosi <= r_byte[7];
+			else if (!i_cs)
+				o_mosi <= MOSI_INACTIVE_VALUE;
+		end
+	end
+
+	initial	o_stb  = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset || startup_hold || !i_cs || !r_z_counter || !o_sclk)
+		o_stb <= 1'b0;
+	else
+		o_stb <= (r_state >= LLSDSPI_END);
+
+	always @(*)
+	begin
+		if (OPT_CONTINUOUS_CLOCK)
+			o_idle = (r_idle)&&(r_z_counter)&&(o_sclk);
+		else
+			o_idle = (r_idle)&&(r_z_counter);
+	end
+
+`ifdef	FORMAL
+// Formal properties for this core are maintained elsewhere
+`endif
 endmodule
 
 

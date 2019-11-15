@@ -206,6 +206,7 @@ int main(int argc, char **argv) {
 #ifdef	FLASH_ACCESS
 		unsigned	startaddr = RESET_ADDRESS;
 		unsigned	codelen = 0;
+		bool		uses_flash = false;
 #endif
 
 
@@ -236,7 +237,7 @@ int main(int argc, char **argv) {
 			if ((secp->m_start >= RESET_ADDRESS)
 				&&(secp->m_start+secp->m_len
 						<= FLASHBASE+FLASHLEN))
-				valid = true;
+				valid = uses_flash = true;
 #endif
 
 #ifdef	SDRAM_ACCESS
@@ -321,8 +322,10 @@ int main(int argc, char **argv) {
 #endif
 		}
 
+		if (m_fpga) m_fpga->readio(R_VERSION); // Check for bus errors
 #ifdef	FLASH_ACCESS
-		if ((flash)&&(codelen>0)&&(!flash->write(startaddr, codelen, &fbuf[startaddr-FLASHBASE], true))) {
+		if ((flash)&&(codelen>0)&&(uses_flash)
+			&& (!flash->write(startaddr, codelen, &fbuf[startaddr-FLASHBASE], true))) {
 			fprintf(stderr, "ERR: Could not write program to flash\n");
 			exit(EXIT_FAILURE);
 		} else if ((!flash)&&(codelen > 0)) {

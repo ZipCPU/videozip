@@ -55,7 +55,7 @@
 //
 module	zipcounter(i_clk, i_reset, i_event,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data,
-			o_wb_ack, o_wb_stall, o_wb_data,
+			o_wb_stall, o_wb_ack, o_wb_data,
 		o_int);
 	parameter	BW = 32;
 	input	wire			i_clk, i_reset, i_event;

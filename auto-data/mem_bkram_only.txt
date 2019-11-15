@@ -40,8 +40,8 @@
 ##
 ##
 @PREFIX=mem_bkram_only
-@MASTER.TYPE=CPU
-@MASTER.BUS=zip
+@MASTER.TYPE=SCRIPT
+@MASTER.BUS=wb
 @LD.FILE=bkram.ld
 @LD.DEFNS=
 /* LD.DEFNS from @$(PREFIX) */

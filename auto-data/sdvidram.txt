@@ -45,35 +45,30 @@
 @ACCESS=@$(DEVID)_ACCESS
 @$LGMEMSZ=29
 @LGMEMSZ.FORMAT=%d
-@$NADDR=((1<<(LGMEMSZ-4)))
+@$NADDR=((1<<(LGMEMSZ-2)))
 @$NBYTES=(1<<(@$LGMEMSZ))
 @NBYTES.FORMAT=0x%08x
 @$MADDR= @$(REGBASE)
 @MADDR.FORMAT=0x%08x
 @SLAVE.TYPE=MEMORY
-@SLAVE.BUS=sdr
-@CLOCK.NAME=clk
-@CLOCK.FREQUENCY = 100000000
-# SDRAM bus transactions are 128 bits wide
-# Hence we need 4 fewer bus wires than would be necessary for
-@BUS.NAME=sdr
-@$BUS.WIDTH=128
-@BUS.CLOCK=clk
-@ERROR.WIRE=@$(PREFIX)_err
+@SLAVE.BUS=wb
+@ERROR.WIRE=@$(PREFIX)_err;
 # 8-bit byte accesses
 @LD.PERM=wx
 @TOP.PORTLIST=
 		// SDRAM I/O port wires
-		ddr3_ck_p, ddr3_ck_n,
-		ddr3_reset_n, ddr3_cke,
+		ddr3_reset_n, ddr3_cke, ddr3_ck_p, ddr3_ck_n,
 		ddr3_ras_n, ddr3_cas_n, ddr3_we_n,
-		ddr3_ba, ddr3_addr, ddr3_odt, ddr3_dm,
 		ddr3_dqs_p, ddr3_dqs_n,
-		ddr3_dq,
+		ddr3_ba, ddr3_addr,
+		ddr3_dq, ddr3_dm, ddr3_odt,
 		i_cpu_resetn
 @TOP.IODECL=
 	// I/O declarations for the SDRAM
 	output	wire	ddr3_ck_p, ddr3_ck_n, ddr3_reset_n, ddr3_cke,
+		ddr3_ras_n, ddr3_cas_n, ddr3_we_n;
+	output	wire	ddr3_reset_n, ddr3_cke,
+		ddr3_ck_p, ddr3_ck_n, ddr3_reset_n, ddr3_cke,
 		ddr3_ras_n, ddr3_cas_n, ddr3_we_n;
 	output	wire	[2:0]	ddr3_ba;
 	output	wire	[14:0]	ddr3_addr;
@@ -86,8 +81,8 @@
 	// Wires necessary to run the SDRAM
 	//
 	wire	@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we,
-		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_err;
-	wire	[(@$(BUS.AWID)-1):0]	@$(PREFIX)_addr;
+		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_err;
+	wire	[(@$(LGMEMSZ)-3):0]	@$(PREFIX)_addr;
 	wire	[(@$(BUS.WIDTH)-1):0]	@$(PREFIX)_data,
 					@$(PREFIX)_idata;
 	wire	[(@$(BUS.WIDTH)/8-1):0]	@$(PREFIX)_sel;
@@ -99,18 +94,20 @@
 		//
 		@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we,
 			@$(PREFIX)_addr, @$(PREFIX)_data, @$(PREFIX)_sel,
-			@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_idata
+			@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_idata
 @TOP.INSERT=
 	wire	[31:0]	@$(PREFIX)_debug;
+	wire	i_clk_buffered;
 
-	migsdram #(.AXIDWIDTH(5), .WBDATAWIDTH(@$(BUS.WIDTH)),
+	BUFG @$(PREFIX)clkbufi(.I(i_clk), .O(i_clk_buffered));
+
+	migsdram #(.AXIDWIDTH(1), .WBDATAWIDTH(@$(BUS.WIDTH)),
 			.DDRWIDTH(16),
 			.RAMABITS(@$(LGMEMSZ))) @$(PREFIX)i(
 		.i_clk(i_clk_buffered),
 		.i_clk_200mhz(s_clk_200mhz),
 		.o_sys_clk(s_clk),
-		// .i_rst(!i_cpu_resetn),
-		.i_rst(upper_plls_stable[3:2]!=2'b11),
+		.i_rst(!i_cpu_resetn),
 		.o_sys_reset(s_reset),
 		.i_wb_cyc(@$(PREFIX)_cyc),
 		.i_wb_stb(@$(PREFIX)_stb),
@@ -143,10 +140,10 @@
 @MAIN.PORTLIST=
 		o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we,
 				o_@$(PREFIX)_addr, o_@$(PREFIX)_data, o_@$(PREFIX)_sel,
-			i_@$(PREFIX)_ack, i_@$(PREFIX)_stall, i_@$(PREFIX)_data
+			i_@$(PREFIX)_stall, i_@$(PREFIX)_ack, i_@$(PREFIX)_data
 @MAIN.IODECL=
 	output	wire	o_@$(PREFIX)_cyc, o_@$(PREFIX)_stb, o_@$(PREFIX)_we;
-	output	wire	[(@$(BUS.AWID)-1):0]	o_@$(PREFIX)_addr;
+	output	wire	[(@$(LGMEMSZ)-3):0]	o_@$(PREFIX)_addr;
 	output	wire	[(@$(BUS.WIDTH)-1):0]	o_@$(PREFIX)_data;
 	output	wire	[(@$(BUS.WIDTH)/8)-1:0]	o_@$(PREFIX)_sel;
 	//
@@ -163,7 +160,7 @@
 	assign	@$(PREFIX)_ack   = i_@$(PREFIX)_ack;
 	assign	@$(PREFIX)_stall = i_@$(PREFIX)_stall;
 	assign	@$(PREFIX)_data = i_@$(PREFIX)_data;
-	 assign	@$(PREFIX)_err   = 1'b0; // i_@$(PREFIX)_err;
+	assign	@$(PREFIX)_err   = 1'b0; // i_@$(PREFIX)_err;
 
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
@@ -184,23 +181,27 @@ _@$(PREFIX) = ORIGIN(@$(PREFIX));
 #include "memsim.h"
 @SIM.DEFNS=
 #ifdef	@$(ACCESS)
-	MEMSIM	*m_sdram;
+	MEMSIM	*m_@$(PREFIX);
 #endif	// @$(ACCESS)
 @SIM.INIT=
-		m_sdram = new MEMSIM(@$(NBYTES));
+#ifdef	@$(ACCESS)
+		m_@$(PREFIX) = new MEMSIM(@$(NBYTES));
+#endif	// @$(ACCESS)
 @SIM.CLOCK=@$(SLAVE.BUS.CLOCK.NAME)
 @SIM.TICK=
 #ifdef	@$(ACCESS)
-		(*m_sdram)(m_core->o_@$(PREFIX)_cyc,
+		(*m_@$(PREFIX))(m_core->o_@$(PREFIX)_cyc,
 			m_core->o_@$(PREFIX)_stb,
 			m_core->o_@$(PREFIX)_we,
 			m_core->o_@$(PREFIX)_addr,
-			m_core->o_@$(PREFIX)_data,
+			&m_core->o_@$(PREFIX)_data,
 			m_core->o_@$(PREFIX)_sel,
 			m_core->i_@$(PREFIX)_ack,
 			m_core->i_@$(PREFIX)_stall,
-			m_core->i_@$(PREFIX)_data);
+			&m_core->i_@$(PREFIX)_data);
 #endif	// @$(ACCESS)
 @SIM.LOAD=
+#ifdef	@$(ACCESS)
 			// Need to byte swap data to get it into the memory
-			m_sdram->load(start, &buf[offset], wlen >> 2);
+			m_sdram->load(start, &buf[offset], wlen);
+#endif	// @$(ACCESS)

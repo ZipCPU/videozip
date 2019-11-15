@@ -47,6 +47,6 @@
 	initial	r_@$(PREFIX)_data = 32'h0;
 	always @(posedge i_clk)
 		r_@$(PREFIX)_data <= r_@$(PREFIX) + @$(STEP);
-	assign	@$(PREFIX)_data = r_@$(PREFIX)_data;
+	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
 @REGS.N=1
 @REGS.0= 0 R_RTCCOUNT RTCCOUNT

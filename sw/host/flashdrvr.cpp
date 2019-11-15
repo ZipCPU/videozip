@@ -97,7 +97,8 @@ FLASHDRVR::FLASHDRVR(DEVBUS *fpga) : m_fpga(fpga),
 
 unsigned FLASHDRVR::flashid(void) {
 #ifndef	FLASH_ACCESS
-printf("No flash\n");
+	return FLASH_UNKNOWN;
+#elif	!defined(R_FLASHCFG)
 	return FLASH_UNKNOWN;
 #else
 	unsigned	r;
@@ -126,72 +127,89 @@ printf("No flash\n");
 }
 
 void	FLASHDRVR::take_offline(void) {
+	take_offline(m_fpga);
+}
+
+void	FLASHDRVR::place_online(void) {
+	place_online(m_fpga);
+}
+
+void	FLASHDRVR::take_offline(DEVBUS *fpga) {
 #ifdef	R_FLASHCFG
-// printf("Take offline\n");
-	m_fpga->writeio(R_FLASHCFG, F_END);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_RESET);
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	fpga->writeio(R_FLASHCFG, F_END);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_RESET);
+	fpga->writeio(R_FLASHCFG, F_END);
 #endif
 }
 
-
-void	FLASHDRVR::place_online(void) {
+void	FLASHDRVR::place_online(DEVBUS *fpga) {
 #ifdef	QSPI_FLASH
-// printf("Place online\n");
-	restore_quadio();
+	restore_quadio(fpga);
 #elif	defined(DSPI_FLASH)
-	restore_dualio();
+	restore_dualio(fpga);
 // elif
 //	No action required for normal SPI devices
 #endif
 }
 
-
 void	FLASHDRVR::restore_dualio(void) {
+	restore_dualio(m_fpga);
+}
+
+void	FLASHDRVR::restore_dualio(DEVBUS *fpga) {
+	// static const	uint32_t	DUAL_IO_READ     = CFG_USERMODE|0xbb;
 #ifdef	DSPI_FLASH
 #error "This controller doesn't (yet) support Dual-mode"
 #endif
 }
 
 void	FLASHDRVR::restore_quadio(void) {
+	restore_quadio(m_fpga);
+}
+
+void	FLASHDRVR::restore_quadio(DEVBUS *fpga) {
 #ifdef	QSPI_FLASH
 	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE|0xeb;
 
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	fpga->writeio(R_FLASHCFG, F_END);
+	/*
 	if (MICRON_FLASHID == m_id) {
 		// printf("MICRON-flash\n");
 		// Need to enable XIP first for MICRON's flash
 		//
 		// This requires sending a write enable first
-		m_fpga->writeio(R_FLASHCFG, F_WREN);
-		m_fpga->writeio(R_FLASHCFG, F_END);
+		fpga->writeio(R_FLASHCFG, F_WREN);
+		fpga->writeio(R_FLASHCFG, F_END);
 
 		// Then sending a 0xab, 0x81
-		m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x81);
-		m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0xf3);
-		m_fpga->writeio(R_FLASHCFG, F_END);
+		fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x81);
+		fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0xf3);
+		fpga->writeio(R_FLASHCFG, F_END);
 	}
+	*/
 
-	m_fpga->writeio(R_FLASHCFG, QUAD_IO_READ);
+	fpga->writeio(R_FLASHCFG, QUAD_IO_READ);
 	// 3 address bytes
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
 	// Mode byte
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0);
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0);
 	// Read NDUMMY clocks worth
+#ifdef	FLASH_NDUMMY
 	for(int k=0; k<(FLASH_NDUMMY-2)/2; k++)
-		m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
+		fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
+#endif
 	// Read a dummy byte
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
 	// Close the interface
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE);
-	m_fpga->writeio(R_FLASHCFG, CFG_USER_CS_n);
+	fpga->writeio(R_FLASHCFG, CFG_USERMODE);
+	fpga->writeio(R_FLASHCFG, CFG_USER_CS_n);
 #endif
 }
 
@@ -295,7 +313,6 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 		return true;
 	}
 
-
 	// Write enable
 	m_fpga->writeio(R_FLASHCFG, F_END);
 	m_fpga->writeio(R_FLASHCFG, F_WREN);
@@ -306,12 +323,19 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	//
 
 	// Issue the page program command
+	//
+	// Our interface will limit us, so there's no reason to use
+	// QUAD page programming here
+	// if (F_QPP) {} else
 	m_fpga->writeio(R_FLASHCFG, F_PP);
 	// The address of the page to be programmed
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>>16)&0x0ff));
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>> 8)&0x0ff));
 	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr    )&0x0ff));
+
+	//
 	// Write the page data itself
+	//
 	for(unsigned i=0; i<len; i++)
 		m_fpga->writeio(R_FLASHCFG, 
 			CFG_USERMODE | CFG_WEDIR | (data[i] & 0x0ff));

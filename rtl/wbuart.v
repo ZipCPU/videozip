@@ -47,7 +47,7 @@
 module	wbuart(i_clk, i_rst,
 		//
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-			o_wb_ack, o_wb_stall, o_wb_data,
+			o_wb_stall, o_wb_ack, o_wb_data,
 		//
 		i_uart_rx, o_uart_tx, i_cts_n, o_rts_n,
 		//
@@ -68,8 +68,8 @@ module	wbuart(i_clk, i_rst,
 	input	wire		i_wb_stb, i_wb_we;
 	input	wire	[1:0]	i_wb_addr;
 	input	wire	[31:0]	i_wb_data;	// and only use 30 lines here
-	output	reg		o_wb_ack;
 	output	wire		o_wb_stall;
+	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
 	//
 	input	wire		i_uart_rx;

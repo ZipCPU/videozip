@@ -42,8 +42,8 @@
 `default_nettype	none
 //
 module	enetctrl(i_clk, i_reset,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-			o_wb_ack, o_wb_stall, o_wb_data,
+		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
+			o_wb_stall, o_wb_ack, o_wb_data,
 		o_mdclk, o_mdio, i_mdio, o_mdwe,
 		o_debug);
 	parameter	CLKBITS=2; // = 3 for 200MHz source clock, 2 for 100 MHz
@@ -61,8 +61,9 @@ module	enetctrl(i_clk, i_reset,
 	input	wire		i_clk, i_reset;
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
 	input	wire	[4:0]	i_wb_addr;
-	input	wire	[15:0]	i_wb_data;
-	output	reg		o_wb_ack, o_wb_stall;
+	input	wire	[31:0]	i_wb_data;
+	input	wire	[3:0]	i_wb_sel;
+	output	reg		o_wb_stall, o_wb_ack;
 	output	wire	[31:0]	o_wb_data;
 	//
 	input	wire		i_mdio;
@@ -148,7 +149,7 @@ module	enetctrl(i_clk, i_reset,
 		if (!o_wb_stall)
 			r_addr <= i_wb_addr;
 		if (!o_wb_stall)
-			r_data <= i_wb_data;
+			r_data <= i_wb_data[15:0];
 		if ((i_reset)||(ctrl_state == ECTRL_READ)||(ctrl_state == ECTRL_WRITE))
 		begin
 			read_pending  <= 1'b0;
@@ -253,6 +254,11 @@ module	enetctrl(i_clk, i_reset,
 			o_mdclk, o_mdwe, o_mdio, i_mdio		// 4 bits
 		};
 
+	// Make Verilator happy
+	// verilator lint_off UNUSED
+	wire	unused;
+	assign	unused = &{ 1'b0, i_wb_sel, i_wb_data[31:16] };
+	// verilator lint_on  UNUSED
 `ifdef	FORMAL
 `define	ASSUME	assume
 `define	ASSERT	assert
@@ -303,7 +309,7 @@ module	enetctrl(i_clk, i_reset,
 	fwb_slave #(.AW(5), .DW(32), .F_MAX_STALL(0), .F_MAX_ACK_DELAY(0),
 			.F_LGDEPTH(F_LGDEPTH), .F_MAX_REQUESTS(0))
 	  fwb(i_clk, i_reset, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr,
-			{ 16'h0, i_wb_data }, 4'h3,
+			i_wb_data, i_wb_sel,
 		o_wb_ack, o_wb_stall, o_wb_data, 1'b0,
 		f_nreqs, f_nacks, f_outstanding);
 

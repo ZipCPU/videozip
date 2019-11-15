@@ -61,7 +61,7 @@
 			(@$(SLAVE.BUS.NAME)_stb)&&(@$(PREFIX)_sel), @$(SLAVE.BUS.NAME)_we,
 				@$(SLAVE.BUS.NAME)_addr[(@$(AWID)-1):0],
 				@$(SLAVE.BUS.NAME)_data, @$(SLAVE.BUS.NAME)_sel,
-				@$(PREFIX)_ack, @$(PREFIX)_stall,
+				@$(PREFIX)_stall, @$(PREFIX)_ack,
 				@$(PREFIX)_data, @$(PREFIX)_err,
 			@$(MASTER.BUS.CLOCK.WIRE),
 			@$(MASTER.BUS.NAME)_cyc,

@@ -47,7 +47,7 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-BASE    := global.txt dlyarbiter.txt icape.txt
+BASE    := global.txt icape.txt # dlyarbiter not necessary with new AutoFPGA
 AUX     := version.txt buserr.txt pic.txt pwrcount.txt xpander.txt vidarbiter.txt
 IO      := spio.txt gpio.txt
 RTC     := rtcgps.txt rtcdate.txt
@@ -57,10 +57,10 @@ CPU     := zipmaster.txt
 NETWORK := mdio.txt enet.txt
 GPS     := gps.txt
 SDCARD  := sdspi.txt
-GFX     := hdmi.txt # wboledbw.txt
-SCOPES  := cpuscope.txt enetscope.txt flashscope.txt mdioscope.txt
+GFX     := # hdmi.txt # wboledbw.txt
+SCOPES  := cpuscope.txt # sdscope.txt enetscope.txt flashscope.txt mdioscope.txt
 CLOCKS  := allclocks.txt genclk.txt netclockctr.txt
-OTHER   := clkcounter.txt wbmouse.txt wbpmic.txt xdc.txt
+OTHER   := xdc.txt clkcounter.txt # wbmouse.txt wbpmic.txt
 LDSCRIPT:= mem_bkram_only.txt mem_flash_bkram.txt
 DATA := $(CLOCKS) $(BASE) $(AUX) $(IO) $(RTC)				\
 	$(DBGBUS) $(MEMORY) $(CPU) $(NETWORK) $(GPS) $(SDCARD) $(GFX)	\

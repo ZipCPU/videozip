@@ -40,6 +40,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype none
+//
 `define	WB_IDLE			3'b000
 `define	WB_READ_REQUEST		3'b001
 `define	WB_WRITE_REQUEST	3'b010
@@ -49,7 +51,7 @@
 
 module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
-			i_wb_ack, i_wb_stall, i_wb_err, i_wb_data,
+			i_wb_stall, i_wb_ack, i_wb_err, i_wb_data,
 		o_stb, o_codword);
 	input	wire		i_clk, i_rst;
 	// The command inputs
@@ -62,7 +64,7 @@ module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 	output	reg		o_wb_we;
 	output	reg	[31:0]	o_wb_addr, o_wb_data;
 	// Wishbone inputs
-	input	wire		i_wb_ack, i_wb_stall, i_wb_err;
+	input	wire		i_wb_stall, i_wb_ack, i_wb_err;
 	input	wire	[31:0]	i_wb_data;
 	// And our codeword outputs
 	output	reg		o_stb;

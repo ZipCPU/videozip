@@ -40,7 +40,7 @@
 module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	// Wishbone components
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-		o_wb_ack, o_wb_stall, o_wb_data, o_wb_err,
+		o_wb_stall, o_wb_ack, o_wb_data, o_wb_err,
 	// SDRAM connections
 		o_ddr_ck_p, o_ddr_ck_n,
 		o_ddr_reset_n, o_ddr_cke,
@@ -51,10 +51,10 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 		io_ddr_dqs_p, io_ddr_dqs_n,
 		io_ddr_data
 	// Debug connection
-		// , o_ram_dbg
+		, o_ram_dbg
 	);
 	parameter	DDRWIDTH = 16, WBDATAWIDTH=32;
-	parameter	AXIDWIDTH = 6;
+	parameter	AXIDWIDTH = 1;
 	// The SDRAM address bits (RAMABITS) are a touch more difficult to work
 	// out.  Here we leave them as a fixed parameter, but there are 
 	// consequences to this.  Specifically, the wishbone data width, the
@@ -80,7 +80,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	input	wire	[(AW-1):0]	i_wb_addr;
 	input	wire	[(DW-1):0]	i_wb_data;
 	input	wire	[(SELW-1):0]	i_wb_sel;
-	output	wire			o_wb_ack, o_wb_stall;
+	output	wire			o_wb_stall, o_wb_ack;
 	output	wire	[(DW-1):0]	o_wb_data;
 	output	wire			o_wb_err;
 	//
@@ -96,7 +96,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	inout	wire	[1:0]			io_ddr_dqs_p, io_ddr_dqs_n;
 	inout	wire	[(DDRWIDTH-1):0]	io_ddr_data;
 
-	// output	wire	[31:0]			o_ram_dbg;
+	output	wire	[31:0]			o_ram_dbg;
 
 
 `define	SDRAM_ACCESS
@@ -218,7 +218,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 			)
 			bus_translator (
 				.i_clk(o_sys_clk),
-				// .i_reset(i_rst), // internally unused
+				.i_reset(o_sys_reset), // internally unused
 				// Write address channel signals
 				.o_axi_awid(	s_axi_awid), 
 				.o_axi_awaddr(	s_axi_awaddr), 
@@ -269,12 +269,12 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 				.i_wb_data(	i_wb_data),
 				.i_wb_sel(	i_wb_sel),
 			//
-				.o_wb_ack(	o_wb_ack),
 				.o_wb_stall(	o_wb_stall),
+				.o_wb_ack(	o_wb_ack),
 				.o_wb_data(	o_wb_data),
 				.o_wb_err(	o_wb_err)
 			//
-				// .o_dbg(	o_ram_dbg)
+				, .o_dbg(	o_ram_dbg)
 		);
 
 	// Convert from active low to active high, *and* hold the system in

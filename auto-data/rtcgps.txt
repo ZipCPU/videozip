@@ -59,7 +59,7 @@
 `ifdef	GPSTRK_ACCESS
 	rtcgps	#(RTC_CLKSTEP) the@$(PREFIX)(i_clk, i_reset,
 		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, wb_addr[1:0], wb_data, wb_sel,
-		@$(PREFIX)_ack, @$(PREFIX)_stall, @$(PREFIX)_data,
+		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
 		@$(PREFIX)_int, @$(PREFIX)_ppd,
 		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
 `else

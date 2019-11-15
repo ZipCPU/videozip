@@ -35,10 +35,10 @@
 ################################################################################
 ##
 ##
-@PREFIX=netrxctr
-@DEVID=NETRXCLK
+@PREFIX=netclockctr
+@DEVID=NETCLOCKCTR
 @ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=ETHERNET_ACCESS
+@DEPENDS=ETHERNET_ACCESS GPSTRK_ACCESS
 @TSTCLOCK=i_net_rx_clk
 @REGS.NOTE = // Network RX clock counter (measures clock speed)
 @BDEF.IONAME=_@$(PREFIX)

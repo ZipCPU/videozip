@@ -1,5 +1,6 @@
 board.h
 board.ld
+bootrom.ld
 bkram.ld
 build.xdc
 main.v

@@ -186,7 +186,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2018, Gisselquist Technology, LLC
+// Copyright (C) 2016-2019, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -218,7 +218,7 @@
 `define	AXFLAG	0	// Accessed flag
 //
 module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
-				i_wbs_data, o_wbs_ack, o_wbs_stall, o_wbs_data,
+				i_wbs_data, o_wbs_stall, o_wbs_ack, o_wbs_data,
 		i_wbm_cyc, i_wbm_stb, i_wbm_we, i_wbm_exe,
 			i_wbm_addr, i_wbm_data, i_wbm_sel, i_gie,
 		o_cyc, o_stb, o_we, o_addr, o_data, o_sel,
@@ -269,8 +269,8 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 	input	wire		i_wbs_we;
 	input	wire	[(LGTBL+1):0]	i_wbs_addr;
 	input	wire	[(DW-1):0]	i_wbs_data;
-	output	reg			o_wbs_ack;
 	output	wire			o_wbs_stall;
+	output	reg			o_wbs_ack;
 	output	reg	[(DW-1):0]	o_wbs_data;
 	//
 	input	wire		i_wbm_cyc, i_wbm_stb;
@@ -310,7 +310,8 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 //
 //
 //
-	reg	[3:1]			tlb_flags	[0:(TBL_SIZE-1)];
+	reg	[3:0]			tlb_flags	[0:(TBL_SIZE-1)];
+	wire	[3:0]			s_tlb_flags;
 	reg	[(LGCTXT-1):0]		tlb_cdata	[0:(TBL_SIZE-1)];
 	reg	[(VAW-1):0]		tlb_vdata	[0:(TBL_SIZE-1)];
 	reg	[(PAW-1):0]		tlb_pdata	[0:(TBL_SIZE-1)];
@@ -331,7 +332,8 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 	wire			kernel_context;
 	reg	[(LGCTXT-1):0]	r_context_word;
 	//
-	wire	[31:0]		w_control_data,w_vtable_reg,w_ptable_reg;
+	wire	[31:0]		w_control_data, w_ptable_reg;
+	reg	[31:0]		w_vtable_reg;
 	reg	[31:0]	status_word;
 	//
 	//
@@ -381,7 +383,7 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 			tlb_pdata[wr_tlb_addr]<=i_wbs_data[(AW+1):LGPGSZB];
 		// Set the context register for the page
 		if (wr_vtable)
-			tlb_flags[wr_tlb_addr] <= i_wbs_data[3:1];
+			tlb_flags[wr_tlb_addr] <= { i_wbs_data[3:1], 1'b0 };
 		if (wr_vtable)
 			tlb_cdata[wr_tlb_addr][(LGLCTX-1):0]
 				<= i_wbs_data[(LGLCTX+4-1):4];
@@ -436,9 +438,14 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 	/* v*rilator lint_on WIDTH */
 	assign	w_control_data[15: 0] = {{(16-LGCTXT){1'b0}}, r_context_word};
 	//
-	assign	w_vtable_reg[(DW-1):LGPGSZB] = tlb_vdata[wr_tlb_addr];
-	assign	w_vtable_reg[(LGLCTX+4-1):4] = { tlb_cdata[wr_tlb_addr][(LGLCTX-1):0] };
-	assign	w_vtable_reg[ 3:0]  = { tlb_flags[wr_tlb_addr], tlb_accessed[wr_tlb_addr] };
+	always @(*)
+	begin
+		w_vtable_reg = 0;
+		w_vtable_reg[(DW-1):LGPGSZB] = tlb_vdata[wr_tlb_addr];
+		w_vtable_reg[(LGLCTX+4-1):4] = { tlb_cdata[wr_tlb_addr][(LGLCTX-1):0] };
+		w_vtable_reg[ 3:0]  = { tlb_flags[wr_tlb_addr][3:1],
+					tlb_accessed[wr_tlb_addr] };
+	end
 	//
 	assign	w_ptable_reg[(DW-1):LGPGSZB] = { {(DW-PAW-LGPGSZB){1'b0}},
 					tlb_pdata[wr_tlb_addr] };
@@ -574,15 +581,16 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 
 	// Third clock: Read from the address the virtual table offset,
 	// whether read-only, etc.
-	assign	ro_flag     = tlb_flags[s_tlb_addr][`ROFLAG];
-	assign	exe_flag    = tlb_flags[s_tlb_addr][`EXEFLG];
+	assign	s_tlb_flags = tlb_flags[s_tlb_addr];
+	assign	ro_flag     = s_tlb_flags[`ROFLAG];
+	assign	exe_flag    = s_tlb_flags[`EXEFLG];
+	assign	cachable    = s_tlb_flags[`CHFLAG];
 	assign	simple_miss = (s_pending)&&(s_tlb_miss);
 	assign	ro_miss     = (s_pending)&&(s_tlb_hit)&&(r_we)&&(ro_flag);
 	assign	exe_miss    = (s_pending)&&(s_tlb_hit)&&(r_exe)&&(!exe_flag);
 	assign	table_err   = (s_pending)&&(!s_tlb_miss)&&(!s_tlb_hit);
 	assign	vpage       = tlb_vdata[s_tlb_addr];
 	assign	ppage	    = tlb_pdata[s_tlb_addr];
-	assign	cachable    = tlb_flags[s_tlb_addr][`CHFLAG];
 
 	initial	pf_cachable = 1'b0;
 	always @(posedge i_clk)
@@ -770,8 +778,11 @@ module zipmmu(i_clk, i_reset, i_wbs_cyc_stb, i_wbs_we, i_wbs_addr,
 	generate if (4+LGCTXT < LGPGSZB)
 	begin
 		wire	unused_data;
-		assign	unused_data = i_wbs_data[LGPGSZB-1:4+LGCTXT];
+		assign	unused_data = { 1'b0, i_wbs_data[LGPGSZB-1:4+LGCTXT] };
 	end endgenerate
+
+	wire	unused_always;
+	assign	unused_always = s_tlb_flags[0];
 	// verilator lint_on  UNUSED
 
 `ifdef	FORMAL

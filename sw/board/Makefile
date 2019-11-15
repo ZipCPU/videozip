@@ -37,7 +37,7 @@
 ##
 ##
 .PHONY: all
-PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest simple_ping helloworld
+PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest simple_ping helloworld contest
 all:	$(PROGRAMS)
 #
 #
@@ -77,9 +77,10 @@ $(OBJDIR)/%.s: %.c
 	$(CC) $(CFLAGS) $(DUMPRTL) -S $< -o $@
 $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 	$(mk-objdir)
-	bash -c "$(RDELF) -a $^ ; $(OBJDUMP) -S -D $^ " | tee $@
+	bash -c "$(RDELF) -a $^ ; $(OBJDUMP) -S -Drz $^ " | tee $@
+
 %.txt: %
-	$(OBJDUMP) -S -D $^ > $@
+	$(OBJDUMP) -S -Drz $^ > $@
 
 
 #
@@ -101,6 +102,11 @@ cputest: $(OBJDIR)/cputest.o bkram.ld
 	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
 cputestcis: $(OBJDIR)/cputestcis.o bkram.ld
 	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputestcis.map $(OBJDIR)/cputestcis.o -o $@
+
+CONTESTSRC := contest.c txfns.c
+CONTESTOBJ := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(CONTESTSRC))) # $(DIVOBJ)
+contest: $(CONTESTOBJ) bkram.ld
+	$(CC) -T bkram.ld $(CFLAGS) $(CONTESTOBJ) -o $@
 
 memtest: $(OBJDIR)/memtest.o bkram.ld
 	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@

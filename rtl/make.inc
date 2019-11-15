@@ -44,7 +44,7 @@ SCOPE := wbscope.v
 SCOPE := wbscope.v
 
 ENETD := ethernet
-ENET  := $(addprefix $(ENETD)/,enetpackets.v addecrc.v addemac.v addepad.v addepreamble.v rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v xiddr.v xoddr.v)
+ENET  := $(addprefix $(ENETD)/,enetpackets.v addecrc.v addemac.v addepad.v addepreamble.v rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v xiddr.v xoddr.v txespeed.v txeaddr.v)
 ZIPCPUD := cpu
 ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipcpu.v cpuops.v pfcache.v pipemem.v pfcache.v idecode.v wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v)
 GPIO := wbgpio.v
@@ -79,5 +79,5 @@ CONSOLE := wbconsole.v txuartlite.v rxuartlite.v ufifo.v
 
 ENETMDIO := enetctrl.v
 
-VFLIST := main.v  $(SCOPE) $(SCOPE) $(ENET) $(ZIPCPU) $(GPIO) $(WBMOUSE) $(SDSPI) $(WBUBUS) $(ICAP) $(SCOPC) $(BUSDLY) $(GPS) $(BUSPIC) $(BUSDLY) $(RTCGPS) $(BKRAM) $(FLASH) $(RTCDATE) $(CONSOLE) $(ENETMDIO)
+VFLIST := main.v  $(SCOPE) $(ENET) $(ZIPCPU) $(GPIO) $(WBMOUSE) $(SDSPI) $(WBUBUS) $(ICAP) $(SCOPC) $(BUSDLY) $(GPS) $(BUSPIC) $(RTCGPS) $(BKRAM) $(FLASH) $(RTCDATE) $(CONSOLE) $(ENETMDIO)
 AUTOVDIRS :=  -y ethernet -y cpu

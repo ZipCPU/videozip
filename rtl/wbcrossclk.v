@@ -90,22 +90,70 @@ module	wbcrossclk(i_wb_clk,
 	//
 	//	 FIFO/queue up our requests
 	//
-	reg	our_cyc;
+	reg	our_cyc, bus_abort;
 	always	@(posedge i_wb_clk)
 		our_cyc <= ((our_cyc)&&(i_wb_cyc))||(i_wb_stb);
-	always @(posedge i_xclk_clk)
-		tfr_cyc <= { tfr_cyc[(TFRCLOCKS-2):0], (our_cyc)||(i_wb_stb) };
-	assign	o_xclk_cyc = tfr_cyc[(TFRCLOCKS-1)];
+
+	initial	{ bus_abort, bus_abort_pipe } = -1;
+	always	@(posedge i_wb_clk)
+	if (i_reset)
+		{ bus_abort, bus_abort_pipe } <= -1;
+	else if (!i_wb_cyc && !ack_fifo_empty)
+		{ bus_abort, bus_abort_pipe } <= -1;
+	else if (ack_fifo_empty)
+		{ bus_abort, bus_abort_pipe } <= { bus_abort_pipe, 1'b0 };
+
+	initial	{ xck_reset, xck_reset_pipe } = -1;
+	always	@(posedge i_xck or posedge i_reset)
+	if (i_reset)
+		{ xck_reset, xck_reset_pipe } <= 3'b111;
+	else
+		{ xck_reset, xck_reset_pipe[1] } <= xck_reset_pipe;
 
 	always @(posedge i_wb_clk)
-		if ((i_wb_stb)&&(!o_wb_stall))
-			req_head <= req_head+1'b1;
+	if ((i_wb_stb)&&(!o_wb_stall))
+		req_head <= req_head+1'b1;
 	always @(posedge i_wb_clk)
 		o_wb_stall <= (req_head != wb_ack_tail)&&(wb_ack_tail - req_head< THRESHOLD);
 
+	initial	full_fifo_wptr = 0;
 	always @(posedge i_wb_clk)
-		req_fifo[req_head] <= {
+	if (i_reset || !i_wb_cyc)
+	begin
+		master_wrptr <= 0;
+		master_rdptr <= 0;
+	end else case(i_wb_stb && !o_wb_stall && !in_reset, !ack_fifo_empty })
+	2'b10: master_wrptr <= master_wrptr + 1;
+	2'b01: master_rdptr <= master_rdptr - 1;
+	default: begin end
+	endcase
+
+	always @(*)
+		o_wb_stall = (master_full || bus_abort);
+
+	always @(*)
+	master_full = (master_wrptr[LGFIFO-1:0] == master_rdptr[LGFIFO-1:0])
+		&&(master_wrptr[LGFIFO] != master_rdptr[LGFIFO]);
+
+	always @(posedge i_wb_clk)
+	if (i_wb_stb && !master_full)
+		req_fifo[master_wrptr] <= {
 				i_wb_we, i_wb_addr, i_wb_data, i_wb_sel };
+
+	initial	ack_enable = 1'b0;
+	always @(posedge i_wb_clk)
+		ack_enable <= (i_wb_cyc && !bus_abort) && (!master_empty);
+
+	initial pre_err = 0;
+	always @(posedge i_wb_clk)
+		{ pre_err, o_wb_data } <= ack_fifo[master_rdptr];
+
+	always @(*)
+	if (ack_enable)
+		{ o_wb_ack, o_wb_err } =  { !pre_err, pre_err };
+	else
+		{ o_wb_ack, o_wb_err } = 2'b00;
+
 
 	//
 	//
@@ -113,30 +161,38 @@ module	wbcrossclk(i_wb_clk,
 	//
 	//	 De-queue the request, and issue it to the peripheral
 	//
-	// Find where the head is at, but on our clock
-	tfrvalue #(.NB(LGFIFO),.METHOD("FLAGGED")) tfr_reqptr(i_wb_clk,
-		req_head, i_xclk_clk, xclk_req_head);
+	always @(posedge i_xck)
+	if (xck_reset)
+		o_xclk_cyc <= 1'b0;
+	else if (!xck_req_empty)
+		o_xclk_cyc <= 1'b1;
+	else if (xck_ack_empty)
+		o_xclk_cyc <= 1'b0;
 
-	// That then allows us to do everything else
-	wire	[(LGFIFO-1):0]	next_xclk_tail;
-	assign	next_xclk_tail = xclk_tail + 1'b1;
-	always @(posedge i_xclk_clk)
-		if (!o_xclk_cyc)
-			o_xclk_stb <= 1'b0;
-		else if ((o_xclk_stb)&&(!i_xclk_stall))
-			o_xclk_stb <= (next_xclk_tail != xclk_req_head);
-		else
-			o_xclk_stb <= (xclk_req_head != xclk_tail);
-	always @(posedge i_xclk_clk)
-		if ((o_xclk_stb)&&(!i_xclk_stall)&&(xclk_req_head != xclk_tail))
-			xclk_tail <= xclk_tail + 1'b1;
-	always @(posedge i_xclk_clk)
-		xclk_fifo_data <= req_fifo[xclk_tail];
+	always @(posedge i_xck)
+	if (xck_reset)
+	begin
+		xck_rdptr <= 0;
+		xck_wrptr <= 0;
+	end else begin
+		if (!xck_req_empty && (!o_xck_stb || !i_xck_stall))
+			xck_rd_ptr <= xck_rd_ptr + 1;
+		if (i_xck_ack || i_xck_err)
+			xck_wr_ptr <= xck_wr_ptr + 1;
+	end
 
-	assign	o_xclk_we   = xclk_fifo_data[(AW+DW+DW/8)];
-	assign	o_xclk_addr = xclk_fifo_data[(AW+DW+DW/8-1):(DW+DW/8)];
-	assign	o_xclk_data = xclk_fifo_data[(DW+DW/8-1):(DW/8)];
-	assign	o_xclk_sel  = xclk_fifo_data[(DW/8-1):0];
+	always @(posedge i_xck)
+		o_xck_stb = !xck_req_empty;
+
+	always @(posedge i_xck)
+	if (!o_xck_stb || i_xck_stall)
+		{ o_xck_we, o_xck_addr, o_xck_data, o_xck_sel }
+			= req_fifo[xck_rd_ptr];
+
+	always @(posedge i_xck)
+	if (i_xck_ack || i_xck_err)
+		ack_fifo[xck_wr_ptr] <= { i_xck_err, i_xck_data };
+
 
 	//
 	//

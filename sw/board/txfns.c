@@ -55,19 +55,20 @@ void	txstr(const char *str);
  * to send the next character.
  *
  */
+#define	UARTTX_READY	(_uart->u_fifo & 0x010000)
 void	txchr(char val) {
 	unsigned v = (unsigned char)val;
 	static	int last_was_cr = 0;
 	uint8_t	c;
 
 	if ((0 == last_was_cr)&&(val == '\n')) {
-		while(_uart->u_fifo & 0x010000)
+		while(!UARTTX_READY)
 			;
 		c = '\r';
 		_uart->u_tx = (unsigned)c;
 	}
 
-	while(_uart->u_fifo & 0x010000)
+	while(!UARTTX_READY)
 		;
 	c = v;
 	_uart->u_tx = (unsigned)c;
@@ -117,7 +118,9 @@ void	txdecimal(int val) {
 		txchr(' ');
 	}
 
-	while(uval > 0) {
+	if (uval == 0) {
+		tmp[nc++] = '0';
+	} else while(uval > 0) {
 		unsigned dval, digit;
 		dval = uval / 10;
 		digit = (uval - dval * 10);
@@ -125,7 +128,7 @@ void	txdecimal(int val) {
 		uval = dval;
 	}
 
-	for(unsigned i=nc-1; i>0; i--)
-		txchr(tmp[i]);
+	for(unsigned i=nc; i>0; i--)
+		txchr(tmp[i-1]);
 }
 

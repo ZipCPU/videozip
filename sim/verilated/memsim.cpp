@@ -62,11 +62,11 @@ MEMSIM::MEMSIM(const unsigned int nwords, const unsigned int delay) {
 	m_delay = delay;
 	for(m_delay_mask=1; m_delay_mask < delay; m_delay_mask<<=1)
 		;
-	m_fifo_ack  = new int[m_delay_mask*NWRDWIDTH];
+	m_fifo_ack  = new int[m_delay_mask];
 	m_fifo_data = new BUSW[m_delay_mask*NWRDWIDTH];
-	for(unsigned i=0; i<m_delay_mask*NWRDWIDTH; i++)
+	for(unsigned i=0; i<m_delay_mask; i++)
 		m_fifo_ack[i] = 0;
-	m_delay_mask-=1; m_delay_mask *= NWRDWIDTH;
+	m_delay_mask-=1;
 	m_head = 0; m_tail = (m_head - delay)&m_delay_mask;
 }
 
@@ -103,78 +103,88 @@ void	MEMSIM::load(const char *fname) {
 
 void	MEMSIM::load(const unsigned int addr, const char *buf, const size_t len) {
 	memcpy(&m_mem[addr], buf, len);
-	byteswapbuf(len, &m_mem[addr]);
+	byteswapbuf(len/sizeof(BUSW), &m_mem[addr]);
 }
 
 void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 		const BUSW wb_addr, const uint32_t *wb_data, const short wb_sel,
-		unsigned char &o_ack, unsigned char &o_stall, uint32_t *o_data){
+		unsigned char &o_stall, unsigned char &o_ack, uint32_t *o_data){
 	unsigned	sel = 0, addr = wb_addr*NWRDWIDTH;
 	const uint32_t	*sp = &wb_data[NWRDWIDTH-1];
 	uint32_t	*dp = &o_data[NWRDWIDTH-1];
 	uint32_t	wbsel = ((unsigned)wb_sel)&0x0ffff;
+	bool		DEBUG = false;
 
 	if (!wb_cyc) {
 		o_ack = 0;
 		o_stall= 0;
-		for(unsigned k=0; k<NWRDWIDTH; k++) {
-			m_head++;
-			m_tail = (m_head - m_delay)&m_delay_mask;
-			m_head&=m_delay_mask;
-			m_fifo_ack[m_head] = 0;
-		}
+		m_head = 0;
+		m_tail = (m_head - m_delay)&m_delay_mask;
+		for(unsigned k=0; k<m_delay_mask+1; k++)
+			m_fifo_ack[k] = 0;
 		return;
 	}
 
-	if ((0)&&(wb_stb)&&(wb_we))
-		printf("MEMSIM::WR[%08x]&%5x: ", wb_addr, wbsel);
+	if ((DEBUG)&&(wb_stb)&&(wb_we)) {
+		printf("MEMSIM::WR[%08x]&%0*x: <- ", addr * NWRDWIDTH,
+				(NWRDWIDTH*32/8/4),wbsel);
+		for(unsigned k=0; k<NWRDWIDTH; k++)
+			printf("%08x%s",
+				wb_data[(NWRDWIDTH-1)-k],
+				(k<NWRDWIDTH-1)?":":"");
 
-	m_head += 4;
-	m_tail = (m_head - m_delay*4)&m_delay_mask;
+		printf("\n");
+	}
+
+	m_head++;
+	m_tail = (m_head - m_delay)&m_delay_mask;
 	m_head &= m_delay_mask;
 
-	for(unsigned k=0; k<NWRDWIDTH; k++) {
-		o_ack = m_fifo_ack[ m_tail + k];
-		*dp-- = m_fifo_data[m_tail + k];
+	o_stall= 0;
+	o_ack = m_fifo_ack[m_tail];
+	m_fifo_ack[m_head] = 0;
 
-		m_fifo_ack[ m_head + k] = 0;
-		m_fifo_data[m_head + k] = 0;
+	for(unsigned k=0; k<NWRDWIDTH; k++)
+		*dp-- = m_fifo_data[m_tail*NWRDWIDTH + k];
 
-		o_stall= 0;
-		if ((wb_cyc)&&(wb_stb)) {
-			if (wb_we) {
-				unsigned dsel  = ((unsigned)wbsel) >> ((NWRDWIDTH-1-k)*4);
+	if (wb_cyc && wb_stb) {
+		m_fifo_ack[m_head] = 1;
 
-				if ((dsel&0x0f)==0x0f) {
-					uint32_t memv = *sp--;
-					if (0) printf("%02x:%02x:%02x:%02x  ",
-						(memv>>24)&0x0ff,
-						(memv>>16)&0x0ff,
-						(memv>> 8)&0x0ff,
-						memv&0x0ff);
-					m_mem[addr & m_mask] = memv;
-				} else {
-					uint32_t memv = m_mem[addr & m_mask];
+		if (wb_we) { for(unsigned k=0; k<NWRDWIDTH; k++) {
 
-					sel = 0;
-					if (dsel&0x8)
-						sel |= 0x0ff000000;
-					if (dsel&0x4)
-						sel |= 0x000ff0000;
-					if (dsel&0x2)
-						sel |= 0x00000ff00;
-					if (dsel&0x1)
-						sel |= 0x0000000ff;
+			unsigned dsel  = ((unsigned)wbsel)>>((NWRDWIDTH-1-k)*4);
+			dsel &= 0x0f;
 
-					memv &= ~sel;
-					memv |= (*sp-- & sel);
-					m_mem[addr & m_mask] = memv;
+			if ((dsel&0x0f)==0x0f) {
+				uint32_t memv = *sp--;
+				if (DEBUG) printf("MEMSIM: %02x:%02x:%02x:%02x\n",
+					(memv>>24)&0x0ff,
+					(memv>>16)&0x0ff,
+					(memv>> 8)&0x0ff,
+					memv&0x0ff);
+				m_mem[(addr+k) & m_mask] = memv;
+			} else {
+				uint32_t memv = m_mem[(addr+k)&m_mask];
 
-					if (0) {
+				sel = 0;
+				if (dsel&0x8)
+					sel |= 0x0ff000000;
+				if (dsel&0x4)
+					sel |= 0x000ff0000;
+				if (dsel&0x2)
+					sel |= 0x00000ff00;
+				if (dsel&0x1)
+					sel |= 0x0000000ff;
+
+				memv &= ~sel;
+				memv |= (*sp-- & sel);
+				m_mem[(addr+k) & m_mask] = memv;
+
+				if (DEBUG) {
 					if (sel&0x0ff000000)
-						printf("%02x:", (memv>>24)&0x0ff);
+						printf("MEMSIM: %02x:", (memv>>24)&0x0ff);
 					else
-						printf("--:");
+						printf("MEMSIM: --:");
 
 					if (sel&0x0ff0000)
 						printf("%02x:", (memv>>16)&0x0ff);
@@ -190,30 +200,30 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 						printf("%02x  ", (memv)&0x0ff);
 					else
 						printf("--  ");
-					}
+
+					printf("\n");
 				}
 			}
-			m_fifo_ack[m_head + k] = 1;
-			m_fifo_data[m_head + k] = m_mem[addr & m_mask];
-// #define	DEBUG
-#ifdef	DEBUG
-			printf("MEMBUS %s[%08x] = %08x\n",
-				(wb_we)?"W":"R",
-				addr&m_mask,
-				m_mem[addr&m_mask]);
-#endif
-		// o_ack  = 1;
-		}
+		}} else { for(unsigned k=0; k<NWRDWIDTH; k++) {
+			// if (!wb_we)
+			m_fifo_data[m_head*NWRDWIDTH + k] = m_mem[(addr+k) & m_mask];
+		}}
 
-#ifdef	DEBUG
-		if (o_ack) {
-			printf("MEMBUS -- ACK %s 0x%08x - 0x%08x\n",
-				(wb_we)?"WRITE":"READ ",
-				addr, dp[1]);
+		if (DEBUG) {
+			printf("MEMBUS %s[%08x] = ",
+				(wb_we)?"W":"R", addr << 2);
+			for(unsigned k=0; k<NWRDWIDTH; k++)
+				printf("%08x%s",
+					m_mem[(addr+k)&m_mask],
+					(k < NWRDWIDTH-1) ? ":":"\n");
 		}
-#endif
-		addr++;
 	}
 
+	if (DEBUG && o_ack) {
+		printf("MEMBUS -- ACK: ");
+		for(unsigned k=0; k<NWRDWIDTH; k++)
+			printf("%08x%s", o_data[(NWRDWIDTH-1)-k],
+				(k < NWRDWIDTH-1) ? ":":"\n");
+	}
 	// if ((wb_stb)&&(wb_we)) printf("\n");
 }

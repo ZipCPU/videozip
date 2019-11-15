@@ -48,6 +48,8 @@ CPUDR := cpu
 BASE  := main
 
 .DELETE_ON_ERROR:
+.PHONY: test
+test: $(VOBJ)/V$(BASE)__ALL.a
 SUBMAKE := $(MAKE) --no-print-directory -C $(VOBJ) -f
 ifeq ($(VERILATOR_ROOT),)
 VERILATOR := verilator
@@ -144,6 +146,7 @@ clean:
 	rm -rf $(VDIRFB)/*.cpp
 	rm -rf $(VDIRFB)/*.h
 	rm -rf $(VDIRFB)/
+	rm -rf $(VOBJ)/ design.h cpudefs.h
 
 #
 # Note Verilator's dependency created information, and include it here if we

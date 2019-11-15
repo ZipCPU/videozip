@@ -41,6 +41,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype none
+//
 // Goal: single clock pipeline, 50 slices or less
 //
 module	wbureadcw(i_clk, i_stb, i_valid, i_hexbits,
@@ -82,6 +84,8 @@ module	wbureadcw(i_clk, i_stb, i_valid, i_hexbits,
 		r_len <= r_len + 3'h1;
 
 	reg	[35:0]	shiftreg;
+
+	initial	shiftreg = 0;
 	always @(posedge i_clk)
 	if (w_stb)
 		shiftreg[35:30] <= i_hexbits;
@@ -95,6 +99,7 @@ module	wbureadcw(i_clk, i_stb, i_valid, i_hexbits,
 	default: begin end
 	endcase
 
+	initial	lastcw = 2'b00;
 	always @(posedge i_clk)
 	if (o_stb)
 		lastcw <= o_codword[35:34];
@@ -124,6 +129,7 @@ module	wbureadcw(i_clk, i_stb, i_valid, i_hexbits,
 	end else if (w_stb)
 		cw_len <= 0;
 
+	initial	o_stb = 1'b0;
 	always @(posedge i_clk)
 		o_stb <= w_stb;
 
