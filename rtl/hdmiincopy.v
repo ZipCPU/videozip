@@ -45,7 +45,7 @@ module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 			i_wb_pix_line, i_wb_nlines,
 		i_pix_npix, i_pix_nlines,
 		o_wb_cyc, o_wb_stb, o_wb_addr, o_wb_data,
-			i_wb_ack, i_wb_stall, i_wb_err);
+			i_wb_stall, i_wb_ack, i_wb_err);
 	parameter	XBITS=13, YBITS=11, FRAMEBITS=(XBITS+YBITS+1),
 			AW=24;
 	input	wire	i_wb_clk, i_pix_clk, i_reset;
@@ -65,7 +65,7 @@ module	hdmiincopy(i_wb_clk, i_pix_clk, i_reset,
 	output	reg			o_wb_cyc, o_wb_stb;
 	output	reg	[(AW-1):0]	o_wb_addr;
 	output	reg	[(128-1):0]	o_wb_data;
-	input	wire			i_wb_ack, i_wb_stall, i_wb_err;
+	input	wire			i_wb_stall, i_wb_ack, i_wb_err;
 
 
 	reg	[(XBITS-1):0]	pix_raw_line_len, pix_per_line, xloc;

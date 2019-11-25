@@ -71,20 +71,16 @@ CPUSOURCESnD := zipcpu.v cpuops.v pfcache.v pipemem.v div.v		\
 		wbdmac.v icontrol.v wbwatchdog.v busdelay.v cpudefs.v
 CPUSOURCES := $(addprefix $(CPUDR)/,$(CPUSOURCESnD))
 
-JTAGBUS := wbuconsole.v wbufifo.v wbucompactlines.v				\
-	wbucompress.v wbudecompress.v wbudeword.v wbuexec.v		\
-	wbuidleint.v wbuinput.v wbuoutput.v wbureadcw.v wbusixchar.v	\
-	wbutohex.v
+JTAGBUS :=
 NETSRCS := enetpacketst.v enetctrl.v					\
 	addecrc.v addemac.v addepad.v addepreamble.v			\
 	rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepreambl.v rxewrite.v
 HDMISRCS:= hdmisync.v hdmipixelsync.v hdmipxslip.v hdmihist.v		\
 	hdmipixel.v transferstb.v tmdsdecode.v				\
 	hdmigethmode.v hdmigetvmode.v hdmisync.v
-SCOPESRCS := wbscopc.v wbscope.v
-PERIPHERALS:= rtcdate.v rtcgps.v wbuart.v ufifo.v rxuart.v txuart.v	\
-	wbicapetwo.v sdspi.v gpsclock_tb.v gpsclock.v wboledbw.v lloled.v \
-	memdev.v spio.v wbi2cslave.v wbi2cmaster.v lli2cm.v qflexpress.v
+SCOPESRCS := # wbscopc.v wbscope.v
+PERIPHERALS:= wbicapetwo.v gpsclock_tb.v gpsclock.v wboledbw.v lloled.v \
+	memdev.v spio.v wbi2c/wbi2cslave.v wbi2c/wbi2cmaster.v lli2cm.v qflexpress.v
 BIGMATH:= bigadd.v bigsmpy.v bigsub.v
 SOURCES := main.v builddate.v $(SCOPESRCS)				\
 	$(CPUSOURCES) $(JTAGBUS) $(PERIPHERALS) $(BIGMATH) $(HDMISRCS)

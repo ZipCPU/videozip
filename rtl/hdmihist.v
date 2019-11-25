@@ -39,7 +39,7 @@
 //
 module	hdmihist(i_wb_clk, i_hclk, i_pps, i_hdmi_r, i_hdmi_g, i_hdmi_b,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-		o_wb_ack, o_wb_stall, o_wb_data);
+		o_wb_stall, o_wb_ack, o_wb_data);
 	input	wire		i_wb_clk, i_hclk, i_pps;
 	input	wire	[9:0]	i_hdmi_r, i_hdmi_g, i_hdmi_b;
 	// Wishbone inputs
@@ -47,8 +47,8 @@ module	hdmihist(i_wb_clk, i_hclk, i_pps, i_hdmi_r, i_hdmi_g, i_hdmi_b,
 	input	wire	[1:0]	i_wb_addr;
 	input	wire	[31:0]	i_wb_data;
 	// WB outputs
-	output	reg		o_wb_ack;
 	output	wire		o_wb_stall;
+	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
 
 
@@ -132,14 +132,17 @@ module	hdmihist(i_wb_clk, i_hclk, i_pps, i_hdmi_r, i_hdmi_g, i_hdmi_b,
 
 	// Now, let's handle our wishbone outputs
 	always @(posedge i_wb_clk)
-		case(i_wb_addr)
-		2'b00: o_wb_data <= { 2'h0, r_match_r, r_match_g, r_match_g };
-		2'b01: o_wb_data <= hs_r_out;
-		2'b10: o_wb_data <= hs_g_out;
-		2'b11: o_wb_data <= hs_b_out;
-		endcase
+	case(i_wb_addr)
+	2'b00: o_wb_data <= { 2'h0, r_match_r, r_match_g, r_match_g };
+	2'b01: o_wb_data <= hs_r_out;
+	2'b10: o_wb_data <= hs_g_out;
+	2'b11: o_wb_data <= hs_b_out;
+	endcase
+
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_wb_clk)
 		o_wb_ack <= i_wb_stb;
+
 	assign	o_wb_stall = 1'b0;
 
 endmodule

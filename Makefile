@@ -40,6 +40,10 @@
 .PHONY: all
 all:	check-install datestamp autodata rtl sim sw
 #
+#
+AUTOD := autodata
+SIMD  := sim/verilated
+#
 # Could also depend upon load, if desired, but not necessary
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
 SIM   := `find sim -name Makefile` `find sim -name "*.cpp"` `find sim -name "*.h"` `find sim -name "*.c"`
@@ -53,7 +57,7 @@ DEVSW := `find sw/board -name "*.cpp"` `find sw/board -name "*.h"` \
 	`find sw/board -name Makefile`
 PROJ  :=
 BIN  := `find xilinx -name "*.bit"`
-AUTODATA := `find auto-data -name "*.txt"` `find auto-data -name Makefile`
+AUTODATA := `find $(AUTOD) -name "*.txt"` `find $(AUTOD) -name Makefile`
 CONSTRAINTS := `find . -name "*.xdc"`
 YYMMDD:=`date +%Y%m%d`
 SUBMAKE:= $(MAKE) --no-print-directory -C
@@ -118,20 +122,21 @@ archive:
 #
 .PHONY: autodata
 autodata: datestamp check-autofpga
-	$(SUBMAKE) auto-data
-	$(call copyif-changed,auto-data/toplevel.v,rtl/toplevel.v)
-	$(call copyif-changed,auto-data/main.v,rtl/main.v)
-	$(call copyif-changed,auto-data/iscachable.v,rtl/iscachable.v)
-	$(call copyif-changed,auto-data/build.xdc,rtl/board.xdc)
-	$(call copyif-changed,auto-data/regdefs.h,sw/host/regdefs.h)
-	$(call copyif-changed,auto-data/regdefs.cpp,sw/host/regdefs.cpp)
-	$(call copyif-changed,auto-data/board.h,sw/zlib/board.h)
-	$(call copyif-changed,auto-data/board.h,sw/board/board.h)
-	$(call copyif-changed,auto-data/bkram.ld,sw/board/bkram.ld)
-	$(call copyif-changed,auto-data/board.ld,sw/board/board.ld)
-	$(call copyif-changed,auto-data/rtl.make.inc,rtl/make.inc)
-	$(call copyif-changed,auto-data/testb.h,sim/verilated/testb.h)
-	$(call copyif-changed,auto-data/main_tb.cpp,sim/verilated/main_tb.cpp)
+	$(SUBMAKE) $(AUTOD)
+	$(call copyif-changed,$(AUTOD)/toplevel.v,rtl/toplevel.v)
+	$(call copyif-changed,$(AUTOD)/main.v,rtl/main.v)
+	$(call copyif-changed,$(AUTOD)/iscachable.v,rtl/iscachable.v)
+	$(call copyif-changed,$(AUTOD)/iscachable.v,rtl/cpu/iscachable.v)
+	$(call copyif-changed,$(AUTOD)/build.xdc,rtl/board.xdc)
+	$(call copyif-changed,$(AUTOD)/regdefs.h,sw/host/regdefs.h)
+	$(call copyif-changed,$(AUTOD)/regdefs.cpp,sw/host/regdefs.cpp)
+	$(call copyif-changed,$(AUTOD)/board.h,sw/zlib/board.h)
+	$(call copyif-changed,$(AUTOD)/board.h,sw/board/board.h)
+	$(call copyif-changed,$(AUTOD)/bkram.ld,sw/board/bkram.ld)
+	$(call copyif-changed,$(AUTOD)/board.ld,sw/board/board.ld)
+	$(call copyif-changed,$(AUTOD)/rtl.make.inc,rtl/make.inc)
+	$(call copyif-changed,$(AUTOD)/testb.h,sim/verilated/testb.h)
+	$(call copyif-changed,$(AUTOD)/main_tb.cpp,sim/verilated/main_tb.cpp)
 
 #
 #
@@ -139,7 +144,7 @@ autodata: datestamp check-autofpga
 # simulation class library that we can then use for simulation
 #
 .PHONY: verilated
-verilated: check-verilator
+verilated: datestamp check-verilator
 	+@$(SUBMAKE) rtl
 
 .PHONY: rtl
@@ -187,6 +192,14 @@ sw-board: check-zip-gcc sw-zlib
 
 #
 #
+# Build the board software.  This may (or may not) use the software library
+#
+.PHONY: sw-boot
+sw-boot: check-zip-gcc sw-zlib
+	+@$(SUBMAKE) sw/boot
+
+#
+#
 # Run "Hello World", and ... see if this all works
 #
 .PHONY: hello
@@ -223,7 +236,7 @@ endef
 
 .PHONY: clean
 clean:
-	+$(SUBMAKE) auto-data     clean
+	+$(SUBMAKE) $(AUTOD)      clean
 	+$(SUBMAKE) sim/verilated clean
 	+$(SUBMAKE) rtl           clean
 	+$(SUBMAKE) sw/zlib       clean

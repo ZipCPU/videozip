@@ -161,6 +161,7 @@ module	wbicapetwo(i_clk,
 	reg	[4:0]	state;
 	initial	state = `MBOOT_IDLE;
 	initial	cfg_cs_n = 1'b1;
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 	begin
 		// In general, o_wb_ack is always zero.  The exceptions to this

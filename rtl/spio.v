@@ -125,6 +125,8 @@ module	spio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 		o_led <= r_led[NLEDS-1:0];
 
 	assign	o_wb_stall = 1'b0;
+
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 		o_wb_ack <= (i_wb_stb);
 

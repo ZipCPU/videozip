@@ -63,7 +63,7 @@
 `default_nettype	none
 //
 module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-		o_wb_ack, o_wb_stall, o_wb_data,
+		o_wb_stall, o_wb_ack, o_wb_data,
 		o_csn, o_sck, i_miso,
 		o_int);
 	parameter [4:0]			TIMING_BITS = 5'd20;
@@ -79,8 +79,8 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr;
 	input	wire	[31:0]	i_wb_data;
 	//
-	output	reg		o_wb_ack;
 	output	wire		o_wb_stall;
+	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
 	//
 	output	wire		o_csn, o_sck;
@@ -146,8 +146,11 @@ module	wbmic(i_clk, i_rst, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 	initial	pre_ack = 1'b0;
 	always @(posedge i_clk)
 		pre_ack <= (i_wb_stb)&&(!i_rst);
+
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 		o_wb_ack <= (pre_ack)&&(i_wb_cyc)&&(!i_rst);
+
 	assign	o_wb_stall = 1'b0;
 
 	smpladc	#(CKPCK)

@@ -84,11 +84,11 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 		i_r, i_g, i_b,
 		// Control interface
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_ack, o_wb_stall, o_wb_data,
+			o_wb_stall, o_wb_ack, o_wb_data,
 		// Bus-master, pixel writing interface
 		o_pix_cyc, o_pix_stb, o_pix_we, o_pix_addr,
 			o_pix_data, o_pix_sel,
-			i_pix_ack, i_pix_stall, i_pix_err,
+			i_pix_stall, i_pix_ack, i_pix_err,
 		o_vsync_int,
 		o_copy_pixels,
 		o_dbg_scope);
@@ -106,15 +106,15 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 	input	wire	[3:0]	i_wb_addr;
 	input	wire	[31:0]	i_wb_data;
 	input	wire	[3:0]	i_wb_sel;
-	output	reg		o_wb_ack;
 	output	wire		o_wb_stall;
+	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
 	//
 	output	wire			o_pix_cyc, o_pix_stb, o_pix_we;
 	output	wire	[(AW-1):0]	o_pix_addr;
 	output	wire	[127:0]		o_pix_data;
 	output	wire	[15:0]		o_pix_sel;
-	input	wire			i_pix_ack, i_pix_stall,
+	input	wire			i_pix_stall, i_pix_ack,
 					i_pix_err;
 	//
 	output	wire		o_vsync_int;
@@ -455,8 +455,10 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 		default: o_wb_data <= 32'h0;
 		endcase
 
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_wb_clk)
 		o_wb_ack <= i_wb_stb;
+
 	assign	o_wb_stall = 1'b0;
 
 	//
@@ -498,7 +500,7 @@ module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 			xpix_pline,  xpix_nlines,
 			wh_npix[(XBITS-1):0], wv_nlines[(YBITS-1):0],
 			o_pix_cyc, o_pix_stb, o_pix_addr, o_pix_data,
-				i_pix_ack, i_pix_stall, i_pix_err);
+				i_pix_stall, i_pix_ack, i_pix_err);
 	assign	o_pix_we = 1'b1;
 	assign	o_pix_sel = 16'h7777;
 

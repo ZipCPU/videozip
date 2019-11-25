@@ -40,7 +40,7 @@
 module	wbcrossclk(i_wb_clk,
 		// The input bus
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_ack, o_wb_stall, o_wb_data, o_wb_err,
+			o_wb_stall, o_wb_ack, o_wb_data, o_wb_err,
 		// The delayed bus
 		i_xclk_clk,
 		o_xclk_cyc, o_xclk_stb, o_xclk_we, o_xclk_addr,o_xclk_data,o_xclk_sel,

@@ -58,6 +58,10 @@ module	rtcgps(i_clk, i_reset,
 		o_rtc_pps);
 	parameter	DEFAULT_SPEED = 32'd2814750; //2af31e = 2^48 / 100e6 MHz
 	parameter [0:0]	OPT_WRITE_DELAY = 1'b0;
+	parameter [0:0]	OPT_TIMER = 1'b1,
+			OPT_STOPWATCH = 1'b1,
+			OPT_ALARM = 1'b1;
+
 	//
 	input	wire		i_clk, i_reset;
 	//
@@ -77,31 +81,29 @@ module	rtcgps(i_clk, i_reset,
 	output	wire		o_rtc_pps;
 
 	reg	[31:0]	ckspeed;
+
+	wire	[21:0]	clock_data;
 	wire	[31:0]	alarm_data, timer_data;
 	wire	[30:0]	stopwatch_data;
-	wire	[21:0]	clock_data;
 	wire		sw_running, ck_ppd;
 
-	reg	ck_wr, tm_wr, sw_wr, al_wr, wr_zero;
+	reg		ck_wr, tm_wr, al_wr, wr_zero;
 	reg	[31:0]	wr_data;
-	reg	[3:3]	wr_sel;
 	reg	[2:0]	wr_valid;
 
 	initial	ck_wr = 1'b0;
 	initial	tm_wr = 1'b0;
-	initial	sw_wr = 1'b0;
 	initial	al_wr = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
 		ck_wr <= 1'b0;
 		tm_wr <= 1'b0;
-		sw_wr <= 1'b0;
 		al_wr <= 1'b0;
 	end else begin
 		ck_wr <= ((i_wb_stb)&&(i_wb_addr==2'b00)&&(i_wb_we));
 		tm_wr <= ((i_wb_stb)&&(i_wb_addr==2'b01)&&(i_wb_we));
-		sw_wr <= ((i_wb_stb)&&(i_wb_addr==2'b10)&&(i_wb_we));
+		//sw_wr<=((i_wb_stb)&&(i_wb_addr==2'b10)&&(i_wb_we));
 		al_wr <= ((i_wb_stb)&&(i_wb_addr==2'b11)&&(i_wb_we));
 	end
 
@@ -109,13 +111,12 @@ module	rtcgps(i_clk, i_reset,
 	begin
 
 		wr_data <= i_wb_data;
-		wr_sel[3]   <= i_wb_sel[3];
 		wr_valid[0] <= (i_wb_sel[0])&&(i_wb_data[3:0] <= 4'h9)
 				&&(i_wb_data[7:4] <= 4'h5);
 		wr_valid[1] <= (i_wb_sel[1])&&(i_wb_data[11:8] <= 4'h9)
 				&&(i_wb_data[15:12] <= 4'h5);
 		wr_valid[2] <= (i_wb_sel[2])&&(i_wb_data[19:16] <= 4'h9)
-				&&(i_wb_data[21:16] <= 6'h21);
+				&&(i_wb_data[21:16] <= 6'h23);
 		wr_zero     <= (i_wb_data[23:0]==0);
 	end
 
@@ -124,20 +125,66 @@ module	rtcgps(i_clk, i_reset,
 	rtcbare	clock(i_clk, i_reset, ck_pps,
 			ck_wr, wr_data[21:0], wr_valid, clock_data, ck_ppd);
 
-	rtctimer #(.LGSUBCK(8))
-		timer(i_clk, i_reset, ck_sub_carry,tm_wr, wr_data[24:0],
-			wr_valid, wr_zero, timer_data, tm_int);
+	generate if (OPT_TIMER)
+	begin : TIMER
+		rtctimer #(.LGSUBCK(8))
+			timer(i_clk, i_reset, ck_sub_carry,
+				tm_wr, wr_data[24:0],
+				wr_valid, wr_zero, timer_data, tm_int);
 
-	rtcstopwatch rtcstop(i_clk, i_reset, ckspeed,
-				(sw_wr)&&(wr_sel[3])&&(!sw_running),
-				(sw_wr)&&(wr_sel[3])&&(sw_running),
-				stopwatch_data,
-				sw_running);
+	end else begin : NO_TIMER
+		assign	tm_int = 0;
+		assign	timer_data = 0;
 
-	rtcalarm alarm(i_clk, i_reset, clock_data[21:0],
-				al_wr, wr_data[25], wr_data[24],
-					wr_data[21:0], wr_valid,
-				alarm_data, al_int);
+		// Verilator lint_off UNUSED
+		wire	unused_timer;
+		assign	unused_timer = tm_wr;
+		// Verilator lint_on  UNUSED
+
+	end endgenerate
+
+	generate if (OPT_STOPWATCH)
+	begin : STOPWATCH
+		reg	[2:0]	sw_ctrl;
+
+		initial	sw_ctrl = 0;
+		always @(posedge i_clk)
+		if (i_reset)
+			sw_ctrl <= 0;
+		else if (i_wb_stb && i_wb_we && i_wb_sel[0] && i_wb_addr == 2'b10)
+			sw_ctrl <= { i_wb_data[1:0], !i_wb_data[0] };
+		else
+			sw_ctrl <= 0;
+
+		rtcstopwatch rtcstop(i_clk, i_reset, ckspeed,
+			sw_ctrl[2], sw_ctrl[1], sw_ctrl[0],
+			stopwatch_data, sw_running);
+
+	end else begin : NO_STOPWATCH
+
+		assign stopwatch_data = 0;
+		assign sw_running = 0;
+
+	end endgenerate
+
+	generate if (OPT_ALARM)
+	begin : ALARM
+
+		rtcalarm alarm(i_clk, i_reset, clock_data[21:0],
+			al_wr, wr_data[25], wr_data[24], wr_data[21:0],
+			wr_valid, alarm_data, al_int);
+
+	end else begin : NO_ALARM
+
+		assign	alarm_data = 0;
+		assign	al_int = 0;
+
+		// Verilator lint_off UNUSED
+		wire	unused_alarm;
+		assign	unused_alarm = al_wr;
+		// Verilator lint_on  UNUSED
+
+	end endgenerate
 
 	reg	[39:0]	ck_counter;
 	reg		ck_carry, ck_sub_carry;
@@ -237,8 +284,8 @@ module	rtcgps(i_clk, i_reset,
 
 	// Make verilator happy
 	// verilator lint_off UNUSED
-	wire	[6:0] unused;
-	assign	unused = { i_wb_cyc, wr_data[31:26] };
+	wire	unused;
+	assign	unused = &{ 1'b0, i_wb_cyc, wr_data[31:26], i_wb_sel[3] };
 	// verilator lint_on  UNUSED
 
 `ifdef	FORMAL

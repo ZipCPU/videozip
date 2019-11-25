@@ -37,8 +37,9 @@
 //
 module	onepixel(i_wb_clk, i_data_clk,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-			o_wb_ack, o_wb_stall, o_wb_data,
+			o_wb_stall, o_wb_ack, o_wb_data,
 		i_data);
+
 	input	wire	i_wb_clk, i_data_clk;
 	// Wishbone bus inputs
 	input	wire	i_wb_cyc, i_wb_stb, i_wb_we;
@@ -75,8 +76,9 @@ module	onepixel(i_wb_clk, i_data_clk,
 		zcounter <= (counter == 0);
 
 	always @(posedge i_data_clk)
-		if (zcounter)
-			r_data_captured <= i_data;
+	if (zcounter)
+		r_data_captured <= i_data;
+
 	always @(posedge i_data_clk)
 		q_data_captured <= r_data_captured;
 	always @(posedge i_data_clk)
@@ -84,6 +86,8 @@ module	onepixel(i_wb_clk, i_data_clk,
 
 	always @(posedge i_wb_clk)
 		o_wb_data <= (i_wb_addr) ? wb_data_captured :r_wb_delay_counter;
+
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_wb_clk)
 		o_wb_ack <= i_wb_stb;
 

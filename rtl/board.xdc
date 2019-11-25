@@ -36,7 +36,7 @@ set_property -dict {PACKAGE_PIN D22 IOSTANDARD LVCMOS12} [get_ports i_btnd]
 set_property -dict {PACKAGE_PIN C22 IOSTANDARD LVCMOS12} [get_ports i_btnl]
 set_property -dict {PACKAGE_PIN D14 IOSTANDARD LVCMOS12} [get_ports i_btnr]
 set_property -dict {PACKAGE_PIN F15 IOSTANDARD LVCMOS12} [get_ports i_btnu]
-set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS15} [get_ports i_cpu_resetn]
+#set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS15} [get_ports i_cpu_resetn]
 
 
 ## Switches
@@ -61,33 +61,33 @@ set_property -dict {PACKAGE_PIN M17 IOSTANDARD LVCMOS12} [get_ports {i_sw[7]}]
 
 ## HDMI in
 set_property -dict { PACKAGE_PIN AA5   IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_in_cec   ]
-set_property -dict { PACKAGE_PIN W4    IOSTANDARD TMDS_33     } [get_ports   i_hdmi_in_clk_n  ]
-set_property -dict { PACKAGE_PIN V4    IOSTANDARD TMDS_33     } [get_ports   i_hdmi_in_clk_p  ]
+#set_property -dict { PACKAGE_PIN W4    IOSTANDARD TMDS_33     } [get_ports   i_hdmi_in_clk_n  ]
+#set_property -dict { PACKAGE_PIN V4    IOSTANDARD TMDS_33     } [get_ports   i_hdmi_in_clk_p  ]
 set_property -dict { PACKAGE_PIN AB12  IOSTANDARD LVCMOS25    } [get_ports   o_hdmi_in_hpa    ]
-set_property -dict { PACKAGE_PIN Y4    IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_in_scl   ]
-set_property -dict { PACKAGE_PIN AB5   IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_in_sda   ]
+#set_property -dict { PACKAGE_PIN Y4    IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_in_scl   ]
+#set_property -dict { PACKAGE_PIN AB5   IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_in_sda   ]
 set_property -dict { PACKAGE_PIN R3    IOSTANDARD LVCMOS33    } [get_ports   o_hdmi_in_txen   ]
-set_property -dict { PACKAGE_PIN AA3   IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[0] } ]; #IO_L9N_T1_DQS_34 Sch=hdmi_rx_n[0]
-set_property -dict { PACKAGE_PIN Y3    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[0] } ]; #IO_L9P_T1_DQS_34 Sch=hdmi_rx_p[0]
-set_property -dict { PACKAGE_PIN Y2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[1] } ]; #IO_L4N_T0_34 Sch=hdmi_rx_n[1]
-set_property -dict { PACKAGE_PIN W2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[1] } ]; #IO_L4P_T0_34 Sch=hdmi_rx_p[1]
-set_property -dict { PACKAGE_PIN V2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[2] } ]; #IO_L2N_T0_34 Sch=hdmi_rx_n[2]
-set_property -dict { PACKAGE_PIN U2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[2] } ]; #IO_L2P_T0_34 Sch=hdmi_rx_p[2]
+#set_property -dict { PACKAGE_PIN AA3   IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[0] } ]; #IO_L9N_T1_DQS_34 Sch=hdmi_rx_n[0]
+#set_property -dict { PACKAGE_PIN Y3    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[0] } ]; #IO_L9P_T1_DQS_34 Sch=hdmi_rx_p[0]
+#set_property -dict { PACKAGE_PIN Y2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[1] } ]; #IO_L4N_T0_34 Sch=hdmi_rx_n[1]
+#set_property -dict { PACKAGE_PIN W2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[1] } ]; #IO_L4P_T0_34 Sch=hdmi_rx_p[1]
+#set_property -dict { PACKAGE_PIN V2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_n[2] } ]; #IO_L2N_T0_34 Sch=hdmi_rx_n[2]
+#set_property -dict { PACKAGE_PIN U2    IOSTANDARD TMDS_33     } [get_ports { i_hdmi_in_p[2] } ]; #IO_L2P_T0_34 Sch=hdmi_rx_p[2]
 
 
 ## HDMI out
 set_property -dict { PACKAGE_PIN AA4   IOSTANDARD LVCMOS33    } [get_ports   io_hdmi_out_cec  ]
-set_property -dict { PACKAGE_PIN U1    IOSTANDARD TMDS_33     } [get_ports   o_hdmi_out_clk_n ]
-set_property -dict { PACKAGE_PIN T1    IOSTANDARD TMDS_33     } [get_ports   o_hdmi_out_clk_p ]
+#set_property -dict { PACKAGE_PIN U1    IOSTANDARD TMDS_33     } [get_ports   o_hdmi_out_clk_n ]
+#set_property -dict { PACKAGE_PIN T1    IOSTANDARD TMDS_33     } [get_ports   o_hdmi_out_clk_p ]
 set_property -dict { PACKAGE_PIN AB13  IOSTANDARD LVCMOS25    } [get_ports   i_hdmi_out_hpd_n   ]
-set_property -dict { PACKAGE_PIN U3    IOSTANDARD LVCMOS33    } [get_ports { io_hdmi_out_scl }]; #IO_L6P_T0_34 Sch=hdmi_tx_rscl
-set_property -dict { PACKAGE_PIN V3    IOSTANDARD LVCMOS33    } [get_ports { io_hdmi_out_sda }]; #IO_L6N_T0_VREF_34 Sch=hdmi_tx_rsda
-set_property -dict { PACKAGE_PIN Y1    IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[0] }]; #IO_L5N_T0_34 Sch=hdmi_tx_n[0]
-set_property -dict { PACKAGE_PIN W1    IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[0] }]; #IO_L5P_T0_34 Sch=hdmi_tx_p[0]
-set_property -dict { PACKAGE_PIN AB1   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[1] }]; #IO_L7N_T1_34 Sch=hdmi_tx_n[1]
-set_property -dict { PACKAGE_PIN AA1   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[1] }]; #IO_L7P_T1_34 Sch=hdmi_tx_p[1]
-set_property -dict { PACKAGE_PIN AB2   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[2] }]; #IO_L8N_T1_34 Sch=hdmi_tx_n[2]
-set_property -dict { PACKAGE_PIN AB3   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[2] }]; #IO_L8P_T1_34 Sch=hdmi_tx_p[2]
+#set_property -dict { PACKAGE_PIN U3    IOSTANDARD LVCMOS33    } [get_ports { io_hdmi_out_scl }]; #IO_L6P_T0_34 Sch=hdmi_tx_rscl
+#set_property -dict { PACKAGE_PIN V3    IOSTANDARD LVCMOS33    } [get_ports { io_hdmi_out_sda }]; #IO_L6N_T0_VREF_34 Sch=hdmi_tx_rsda
+#set_property -dict { PACKAGE_PIN Y1    IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[0] }]; #IO_L5N_T0_34 Sch=hdmi_tx_n[0]
+#set_property -dict { PACKAGE_PIN W1    IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[0] }]; #IO_L5P_T0_34 Sch=hdmi_tx_p[0]
+#set_property -dict { PACKAGE_PIN AB1   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[1] }]; #IO_L7N_T1_34 Sch=hdmi_tx_n[1]
+#set_property -dict { PACKAGE_PIN AA1   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[1] }]; #IO_L7P_T1_34 Sch=hdmi_tx_p[1]
+#set_property -dict { PACKAGE_PIN AB2   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_n[2] }]; #IO_L8N_T1_34 Sch=hdmi_tx_n[2]
+#set_property -dict { PACKAGE_PIN AB3   IOSTANDARD TMDS_33     } [get_ports { o_hdmi_out_p[2] }]; #IO_L8P_T1_34 Sch=hdmi_tx_p[2]
 
 
 ## Display Port
@@ -134,10 +134,10 @@ set_property -dict {PACKAGE_PIN AA18 IOSTANDARD LVCMOS33} [get_ports i_gps_pps]
 #set_property -dict { PACKAGE_PIN AA6   IOSTANDARD LVCMOS33 } [get_ports { jc[1] }]; #IO_L18N_T2_34 Sch=jc_n[1]
 #set_property -dict { PACKAGE_PIN AA8   IOSTANDARD LVCMOS33 } [get_ports { jc[2] }]; #IO_L22P_T3_34 Sch=jc_p[2]
 #set_property -dict { PACKAGE_PIN AB8   IOSTANDARD LVCMOS33 } [get_ports { jc[3] }]; #IO_L22N_T3_34 Sch=jc_n[2]
-set_property -dict { PACKAGE_PIN R6    IOSTANDARD LVCMOS33 } [get_ports { o_mic_csn }]; #IO_L17P_T2_34 Sch=jc_p[3]
+#set_property -dict { PACKAGE_PIN R6    IOSTANDARD LVCMOS33 } [get_ports { o_mic_csn }]; #IO_L17P_T2_34 Sch=jc_p[3]
 ## set_property -dict { PACKAGE_PIN T6    IOSTANDARD LVCMOS33 } [get_ports { jc[5] }]; #IO_L17N_T2_34 Sch=jc_n[3]
-set_property -dict { PACKAGE_PIN AB7   IOSTANDARD LVCMOS33 } [get_ports { i_mic_din }]; #IO_L20P_T3_34 Sch=jc_p[4]
-set_property -dict { PACKAGE_PIN AB6   IOSTANDARD LVCMOS33 } [get_ports { o_mic_sck }]; #IO_L20N_T3_34 Sch=jc_n[4]
+#set_property -dict { PACKAGE_PIN AB7   IOSTANDARD LVCMOS33 } [get_ports { i_mic_din }]; #IO_L20P_T3_34 Sch=jc_p[4]
+#set_property -dict { PACKAGE_PIN AB6   IOSTANDARD LVCMOS33 } [get_ports { o_mic_sck }]; #IO_L20N_T3_34 Sch=jc_n[4]
 
 
 ## XADC Header
@@ -200,8 +200,8 @@ set_property -dict { PACKAGE_PIN U15   IOSTANDARD LVCMOS25 } [get_ports { o_unus
 
 
 ## HID port
-set_property -dict {PACKAGE_PIN W17 IOSTANDARD LVCMOS33} [get_ports io_ps2_clk]
-set_property -dict {PACKAGE_PIN N13 IOSTANDARD LVCMOS33} [get_ports io_ps2_data]
+#set_property -dict {PACKAGE_PIN W17 IOSTANDARD LVCMOS33} [get_ports io_ps2_clk]
+#set_property -dict {PACKAGE_PIN N13 IOSTANDARD LVCMOS33} [get_ports io_ps2_data]
 
 
 ## QSPI
@@ -215,7 +215,7 @@ set_property -dict {PACKAGE_PIN R21 IOSTANDARD LVCMOS33} [get_ports {io_qspi_dat
 
 ## SD card
 set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports { o_sd_sck }]; #IO_L12P_T1_MRCC_14 Sch=sd_cclk
-set_property -dict {PACKAGE_PIN T18 IOSTANDARD LVCMOS33} [get_ports i_sd_cd]
+#set_property -dict {PACKAGE_PIN T18 IOSTANDARD LVCMOS33} [get_ports i_sd_cd]
 set_property -dict { PACKAGE_PIN W20   IOSTANDARD LVCMOS33 } [get_ports { io_sd_cmd }]; #IO_L12N_T1_MRCC_14 Sch=sd_cmd
 set_property -dict { PACKAGE_PIN V19   IOSTANDARD LVCMOS33 } [get_ports { io_sd[0] }]; #IO_L14N_T2_SRCC_14 Sch=sd_d[0]
 set_property -dict { PACKAGE_PIN T21   IOSTANDARD LVCMOS33 } [get_ports { io_sd[1] }]; #IO_L4P_T0_D04_14 Sch=sd_d[1]
@@ -319,19 +319,6 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 
 ## Adding in any XDC_INSERT tags
 
-## From enetscope
-#//
-#// NETSCOPE: WB-Bus to scope data
-#// Chosen maximum delay is 8
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*br_*}]            -to [get_cells -hier -filter {NAME=~*enetscopei*/*q_*}] 8
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*br_*}]            -to [get_cells -hier -filter {NAME=~*enetscopei*/*dr_*}] 8
-#//
-#// NETSCOPE: Scope data to WB-bus clock
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei/r_reset_complete*}] -to [get_cells -hier -filter {NAME=~*enetscopei*/q_*}] 8
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei/dr_*}]              -to [get_cells -hier -filter {NAME=~*enetscopei*/q_*}] 8
-#//
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *enetscopei*/*waddr*}]          -to [get_cells -hier -filter {NAME=~*enetscopei*/*this_addr*}] 8
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/*}]                     -to [get_cells -hier -filter {NAME=~*enetscopei*/o_bus_data*}] 8
 ## From netp
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/tx*}]              -to [get_cells -hier -filter {NAME=~*netctrl/n_tx*}]               8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/hw_mac*}]          -to [get_cells -hier -filter {NAME=~*netctrl/txmaci/r_hw*}]        8.0
@@ -345,7 +332,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/n_s
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netctrl/txspdi/o_ck*}]    -to [get_cells -hier -filter {NAME=~*txck/ODDRi*}]          8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_tx_reset*}]          8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *o_sys_reset*}]            -to [get_cells -hier -filter {NAME=~*netctrl/q_rx_reset*}]          8.0
-## From netrxctr
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetrxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknetrxctrctr/q_*}]        8
 ## From nettxctr
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknettxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknettxctrctr/q_*}]        8
+## From netclockctr
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetclockctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknetclockctrctr/q_*}]        8

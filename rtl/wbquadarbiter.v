@@ -39,15 +39,15 @@
 `define	WBA_ALTERNATING
 module	wbquadarbiter(i_clk, i_rst, 
 	// Bus A
-	i_a_cyc, i_a_stb, i_a_we, i_a_adr, i_a_dat, i_a_sel, o_a_ack, o_a_stall, o_a_err,
+	i_a_cyc, i_a_stb, i_a_we, i_a_adr, i_a_dat, i_a_sel, o_a_stall, o_a_ack, o_a_err,
 	// Bus B
-	i_b_cyc, i_b_stb, i_b_we, i_b_adr, i_b_dat, i_b_sel, o_b_ack, o_b_stall, o_b_err,
+	i_b_cyc, i_b_stb, i_b_we, i_b_adr, i_b_dat, i_b_sel, o_b_stall, o_b_ack, o_b_err,
 	// Bus C
-	i_c_cyc, i_c_stb, i_c_we, i_c_adr, i_c_dat, i_c_sel, o_c_ack, o_c_stall, o_c_err,
+	i_c_cyc, i_c_stb, i_c_we, i_c_adr, i_c_dat, i_c_sel, o_c_stall, o_c_ack, o_c_err,
 	// Bus D
-	i_d_cyc, i_d_stb, i_d_we, i_d_adr, i_d_dat, i_d_sel, o_d_ack, o_d_stall, o_d_err,
+	i_d_cyc, i_d_stb, i_d_we, i_d_adr, i_d_dat, i_d_sel, o_d_stall, o_d_ack, o_d_err,
 	// Both buses
-	o_cyc, o_stb, o_we, o_adr, o_dat, o_sel, i_ack, i_stall, i_err);
+	o_cyc, o_stb, o_we, o_adr, o_dat, o_sel, i_stall, i_ack, i_err);
 	// 18 bits will address one GB, 4 bytes at a time.
 	// 19 bits will allow the ability to address things other than just
 	// the 1GB of memory we are expecting.

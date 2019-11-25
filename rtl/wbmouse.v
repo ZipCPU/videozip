@@ -43,7 +43,7 @@ module	wbmouse(i_clk,
 		// Wishbone accesses, read only interface ... saving
 		//	that any writes will reset the mouse interface
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-		o_wb_ack, o_wb_stall, o_wb_data, 
+		o_wb_stall, o_wb_ack, o_wb_data, 
 		// Actual mouse interface
 		i_ps2, o_ps2,
 		// Interface to other things on the board
@@ -54,8 +54,8 @@ module	wbmouse(i_clk,
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
 	input	wire	[1:0]	i_wb_addr;
 	input	wire	[31:0]	i_wb_data;
-	output	reg		o_wb_ack;
 	output	wire		o_wb_stall;
+	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
 	// Mouse interface
 	input	wire	[1:0]	i_ps2;
@@ -122,6 +122,7 @@ module	wbmouse(i_clk,
 		2'b11: o_wb_data <= {4'h0, m_xrows, 4'h0, m_ylines };
 		endcase
 
+	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 		o_wb_ack <= i_wb_stb;
 	assign	o_wb_stall = 1'b0;

@@ -1,11 +1,11 @@
 ################################################################################
 ##
-## Filename: 	rtccount.txt
+## Filename: 	xpander.txt
 ##
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	Define a very simple peripheral that counts fractions of a
-##		second since startup.
+## Purpose:	To describe a simple peripheral capable of expanding a bus from
+##		one data width (32) to another (128)
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -36,17 +36,25 @@
 ################################################################################
 ##
 ##
-@PREFIX=rtccount
-@NADDR=1
-@SLAVE.TYPE=SINGLE
+@PREFIX=xpand
+@$NADDR=(1<<@$(AWID))
+@SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
-@$STEP=(1<<32)/@$(CLOCK.FREQUENCY)
-@MAIN.DEFNS=
-	reg	[31:0]	r_@$(PREFIX)_data;
+@SLAVE.CLOCK=clk
+@BUS=rambus
+@BUS.CLOCK=clk
+@MASTER.BUS=rambus
+## @MASTER.BUS.CLOCK=clk
+@MASTER.TYPE=SUBBUS
+# XPand bus transactions are 128 bits wide
+# Hence we need 4 fewer bus wires than would be necessary for
+@$AWID=@$(MASTER.BUS.AWID)+2
+@ERROR.WIRE=@$(SLAVE.PREFIX)_err
 @MAIN.INSERT=
-	initial	r_@$(PREFIX)_data = 32'h0;
-	always @(posedge i_clk)
-		r_@$(PREFIX)_data <= r_@$(PREFIX) + @$(STEP);
-	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
-@REGS.N=1
-@REGS.0= 0 R_RTCCOUNT RTCCOUNT
+	busexpander #(.AWIN(@$(AWID)), .DWIN(@$(SLAVE.BUS.WIDTH)),
+			.DWOUT(@$(MASTER.BUS.WIDTH)))
+		@$(PREFIX)i@$(SLAVE.BUS.WIDTH)x@$(MASTER.BUS.WIDTH)(
+			@$(SLAVE.BUS.CLOCK.WIRE), i_reset,
+			@$(SLAVE.PORTLIST),
+			//
+			@$(MASTER.PORTLIST));

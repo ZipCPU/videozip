@@ -100,13 +100,14 @@
 @MAIN.INSERT=
 	initial	r_@$(PREFIX)_data = 31'd20;
 	always @(posedge @$(SLAVE.BUS.CLOCK.WIRE))
-		if ((wb_stb)&&(wb_we)&&(@$(PREFIX)_sel))
-			r_@$(PREFIX)_data <= wb_data[30:0];
+	if (@$(SLAVE.PREFIX)_stb && @$(SLAVE.PREFIX)_we)
+		r_@$(PREFIX)_data <= @$(SLAVE.PREFIX)_data[30:0];
+
 	always @(posedge @$(SLAVE.BUS.CLOCK.WIRE))
-		r_@$(PREFIX)_ack <= ((wb_stb)&&(wb_we)&&(@$(PREFIX)_sel));
-	assign	@$(PREFIX)_ack   = r_@$(PREFIX)_ack;
-	assign	@$(PREFIX)_stall = 1'b0;
-	assign	@$(PREFIX)_data = { i_@$(PREFIX)_pll_locked, r_@$(PREFIX)_data };
+		r_@$(PREFIX)_ack <= (@$(SLAVE.PREFIX)_stb)&&(@$(SLAVE.PREFIX)_we);
+	assign	@$(SLAVE.PREFIX)_ack   = r_@$(PREFIX)_ack;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_idata = { i_@$(PREFIX)_pll_locked, r_@$(PREFIX)_data };
 	assign	o_@$(PREFIX)_ce = r_@$(PREFIX)_data[30];
 
 	genclk	clock_generator(@$(SLAVE.BUS.CLOCK.WIRE),

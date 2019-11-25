@@ -286,4 +286,5 @@ typedef	struct @$(DEVID)_S {
 			*/
 ##
 @RTL.MAKE.GROUP= SDSPI
+@RTL.MAKE.SUBD=sdspi
 @RTL.MAKE.FILES= sdspi.v llsdspi.v spicmd.v spirxdata.v spitxdata.v

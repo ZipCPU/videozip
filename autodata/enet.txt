@@ -58,7 +58,7 @@
 
 `else
 
-// These don't need to be defined here, and it deed should not be defined here
+// These don't need to be defined here, and indeed should not be defined here
 // lest their definitions override those of the netb interface defined in the
 // enetpackets module
 //

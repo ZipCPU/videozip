@@ -1350,7 +1350,7 @@ module	wbxbar(i_clk, i_reset,
 	// assert that any time we read from this special slave, the special
 	// value is returned.
 	reg	[2:0]	f_read_seq;
-	reg		f_read_ack, f_read_sstall;
+	reg		f_read_stall, f_read_ack;
 
 	initial	f_read_sstall = 0;
 	always @(posedge i_clk)
@@ -1436,7 +1436,7 @@ module	wbxbar(i_clk, i_reset,
 	// write to our special address, we want to assert that the special
 	// value at that address can be written.
 	reg	[2:0]	f_write_seq;
-	reg		f_write_ack, f_write_sstall;
+	reg		f_write_stall, f_write_ack;
 
 	initial	f_write_sstall = 0;
 	always @(posedge i_clk)

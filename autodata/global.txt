@@ -35,7 +35,7 @@
 ################################################################################
 ##
 ##
-@LEGAL=../auto-data/legalgen.txt
+@LEGAL=../autodata/legalgen.txt
 @PROJECT=VideoZip, a ZipCPU SoC supporting video functionality
 #
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have

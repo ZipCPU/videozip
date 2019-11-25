@@ -48,11 +48,11 @@ all:	data
 # main project files.
 #
 BASE    := global.txt icape.txt # dlyarbiter not necessary with new AutoFPGA
-AUX     := version.txt buserr.txt pic.txt pwrcount.txt xpander.txt vidarbiter.txt
+AUX     := version.txt buserr.txt pic.txt pwrcount.txt xpander.txt # vidarbiter.txt
 IO      := spio.txt gpio.txt
 RTC     := rtcgps.txt rtcdate.txt
 DBGBUS  := wbuconsole.txt
-MEMORY  := bkram.txt flash.txt sdvidram.txt
+MEMORY  := bkram.txt flash.txt sdram.txt
 CPU     := zipmaster.txt
 NETWORK := mdio.txt enet.txt
 GPS     := gps.txt

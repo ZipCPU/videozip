@@ -1,10 +1,11 @@
 ################################################################################
 ##
-## Filename: 	rtcdate.txt
+## Filename: 	scopc.txt
 ##
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	
+## Purpose:	A generic scope description, from which other internal wbscopes
+##		may depend upon
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -35,24 +36,14 @@
 ################################################################################
 ##
 ##
-@PREFIX=rtcdate
-@DEVID=RTCDATE
-@NADDR=1
-@ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=RTC_ACCESS
-@SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-@MAIN.INSERT=
-	//
-	// The Calendar DATE
-	//
-	rtcdate	@$(PREFIX)i(i_clk, rtc_ppd,
-		@$(SLAVE.PORTLIST);
-@REGS.N=1
-@REGS.0= 0 R_@$(DEVID) @$(DEVID) DATE
-@BDEF.IONAME=	_@$(PREFIX)
-@BDEF.IOTYPE=	unsigned
-@BDEF.OSDEF=	_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=	static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$REGBASE);
-@RTL.MAKE.GROUP=@$(DEVID)
-@RTL.MAKE.FILES=rtcdate.v
+@PREFIX=scopc
+@DEVID=SCOPC
+@ACCESS=@$(DEVID)_SCOPC
+@CORE=wbscopc
+@REGS.NOTE=// @$(PREFIX) compressed scope
+@RTL.MAKE.GROUP=SCOPC
+@RTL.MAKE.SUBD=wbscope
+@RTL.MAKE.FILES=wbscopc.v
+@TRIGGER=@$(TARGET)_debug[31]
+@DEBUG=@$(TARGET)_debug[30:0]
+@INCLUDEFILE=wbscope.txt

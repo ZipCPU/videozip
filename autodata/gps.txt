@@ -64,7 +64,9 @@
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
 @MAIN.INSERT=
+	// Verilator lint_off UNUSED
 	wire	[1:0]	ck_dbg;
+	// Verilator lint_on  UNUSED
 
 	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
 		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
@@ -116,7 +118,7 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 `ifdef	GPSTRK_ACCESS
 	gpsclock_tb #(.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY)))
 		ppstb(i_clk, ck_pps, tb_pps,
-			@$(SLAVE.PORTLIST)
+			@$(SLAVE.PORTLIST),
 			gps_err, gps_now, gps_step);
 
 `ifdef	GPSTB

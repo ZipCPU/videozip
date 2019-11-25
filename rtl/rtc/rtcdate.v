@@ -54,7 +54,7 @@
 //
 `default_nettype	none
 //
-module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
+module rtcdate(i_clk, i_ppd, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 		o_wb_stall, o_wb_ack, o_wb_data);
 	input	wire		i_clk;
 	// A one part per day signal, i.e. basically a clock enable line that
@@ -63,7 +63,7 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 	// module to always have the right date.
 	input	wire		i_ppd;
 	// Wishbone inputs
-	input	wire		i_wb_cyc_stb, i_wb_we;
+	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
 	input	wire	[31:0]	i_wb_data;
 	input	wire	[3:0]	i_wb_sel;
 	// Wishbone outputs
@@ -73,20 +73,28 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 
 	wire		update;
 	reg	[9:0]	r_block_updates;
-	initial	r_block_updates = 10'h3ff;
-	always @(posedge i_clk)
-		if ((i_wb_we)&&(i_wb_cyc_stb))
-			r_block_updates <= 10'h3ff;
-		else
-			r_block_updates <= { r_block_updates[8:0], 1'b0 };
-	assign	update = (i_ppd)&&(!r_block_updates[9]);
-
 	reg	[5:0]	r_day;
 	reg	[4:0]	r_mon;
 	reg	[13:0]	r_year;
 
 	reg		last_day_of_month, last_day_of_year, is_leap_year;
 	reg	[5:0]	days_per_month;
+	reg		year_divisible_by_four, century_year, four_century_year;
+	reg	[5:0]	next_day, fixd_day;
+	reg	[4:0]	next_mon, fixd_mon;
+	reg	[13:0]	next_year;
+	reg	[2:0]	next_year_c;
+
+	initial	r_block_updates = 10'h3ff;
+	always @(posedge i_clk)
+	if ((i_wb_we)&&(i_wb_stb))
+		r_block_updates <= 10'h3ff;
+	else
+		r_block_updates <= { r_block_updates[8:0], 1'b0 };
+
+	assign	update = (i_ppd)&&(!r_block_updates[9]);
+
+
 	initial	days_per_month = 6'h31; // Remember, this is BCD
 	always @(posedge i_clk)
 	begin // Clock 3
@@ -107,6 +115,10 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		endcase
 	end
 
+	//
+	// Years
+	//
+
 	initial	last_day_of_month = 1'b0;
 	always @(posedge i_clk) // Clock 4
 		last_day_of_month <= (r_day >= days_per_month);
@@ -116,44 +128,48 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		last_day_of_year <= (last_day_of_month) && (r_mon == 5'h12);
 
 
-	reg	year_divisible_by_four, century_year, four_century_year;
 	initial	year_divisible_by_four = 1'b0;
-	initial	century_year      = 1'b0;
-	initial	four_century_year = 1'b0;
-	initial	is_leap_year      = 1'b0;
 	always @(posedge i_clk) // Clock 1
 		year_divisible_by_four<= ((!r_year[0])&&(r_year[4]==r_year[1]));
+
+	initial	century_year      = 1'b0;
 	always @(posedge i_clk) // Clock 1
 		century_year <= (r_year[7:0] == 8'h00);
+
+	initial	four_century_year = 1'b0;
 	always @(posedge i_clk) // Clock 1
 		four_century_year <= ((!r_year[8])&&((r_year[12]==r_year[9])));
+
+	initial	is_leap_year      = 1'b0;
 	always @(posedge i_clk) // Clock 2
 		is_leap_year <= (year_divisible_by_four)&&((!century_year)
 			||((century_year)&&(four_century_year)));
 
+	//
+	// Days
+	//
+
 	// Adjust the day of month
-	reg	[5:0]	next_day, fixd_day;
 	initial	next_day = 6'h01;
 	always @(posedge i_clk)
-		if (last_day_of_month)
-			next_day <= 6'h01;
-		else if (r_day[3:0] != 4'h9)
-			next_day <= { r_day[5:4], (r_day[3:0]+4'h1) };
-		else
-			next_day <= { (r_day[5:4]+2'h1), 4'h0 };
+	if (last_day_of_month)
+		next_day <= 6'h01;
+	else if (r_day[3:0] != 4'h9)
+		next_day <= { r_day[5:4], (r_day[3:0]+4'h1) };
+	else
+		next_day <= { (r_day[5:4]+2'h1), 4'h0 };
 
 	initial	fixd_day = 6'h01;
 	always @(posedge i_clk)
+	if ((r_day == 0)||(r_day > days_per_month))
+		fixd_day <= 6'h01;
+	else if (r_day[3:0] > 4'h9)
 	begin
-		if ((r_day == 0)||(r_day > days_per_month))
-			fixd_day <= 6'h01;
-		else if (r_day[3:0] > 4'h9)
-		begin
-			fixd_day[3:0] <= 4'h0;
-			fixd_day[5:4] <= r_day[5:4] + 1'b1;
-		end else
-			fixd_day <= r_day;
-	end
+		fixd_day[3:0] <= 4'h0;
+		fixd_day[5:4] <= r_day[5:4] + 1'b1;
+	end else
+		fixd_day <= r_day;
+
 
 	initial	r_day = 6'h01;
 	always @(posedge i_clk)
@@ -163,24 +179,27 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		else if (r_block_updates[5:4] == 2'b10)
 			r_day <= fixd_day;
 
-		if ((i_wb_cyc_stb)&&(i_wb_we)&&(!i_wb_data[7])&&(i_wb_sel[0]))
+		if ((i_wb_stb)&&(i_wb_we)&&(!i_wb_data[7])&&(i_wb_sel[0]))
 			r_day <= i_wb_data[5:0];
 	end
 
+	//
+	// Months
+	//
+
 	// Adjust the month of the year
-	reg	[4:0]	next_mon, fixd_mon;
 	initial	next_mon = 5'h01;
 	always @(posedge i_clk)
-		if (last_day_of_year)
-			next_mon <= 5'h01;
-		else if ((last_day_of_month)&&(r_mon[3:0] != 4'h9))
-			next_mon <= { r_mon[4], (r_mon[3:0] + 4'h1) };
-		else if (last_day_of_month)
-		begin
-			next_mon[3:0] <= 4'h0;
-			next_mon[4] <= 1;
-		end else
-			next_mon <= r_mon;
+	if (last_day_of_year)
+		next_mon <= 5'h01;
+	else if ((last_day_of_month)&&(r_mon[3:0] != 4'h9))
+		next_mon <= { r_mon[4], (r_mon[3:0] + 4'h1) };
+	else if (last_day_of_month)
+	begin
+		next_mon[3:0] <= 4'h0;
+		next_mon[4] <= 1;
+	end else
+		next_mon <= r_mon;
 
 	initial	fixd_mon = 5'h01;
 	always @(posedge i_clk)
@@ -196,13 +215,15 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		else if (r_block_updates[8:7] == 2'b10)
 			r_mon <= fixd_mon;
 
-		if ((i_wb_cyc_stb)&&(i_wb_we)&&(!i_wb_data[15])&&(i_wb_sel[1]))
+		if ((i_wb_stb)&&(i_wb_we)&&(!i_wb_data[15])&&(i_wb_sel[1]))
 			r_mon <= i_wb_data[12:8];
 	end
 
+	//
+	// Years (again)
+	//
+
 	// Adjust the year
-	reg	[13:0]	next_year;
-	reg	[2:0]	next_year_c;
 	initial	next_year   = 14'h2000;
 	initial	next_year_c = 0;
 	always @(posedge i_clk)
@@ -220,7 +241,7 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		next_year[13:12] <= (next_year_c[2])?(r_year[13:12]+2'h1):r_year[13:12];
 
 
-		if ((i_wb_cyc_stb)&&(i_wb_we)&&(!i_wb_data[31])
+		if ((i_wb_stb)&&(i_wb_we)&&(!i_wb_data[31])
 				&&(i_wb_sel[3:2]==2'b11))
 			next_year_c <= 3'h0;
 	end
@@ -238,20 +259,26 @@ module rtcdate(i_clk, i_ppd, i_wb_cyc_stb, i_wb_we, i_wb_data, i_wb_sel,
 		if ((update)&&(last_day_of_year))
 			r_year <= next_year;
 
-		if ((i_wb_cyc_stb)&&(i_wb_we)&&(!i_wb_data[31])
+		if ((i_wb_stb)&&(i_wb_we)&&(!i_wb_data[31])
 				&&(i_wb_sel[3:2]==2'b11))
 			r_year <= i_wb_data[29:16];
 	end
 
+	//
+	// Bus returns
+	//
+
+	initial	o_wb_ack = 0;
 	always @(posedge i_clk)
-		o_wb_ack <= (i_wb_cyc_stb);
+		o_wb_ack <= (i_wb_stb);
+
 	assign	o_wb_stall = 1'b0;
 	assign	o_wb_data = { 2'h0, r_year, 3'h0, r_mon, 2'h0, r_day };
 
 	// Make Verilator happy
 	// verilator lint_off UNUSED
-	wire	[3:0]	unused;
-	assign	unused = { i_wb_data[30], i_wb_data[14:13], i_wb_data[6] };
+	wire	unused;
+	assign	unused = &{ 1'b0, i_wb_cyc, i_wb_data[30], i_wb_data[14:13], i_wb_data[6] };
 	// verilator lint_on  UNUSED
 
 `ifdef	FORMAL

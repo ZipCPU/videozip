@@ -60,6 +60,7 @@ module	rtclight(i_clk, i_reset,
 	parameter	[0:0]	OPT_ALARM       = 1'b1;
 	parameter	[0:0]	OPT_FIXED_SPEED = 1'b1;
 
+	//
 	input	wire		i_clk, i_reset;
 	//
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
@@ -101,6 +102,7 @@ module	rtclight(i_clk, i_reset,
 
 	always @(posedge i_clk)
 	begin
+
 		wr_data <= i_wb_data;
 		wr_valid[0] <= (i_wb_sel[0])&&(i_wb_data[3:0] <= 4'h9)
 				&&(i_wb_data[7:4] <= 4'h5);
@@ -136,12 +138,13 @@ module	rtclight(i_clk, i_reset,
 			ck_wr, wr_data[21:0], wr_valid, clock_data, ck_ppd);
 
 	generate if (OPT_TIMER)
-	begin
+	begin : TIMER
 		rtctimer #(.LGSUBCK(8))
 			timer(i_clk, i_reset, ck_carry,
 				tm_wr, wr_data[24:0],
 				wr_valid, wr_zero, timer_data, tm_int);
-	end else begin
+
+	end else begin : NO_TIMER
 		assign	tm_int = 0;
 		assign	timer_data = 0;
 
@@ -149,10 +152,11 @@ module	rtclight(i_clk, i_reset,
 		wire	unused_timer;
 		assign	unused_timer = tm_wr;
 		// Verilator lint_on  UNUSED
+
 	end endgenerate
 
 	generate if (OPT_STOPWATCH)
-	begin
+	begin : STOPWATCH
 		reg	[2:0]	sw_ctrl;
 
 		initial	sw_ctrl = 0;
@@ -168,7 +172,7 @@ module	rtclight(i_clk, i_reset,
 			sw_ctrl[2], sw_ctrl[1], sw_ctrl[0],
 			stopwatch_data, sw_running);
 
-	end else begin
+	end else begin : NO_STOPWATCH
 
 		assign stopwatch_data = 0;
 		assign sw_running = 0;
@@ -176,12 +180,13 @@ module	rtclight(i_clk, i_reset,
 	end endgenerate
 
 	generate if (OPT_ALARM)
-	begin
+	begin : ALARM
 
 		rtcalarm alarm(i_clk, i_reset, clock_data[21:0],
 			al_wr, wr_data[25], wr_data[24], wr_data[21:0],
-				wr_valid, alarm_data, al_int);
-	end else begin
+			wr_valid, alarm_data, al_int);
+
+	end else begin : NO_ALARM
 
 		assign	alarm_data = 0;
 		assign	al_int = 0;
@@ -190,6 +195,7 @@ module	rtclight(i_clk, i_reset,
 		wire	unused_alarm;
 		assign	unused_alarm = al_wr;
 		// Verilator lint_on  UNUSED
+
 	end endgenerate
 
 	//

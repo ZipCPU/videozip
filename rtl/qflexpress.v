@@ -811,6 +811,7 @@ module	qflexpress(i_clk, i_reset,
 	// risking losing XIP mode or any other mode we might be in, we'll
 	// keep track of whether this operation should be ack'd upon
 	// completion
+	initial	pre_ack = 1'b0;
 	always @(posedge i_clk)
 	if ((i_reset)||(!bus_cyc))
 		pre_ack <= 1'b0;
@@ -1029,18 +1030,21 @@ module	qflexpress(i_clk, i_reset,
 		initial	stall_pipe = -1;
 		if (RDDELAY > 1)
 		begin
+			initial	sck_pipe = 0;
 			always @(posedge i_clk)
 			if (i_reset)
 				sck_pipe <= 0;
 			else
 				sck_pipe <= { sck_pipe[RDDELAY-2:0], actual_sck };
 
+			initial ack_pipe = 0;
 			always @(posedge i_clk)
 			if (i_reset || !bus_cyc)
 				ack_pipe <= 0;
 			else
 				ack_pipe <= { ack_pipe[RDDELAY-2:0], dly_ack };
 
+			initial	stall_pipe = -1;
 			always @(posedge i_clk)
 			if (i_reset)
 				stall_pipe <= -1;
@@ -1049,18 +1053,22 @@ module	qflexpress(i_clk, i_reset,
 
 
 		end else begin
+
+			initial	sck_pipe = 0;
 			always @(posedge i_clk)
 			if (i_reset)
 				sck_pipe <= 0;
 			else
 				sck_pipe <= actual_sck;
 
+			initial	ack_pipe = 0;
 			always @(posedge i_clk)
 			if (i_reset || !bus_cyc)
 				ack_pipe <= 0;
 			else
 				ack_pipe <= dly_ack;
 
+			initial	stall_pipe = -1;
 			always @(posedge i_clk)
 			if (i_reset)
 				stall_pipe <= -1;

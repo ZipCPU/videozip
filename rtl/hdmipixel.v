@@ -37,7 +37,7 @@
 //
 module	hdmipixel(i_wb_clk, i_hclk, i_hdmi_r, i_hdmi_g, i_hdmi_b,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
-		o_wb_ack, o_wb_stall, o_wb_data);
+		o_wb_stall, o_wb_ack, o_wb_data);
 	parameter	CLKBITS = 30;
 	input	wire	i_wb_clk;
 	// HDMI inputs

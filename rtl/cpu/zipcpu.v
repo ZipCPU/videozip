@@ -2667,7 +2667,7 @@ module	zipcpu(i_clk, i_reset, i_interrupt,
 	end else // if (AW-1 >= 27)
 	begin
 		assign	dbg_pc[27:0] = pf_pc[29:2];
-		assign	dbg_wb_addr = o_wb_addr;
+		assign	dbg_wb_addr = o_wb_addr[27:0];
 	end endgenerate
 
 	always @(posedge i_clk)

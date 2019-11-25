@@ -46,7 +46,7 @@
 `define	UART_TXREG	2'b11
 module	wbuart(i_clk, i_rst,
 		//
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
+		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
 			o_wb_stall, o_wb_ack, o_wb_data,
 		//
 		i_uart_rx, o_uart_tx, i_cts_n, o_rts_n,
@@ -68,6 +68,7 @@ module	wbuart(i_clk, i_rst,
 	input	wire		i_wb_stb, i_wb_we;
 	input	wire	[1:0]	i_wb_addr;
 	input	wire	[31:0]	i_wb_data;	// and only use 30 lines here
+	input	wire	[3:0]	i_wb_sel;
 	output	wire		o_wb_stall;
 	output	reg		o_wb_ack;
 	output	reg	[31:0]	o_wb_data;
@@ -425,8 +426,8 @@ module	wbuart(i_clk, i_rst,
 
 	// Make verilator happy
 	// verilator lint_off UNUSED
-	wire	[33:0] unused;
-	assign	unused = { i_rst, i_wb_cyc, i_wb_data };
+	wire	unused;
+	assign	unused = &{ 1'b0, i_rst, i_wb_cyc, i_wb_data, i_wb_sel };
 	// verilator lint_on UNUSED
 
 endmodule
