@@ -11,7 +11,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
+// Copyright (C) 2015-2020, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -35,16 +35,21 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
+`default_nettype	none
+//
 module	ledbouncer(i_clk, o_leds);
-	parameter	NLEDS=8, CTRBITS=25;
+	parameter	NLEDS=8, CTRBITS=25, NPWM = 5;
 	input	wire		i_clk;
 	output	reg	[(NLEDS-1):0]	o_leds;
 
 	reg	[(NLEDS-1):0]	led_owner;
-	reg		led_dir;
-
+	reg			led_dir;
 	reg	[(CTRBITS-1):0]	led_ctr;
 	reg			led_clk;
+	reg	[(NPWM-1):0]	led_pwm [0:(NLEDS-1)];
+	wire	[(NPWM-1):0]	br_ctr;
+
+	// The
 	always @(posedge i_clk)
 		{ led_clk, led_ctr } <= led_ctr + {{(CTRBITS-2){1'b0}},2'b11};
 
@@ -67,7 +72,6 @@ module	ledbouncer(i_clk, o_leds);
 				led_owner <= { 1'b0, led_owner[(NLEDS-1):1] };
 		end
 
-	reg	[4:0]	led_pwm [0:(NLEDS-1)];
 	genvar	k;
 	generate for(k=0; k<(NLEDS); k=k+1)
 		always@(posedge i_clk)
@@ -96,15 +100,14 @@ module	ledbouncer(i_clk, o_leds);
 			end
 	endgenerate
 
-	wire	[4:0]	br_ctr;
 	assign	br_ctr = { led_ctr[0], led_ctr[1], led_ctr[2], led_ctr[3], 
 			led_ctr[4] };
 
 	generate for(k=0; k<(NLEDS); k=k+1)
 		always @(posedge i_clk)
-			o_leds[k] <= (led_pwm[k] == 5'h1f)? 1'b1
+			o_leds[k] <= (&led_pwm[k])? 1'b1
 				:((led_pwm[k] == 5'h00) ? 1'b0
-				: (br_ctr[4:0] <= led_pwm[k][4:0]));
+				: (br_ctr[(NPWM-1):0]<=led_pwm[k]));
 	endgenerate
 
 endmodule

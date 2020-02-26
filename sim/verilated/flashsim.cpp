@@ -430,8 +430,9 @@ int	FLASHSIM::operator()(const int csn, const int sck, const int dat) {
 			m_state = QSPIF_QUAD_READ_CMD;
 			m_mode = FM_QSPI;
 			break;
-		case 0x000:
-		case 0x0ff:
+		case 0x000:	// Dummy implementation of CMD 8'h00
+		case 0x031:	// Dummy implementation of CMD 8'h31
+		case 0x0ff:	// Dummy implementation of CMD 8'hff
 			m_state = QSPIF_IDLE;
 			m_mode = FM_SPI;
 			break;
