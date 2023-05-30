@@ -5,7 +5,7 @@
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This module translates wishbone commands, whether they be read
-//		or write commands, to MIO commands operating on an Ethernet
+//		or write commands, to MDIO commands operating on an Ethernet
 //	controller, such as the TI DP83848 controller on the Artix-7 Arty
 //	development boarod (used by this project).  As designed, the bus
 //	*will* stall until the command has been completed.
@@ -14,8 +14,8 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2016-2019, Gisselquist Technology, LLC
+// }}}
+// Copyright (C) 2016-2023, Gisselquist Technology, LLC
 //
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of  the GNU General Public License as published
@@ -38,44 +38,48 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module	enetctrl(i_clk, i_reset,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_stall, o_wb_ack, o_wb_data,
-		o_mdclk, o_mdio, i_mdio, o_mdwe,
-		o_debug);
-	parameter	CLKBITS=2; // = 3 for 200MHz source clock, 2 for 100 MHz
-	parameter [4:0]	PHYADDR = 5'h01;
+// }}}
+module	enetctrl #(
+		// {{{
+		parameter	CLKBITS=2, // = 3 for 200MHz src, 2 for 100 MHz
+		parameter [4:0]	PHYADDR = 5'h01,
 `ifdef	FORMAL
-	parameter [0:0]		F_OPT_COVER =  1'b0;
+		parameter [0:0]		F_OPT_COVER =  1'b0,
 `else
-	localparam [0:0]	F_OPT_COVER =  1'b0;
+		localparam [0:0]	F_OPT_COVER =  1'b0,
 `endif
-	localparam	[2:0]	ECTRL_RESET   = 3'h0;
-	localparam	[2:0]	ECTRL_IDLE    = 3'h1;
-	localparam	[2:0]	ECTRL_ADDRESS = 3'h2;
-	localparam	[2:0]	ECTRL_READ    = 3'h3;
-	localparam	[2:0]	ECTRL_WRITE   = 3'h4;
-	input	wire		i_clk, i_reset;
-	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[4:0]	i_wb_addr;
-	input	wire	[31:0]	i_wb_data;
-	input	wire	[3:0]	i_wb_sel;
-	output	reg		o_wb_stall, o_wb_ack;
-	output	wire	[31:0]	o_wb_data;
-	//
-	input	wire		i_mdio;
-	output	wire		o_mdclk;
-	output	reg		o_mdio, o_mdwe;
-	//
-	output	wire	[31:0]	o_debug;
-	//
+		localparam	[2:0]	ECTRL_RESET   = 3'h0,
+		localparam	[2:0]	ECTRL_IDLE    = 3'h1,
+		localparam	[2:0]	ECTRL_ADDRESS = 3'h2,
+		localparam	[2:0]	ECTRL_READ    = 3'h3,
+		localparam	[2:0]	ECTRL_WRITE   = 3'h4
+		// }}}
+	) (
+		// {{{
+		input	wire		i_clk, i_reset,
+		input	wire		i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[4:0]	i_wb_addr,
+		input	wire	[31:0]	i_wb_data,
+		input	wire	[3:0]	i_wb_sel,
+		output	reg		o_wb_stall, o_wb_ack,
+		output	wire	[31:0]	o_wb_data,
+		//
+		output	wire		o_mdclk,
+		output	reg		o_mdio,
+		input	wire		i_mdio,
+		output	reg		o_mdwe,
+		//
+		output	wire	[31:0]	o_debug
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	reg		read_pending, write_pending;
 	reg	[4:0]	r_addr;
-	reg	[15:0]	read_reg, write_reg, r_data;
+	reg	[15:0]	read_reg;
+	reg	[15:0]	write_reg, r_data;
 	reg	[2:0]	ctrl_state;
 	reg	[5:0]	reg_pos;
 	reg		zreg_pos;
@@ -84,8 +88,15 @@ module	enetctrl(i_clk, i_reset,
 	reg	[(CLKBITS-1):0]	clk_counter;
 	reg	rclk, zclk;
 	reg	in_idle, pre_ack;
+	// }}}
 
+	////////////////////////////////////////////////////////////////////////
+	//
 	// Step 1: Generate our clock
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 	initial		clk_counter = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -93,8 +104,15 @@ module	enetctrl(i_clk, i_reset,
 	else
 		clk_counter <= clk_counter + 1;
 	assign	o_mdclk = clk_counter[(CLKBITS-1)];
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
 	// Step 2: Generate strobes for when to move, given the clock
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
 	initial	zclk = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -107,28 +125,54 @@ module	enetctrl(i_clk, i_reset,
 		rclk <= 1'b0;
 	else
 		rclk <= (!clk_counter[(CLKBITS-1)])&&(&clk_counter[(CLKBITS-2):0]);
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
 	// Step 3: Read from our input port
 	// 	Note: I read on the falling edge, he changes on the rising edge
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
 	always @(posedge i_clk)
 	if (zclk && !zreg_pos)
 		read_reg <= { read_reg[14:0], i_mdio };
 	always @(posedge i_clk)
 		zreg_pos <= (reg_pos == 0);
 
-	always @(*)
-		r_wb_data = read_reg;
+	always @(posedge i_clk)
+	if (zclk && zreg_pos)
+		r_wb_data <= read_reg;
+
 	assign	o_wb_data = { 16'h00, r_wb_data };
 
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
 	// Step 4: Write to our output port
 	// 	Note: I change on the falling edge,
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	// o_mdio
+	// {{{
 	always @(posedge i_clk)
 	if (zclk)
 		o_mdio <= write_reg[15];
+	// }}}
 
+	// in_idle
+	// {{{
 	initial	in_idle = 1'b0;
 	always @(posedge i_clk)
 		in_idle <= (ctrl_state == ECTRL_IDLE);
+	// }}}
+
+	// o_wb_stall
+	// {{{
 	initial	o_wb_stall = 1'b1;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -137,13 +181,17 @@ module	enetctrl(i_clk, i_reset,
 		o_wb_stall <= 1'b1;
 	else if (o_wb_ack)
 		o_wb_stall <= 1'b0;
-	else if (((i_wb_stb)&&(in_idle))||(read_pending)||(write_pending))
+	else if ((i_wb_stb && in_idle && (i_wb_sel != 0))
+			||(read_pending)||(write_pending))
 		o_wb_stall <= 1'b1;
 	else
 		o_wb_stall <= 1'b0;
+	// }}}
 
-	initial	read_pending  = 1'b0;	
-	initial	write_pending = 1'b0;	
+	// r_addr, r_data, read_pending, write_pending
+	// {{{
+	initial	read_pending  = 1'b0;
+	initial	write_pending = 1'b0;
 	always @(posedge i_clk)
 	begin
 		if (!o_wb_stall)
@@ -154,22 +202,28 @@ module	enetctrl(i_clk, i_reset,
 		begin
 			read_pending  <= 1'b0;
 			write_pending <= 1'b0;
-		end else if ((i_wb_stb)&&(!o_wb_stall))
+		end else if (i_wb_stb && !o_wb_stall && i_wb_sel != 0)
 		begin
 			read_pending  <= (!i_wb_we);
 			write_pending <= (i_wb_we);
 		end
 	end
+	// }}}
 
+	// pre_ack
+	// {{{
 	initial	pre_ack = 1'b0;
 	always @(posedge i_clk)
 	if ((i_reset)||(!i_wb_cyc))
 		pre_ack <= 1'b0;
-	else if ((i_wb_stb)&&(!o_wb_stall))
+	else if (i_wb_stb && !o_wb_stall)
 		pre_ack <= 1'b1;
 	else if (o_wb_ack)
 		pre_ack <= 1'b0;
+	// }}}
 
+	// o_mdwe, reg_pos, ctrl_state, write_reg, o_wb_ack
+	// {{{
 	initial	reg_pos = 6'h3f;
 	initial	ctrl_state = ECTRL_RESET;
 	initial	write_reg = 16'hffff;
@@ -189,12 +243,15 @@ module	enetctrl(i_clk, i_reset,
 			o_mdwe <= 1'b1; // Write
 		end else case(ctrl_state)
 		ECTRL_RESET: begin
+			// {{{
 			o_mdwe <= 1'b1; // Write
 			write_reg[15:0] <= 16'hffff;
 			if ((zclk)&&(zreg_pos))
 				ctrl_state <= ECTRL_IDLE;
 			end
+			// }}}
 		ECTRL_IDLE: begin
+			// {{{
 			o_mdwe <= 1'b1; // Write
 			write_reg <= { 4'he, PHYADDR, r_addr, 2'b11 };
 			if (write_pending)
@@ -209,7 +266,9 @@ module	enetctrl(i_clk, i_reset,
 			if ((zclk)&&(read_pending || write_pending))
 				ctrl_state <= ECTRL_ADDRESS;
 			end
+			// }}}
 		ECTRL_ADDRESS: begin
+			// {{{
 			if (zclk)
 				o_mdwe <= (write_pending)||(reg_pos > 6'h1); // Write
 			if ((zreg_pos)&&(zclk))
@@ -221,30 +280,48 @@ module	enetctrl(i_clk, i_reset,
 					ctrl_state <= ECTRL_WRITE;
 				write_reg <= r_data;
 			end end
+			// }}}
 		ECTRL_READ: begin
+			// {{{
 			o_mdwe <= 1'b0; // Read
 			if ((zreg_pos)&&(zclk))
 			begin
 				ctrl_state <= ECTRL_IDLE;
 				o_wb_ack <= (pre_ack)&&(i_wb_cyc);
 			end end
+			// }}}
 		ECTRL_WRITE: begin
+			// {{{
 			o_mdwe <= 1'b1; // Write
 			if ((zreg_pos)&&(zclk))
 			begin
 				ctrl_state <= ECTRL_IDLE;
 				o_wb_ack <= (pre_ack)&&(i_wb_cyc);
 			end end
+			// }}}
 		default: begin
+			// {{{
 			o_mdwe <= 1'b0; // Read
 			reg_pos <= 6'h3f;
 			ctrl_state <= ECTRL_RESET;
 			end
+			// }}}
 		endcase
 
 		if (i_reset)
 			o_wb_ack <= 1'b0;
 	end
+	// }}}
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Debug bus output(s)
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
 
 	assign	o_debug = {
 			o_wb_stall,i_wb_stb,i_wb_we, i_wb_addr,	// 8 bits
@@ -253,12 +330,24 @@ module	enetctrl(i_clk, i_reset,
 			read_pending, ctrl_state,		// 4 bits
 			o_mdclk, o_mdwe, o_mdio, i_mdio		// 4 bits
 		};
+	// }}}
 
 	// Make Verilator happy
+	// {{{
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = &{ 1'b0, i_wb_sel, i_wb_data[31:16] };
 	// verilator lint_on  UNUSED
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 `define	ASSUME	assume
 `define	ASSERT	assert
@@ -291,7 +380,7 @@ module	enetctrl(i_clk, i_reset,
 	always @(*)
 		`ASSERT(zclk == ((&clk_counter) ? 1 : 0));
 	always @(*)
-		`ASSERT(rclk == (clk_counter == {1'b1,{(CLKBITS-1){1'b0}}}));
+		`ASSERT(rclk == (clk_counter == {1'b1, {(CLKBITS-1){1'b0}} }));
 	always @(*)
 		`ASSERT(ctrl_state <= ECTRL_WRITE);
 	always @(posedge i_clk)
@@ -306,12 +395,19 @@ module	enetctrl(i_clk, i_reset,
 		cover(ctrl_state == ECTRL_IDLE);
 
 
-	fwb_slave #(.AW(5), .DW(32), .F_MAX_STALL(0), .F_MAX_ACK_DELAY(0),
-			.F_LGDEPTH(F_LGDEPTH), .F_MAX_REQUESTS(0))
-	  fwb(i_clk, i_reset, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr,
+	fwb_slave #(
+		// {{{
+		.AW(5), .DW(32), .F_MAX_STALL(0), .F_MAX_ACK_DELAY(0),
+		.F_LGDEPTH(F_LGDEPTH), .F_MAX_REQUESTS(0)
+		// }}}
+	) fwb(
+		// {{{
+		i_clk, i_reset, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr,
 			i_wb_data, i_wb_sel,
 		o_wb_ack, o_wb_stall, o_wb_data, 1'b0,
-		f_nreqs, f_nacks, f_outstanding);
+		f_nreqs, f_nacks, f_outstanding
+		// }}}
+	);
 
 	always @(*)
 		`ASSERT(f_outstanding <= 1);
@@ -349,13 +445,16 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	if (ctrl_state != ECTRL_IDLE)
+	begin
 		`ASSERT(!o_wb_ack);
-	else if ((read_pending)||(write_pending))
+	end else if ((read_pending)||(write_pending))
+	begin
 		`ASSERT(!o_wb_ack && o_wb_stall);
-	else // if (ctrl_state == ECTRL_IDLE)
+	end else // if (ctrl_state == ECTRL_IDLE)
 		`ASSERT(o_wb_ack || !pre_ack);
 
 `ifdef VERIFIC
+	// {{{
 	sequence	BITPERIOD;
 		(!zclk) [*] ##1 (zclk);
 	endsequence
@@ -529,31 +628,39 @@ module	enetctrl(i_clk, i_reset,
 		##1 ((o_mdwe)&&(ctrl_state == ECTRL_WRITE) throughout
 		  ##1 DATABIT(1'b1, 16'hffff, 6'h01)
 		  ##1 DATABIT(1'b0, f_data, 6'h10)
-		  ##1 DATABIT(f_data[15],{f_data[14:0],{(1){1'b1}}},6'h0f)
-		  ##1 DATABIT(f_data[14],{f_data[13:0],{(2){1'b1}}},6'h0e)
-		  ##1 DATABIT(f_data[13],{f_data[12:0],{(3){1'b1}}},6'h0d)
-		  ##1 DATABIT(f_data[12],{f_data[11:0],{(4){1'b1}}},6'h0c)
-		  ##1 DATABIT(f_data[11],{f_data[10:0],{(5){1'b1}}},6'h0b)
-		  ##1 DATABIT(f_data[10],{f_data[ 9:0],{(6){1'b1}}},6'h0a)
-		  ##1 DATABIT(f_data[ 9],{f_data[ 8:0],{(7){1'b1}}},6'h09)
-		  ##1 DATABIT(f_data[ 8],{f_data[ 7:0],{(8){1'b1}}},6'h08)
-		  ##1 DATABIT(f_data[ 7],{f_data[ 6:0],{(9){1'b1}}},6'h07)
-		  ##1 DATABIT(f_data[ 6],{f_data[ 5:0],{(10){1'b1}}},6'h06)
-		  ##1 DATABIT(f_data[ 5],{f_data[ 4:0],{(11){1'b1}}},6'h05)
-		  ##1 DATABIT(f_data[ 4],{f_data[ 3:0],{(12){1'b1}}},6'h04)
-		  ##1 DATABIT(f_data[ 3],{f_data[ 2:0],{(13){1'b1}}},6'h03)
-		  ##1 DATABIT(f_data[ 2],{f_data[ 1:0],{(14){1'b1}}},6'h02)
-		  ##1 DATABIT(f_data[ 1],{f_data[ 0:0],{(15){1'b1}}},6'h01)
+		  ##1 DATABIT(f_data[15],{f_data[14:0],{(1){1'b1}}  },6'h0f)
+		  ##1 DATABIT(f_data[14],{f_data[13:0],{(2){1'b1}}  },6'h0e)
+		  ##1 DATABIT(f_data[13],{f_data[12:0],{(3){1'b1}}  },6'h0d)
+		  ##1 DATABIT(f_data[12],{f_data[11:0],{(4){1'b1}}  },6'h0c)
+		  ##1 DATABIT(f_data[11],{f_data[10:0],{(5){1'b1}}  },6'h0b)
+		  ##1 DATABIT(f_data[10],{f_data[ 9:0],{(6){1'b1}}  },6'h0a)
+		  ##1 DATABIT(f_data[ 9],{f_data[ 8:0],{(7){1'b1}}  },6'h09)
+		  ##1 DATABIT(f_data[ 8],{f_data[ 7:0],{(8){1'b1}}  },6'h08)
+		  ##1 DATABIT(f_data[ 7],{f_data[ 6:0],{(9){1'b1}}  },6'h07)
+		  ##1 DATABIT(f_data[ 6],{f_data[ 5:0],{(10){1'b1}} },6'h06)
+		  ##1 DATABIT(f_data[ 5],{f_data[ 4:0],{(11){1'b1}} },6'h05)
+		  ##1 DATABIT(f_data[ 4],{f_data[ 3:0],{(12){1'b1}} },6'h04)
+		  ##1 DATABIT(f_data[ 3],{f_data[ 2:0],{(13){1'b1}} },6'h03)
+		  ##1 DATABIT(f_data[ 2],{f_data[ 1:0],{(14){1'b1}} },6'h02)
+		  ##1 DATABIT(f_data[ 1],{f_data[ 0:0],{(15){1'b1}} },6'h01)
 		  ##1 DATABIT(f_data[ 0],{(16){1'b1}},6'h00)
 		  ##1 ((o_wb_stall)&&((!pre_ack)||(o_wb_ack))))
 		);
-
+	// }}}
 `else // VERIFIC
+	// {{{
 	//
 	// These properties do the same thing as the verific properties above
 	// would do.  They should also be complete and totally functional.
 	//
-	reg	[33:0]	f_read_steps;
+	reg	[33:0]	f_read_steps, f_write_steps;
+	reg		f_read_steps_onehot, f_write_steps_onehot;
+	// Verilator lint_off UNDRIVEN
+	(* anyconst *) reg	[15:0]	f_const_data;
+	// Verilator lint_on  UNDRIVEN
+	reg	[15:0]	f_known_read;
+
+
 
 	initial	f_read_steps = 0;
 	always @(posedge i_clk)
@@ -568,6 +675,13 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	begin
+		if(f_read_steps[0])
+		begin
+			assert(ctrl_state == ECTRL_IDLE);
+			assert(read_pending);
+			assert(r_addr == f_addr);
+		end
+
 		if(f_read_steps[1])
 		begin
 			assert(write_reg == { 4'h6, PHYADDR, f_addr, 2'b11 });
@@ -698,12 +812,12 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	if (|f_read_steps[33:17])
+	begin
 		assert(ctrl_state == ECTRL_READ);
-	else
+	end else
 		assert(ctrl_state != ECTRL_READ);
 
 
-	reg	f_read_steps_onehot;
 	always @(*)
 	if (f_read_steps != 0)
 	begin
@@ -712,56 +826,52 @@ module	enetctrl(i_clk, i_reset,
 		assert(ctrl_state != ECTRL_RESET);
 		assert(ctrl_state != ECTRL_WRITE);
 
-
 		f_read_steps_onehot = 1'b0;
 		case(f_read_steps)
-		34'h0000_0001: f_read_steps_onehot = 1'b1;
-		34'h0000_0002: f_read_steps_onehot = 1'b1;
-		34'h0000_0004: f_read_steps_onehot = 1'b1;
-		34'h0000_0008: f_read_steps_onehot = 1'b1;
-		34'h0000_0010: f_read_steps_onehot = 1'b1;
-		34'h0000_0020: f_read_steps_onehot = 1'b1;
-		34'h0000_0040: f_read_steps_onehot = 1'b1;
-		34'h0000_0080: f_read_steps_onehot = 1'b1;
-		34'h0000_0100: f_read_steps_onehot = 1'b1;
-		34'h0000_0200: f_read_steps_onehot = 1'b1;
-		34'h0000_0400: f_read_steps_onehot = 1'b1;
-		34'h0000_0800: f_read_steps_onehot = 1'b1;
-		34'h0000_1000: f_read_steps_onehot = 1'b1;
-		34'h0000_2000: f_read_steps_onehot = 1'b1;
-		34'h0000_4000: f_read_steps_onehot = 1'b1;
-		34'h0000_8000: f_read_steps_onehot = 1'b1;
-		34'h0001_0000: f_read_steps_onehot = 1'b1;
-		34'h0002_0000: f_read_steps_onehot = 1'b1;
-		34'h0004_0000: f_read_steps_onehot = 1'b1;
-		34'h0008_0000: f_read_steps_onehot = 1'b1;
-		34'h0010_0000: f_read_steps_onehot = 1'b1;
-		34'h0020_0000: f_read_steps_onehot = 1'b1;
-		34'h0040_0000: f_read_steps_onehot = 1'b1;
-		34'h0080_0000: f_read_steps_onehot = 1'b1;
-		34'h0100_0000: f_read_steps_onehot = 1'b1;
-		34'h0200_0000: f_read_steps_onehot = 1'b1;
-		34'h0400_0000: f_read_steps_onehot = 1'b1;
-		34'h0800_0000: f_read_steps_onehot = 1'b1;
-		34'h1000_0000: f_read_steps_onehot = 1'b1;
-		34'h2000_0000: f_read_steps_onehot = 1'b1;
-		34'h4000_0000: f_read_steps_onehot = 1'b1;
-		34'h8000_0000: f_read_steps_onehot = 1'b1;
-		34'h10000_0000: f_read_steps_onehot = 1'b1;
-		34'h20000_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0001: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0002: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0004: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0008: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0010: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0020: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0040: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0080: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0100: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0200: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0400: f_read_steps_onehot = 1'b1;
+		34'h0_0000_0800: f_read_steps_onehot = 1'b1;
+		34'h0_0000_1000: f_read_steps_onehot = 1'b1;
+		34'h0_0000_2000: f_read_steps_onehot = 1'b1;
+		34'h0_0000_4000: f_read_steps_onehot = 1'b1;
+		34'h0_0000_8000: f_read_steps_onehot = 1'b1;
+		34'h0_0001_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0002_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0004_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0008_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0010_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0020_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0040_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0080_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0100_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0200_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0400_0000: f_read_steps_onehot = 1'b1;
+		34'h0_0800_0000: f_read_steps_onehot = 1'b1;
+		34'h0_1000_0000: f_read_steps_onehot = 1'b1;
+		34'h0_2000_0000: f_read_steps_onehot = 1'b1;
+		34'h0_4000_0000: f_read_steps_onehot = 1'b1;
+		34'h0_8000_0000: f_read_steps_onehot = 1'b1;
+		34'h1_0000_0000: f_read_steps_onehot = 1'b1;
+		34'h2_0000_0000: f_read_steps_onehot = 1'b1;
 		default: begin end
 		endcase
 
 		assert(f_read_steps_onehot);
 	end
 
-	(* anyconst *) reg	[15:0]	f_const_data;
-	reg	[15:0]	f_known_read;
-
 	initial	f_known_read = 0;
 	always @(posedge i_clk)
 	if (i_reset)
-		f_known_read = 0;
+		f_known_read <= 0;
 	else if (zclk)
 	begin
 		f_known_read <= {f_known_read[14:0], 1'b0};
@@ -789,43 +899,104 @@ module	enetctrl(i_clk, i_reset,
 	always @(*)
 	begin
 		if (f_known_read[0])
+		begin
 			assert(read_reg[0] == f_const_data[15]);
+			assert(reg_pos == 6'he);
+		end
+
 		if (f_known_read[1])
+		begin
 			assert(read_reg[1:0] == f_const_data[15:14]);
+			assert(reg_pos == 6'hd);
+		end
+
 		if (f_known_read[2])
+		begin
 			assert(read_reg[2:0] == f_const_data[15:13]);
+			assert(reg_pos == 6'hc);
+		end
+
 		if (f_known_read[3])
+		begin
 			assert(read_reg[3:0] == f_const_data[15:12]);
+			assert(reg_pos == 6'hb);
+		end
+
 		if (f_known_read[4])
+		begin
 			assert(read_reg[4:0] == f_const_data[15:11]);
+			assert(reg_pos == 6'ha);
+		end
+
 		if (f_known_read[5])
+		begin
 			assert(read_reg[5:0] == f_const_data[15:10]);
+			assert(reg_pos == 6'h9);
+		end
+
 		if (f_known_read[6])
+		begin
 			assert(read_reg[6:0] == f_const_data[15:9]);
+			assert(reg_pos == 6'h8);
+		end
+
 		if (f_known_read[7])
+		begin
 			assert(read_reg[7:0] == f_const_data[15:8]);
+			assert(reg_pos == 6'h7);
+		end
+
 		if (f_known_read[8])
+		begin
 			assert(read_reg[8:0] == f_const_data[15:7]);
+			assert(reg_pos == 6'h6);
+		end
+
 		if (f_known_read[9])
+		begin
 			assert(read_reg[9:0] == f_const_data[15:6]);
+			assert(reg_pos == 6'h5);
+		end
+
 		if (f_known_read[10])
+		begin
 			assert(read_reg[10:0] == f_const_data[15:5]);
+			assert(reg_pos == 6'h4);
+		end
+
 		if (f_known_read[11])
+		begin
 			assert(read_reg[11:0] == f_const_data[15:4]);
+			assert(reg_pos == 6'h3);
+		end
+
 		if (f_known_read[12])
+		begin
 			assert(read_reg[12:0] == f_const_data[15:3]);
+			assert(reg_pos == 6'h2);
+		end
+
 		if (f_known_read[13])
+		begin
 			assert(read_reg[13:0] == f_const_data[15:2]);
+			assert(reg_pos == 6'h1);
+		end
+
 		if (f_known_read[14])
+		begin
 			assert(read_reg[14:0] == f_const_data[15:1]);
+			assert(reg_pos == 6'h0);
+		end
+
 		if (f_known_read[15])
-			assert(read_reg[15:0] == f_const_data[15:0]);
+			assert(r_wb_data[15:0] == f_const_data[15:0]);
 	end
 
 	always @(*)
 	if (|f_read_steps[33:19])
+	begin
 		assert((f_known_read[14:0] & (~f_read_steps[33:19])) == 0);
-	else
+	end else
 		assert(f_known_read[14:0] == 0);
 
 	always @(posedge i_clk)
@@ -834,8 +1005,6 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(posedge i_clk)
 		cover(o_wb_ack && f_known_read[15]);
-
-	reg	[33:0]	f_write_steps;
 
 	initial	f_write_steps = 0;
 	always @(posedge i_clk)
@@ -850,23 +1019,32 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	begin
+		if(f_write_steps[0])
+		begin
+			assert(r_addr == f_addr);
+			assert(write_pending);
+			assert(ctrl_state == ECTRL_IDLE);
+		end
 		if(f_write_steps[1])
 		begin
 			assert(write_reg == { 4'h5, PHYADDR, f_addr, 2'b10 });
 			assert(o_mdio == 1'b1);
 			assert(reg_pos == 6'h0f);
+			assert(ctrl_state == ECTRL_ADDRESS);
 		end
 		if(f_write_steps[2])
 		begin
 			assert(write_reg == { 3'h5, PHYADDR, f_addr, 3'b101 });
 			assert(o_mdio == 1'b0);
 			assert(reg_pos == 6'h0e);
+			assert(ctrl_state == ECTRL_ADDRESS);
 		end
 		if(f_write_steps[3])
 		begin
 			assert(write_reg == { 2'h1, PHYADDR, f_addr, 4'hb });
 			assert(o_mdio == 1'b1);
 			assert(reg_pos == 6'h0d);
+			assert(ctrl_state == ECTRL_ADDRESS);
 		end
 		if(f_write_steps[4])
 		begin
@@ -1064,11 +1242,11 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	if (|f_write_steps[33:17])
+	begin
 		assert(ctrl_state == ECTRL_WRITE);
-	else
+	end else
 		assert(ctrl_state != ECTRL_WRITE);
 
-	reg	f_write_steps_onehot;
 	always @(*)
 	if (f_write_steps != 0)
 	begin
@@ -1079,40 +1257,40 @@ module	enetctrl(i_clk, i_reset,
 
 		f_write_steps_onehot = 1'b0;
 		case(f_write_steps)
-		34'h0000_0001: f_write_steps_onehot = 1'b1;
-		34'h0000_0002: f_write_steps_onehot = 1'b1;
-		34'h0000_0004: f_write_steps_onehot = 1'b1;
-		34'h0000_0008: f_write_steps_onehot = 1'b1;
-		34'h0000_0010: f_write_steps_onehot = 1'b1;
-		34'h0000_0020: f_write_steps_onehot = 1'b1;
-		34'h0000_0040: f_write_steps_onehot = 1'b1;
-		34'h0000_0080: f_write_steps_onehot = 1'b1;
-		34'h0000_0100: f_write_steps_onehot = 1'b1;
-		34'h0000_0200: f_write_steps_onehot = 1'b1;
-		34'h0000_0400: f_write_steps_onehot = 1'b1;
-		34'h0000_0800: f_write_steps_onehot = 1'b1;
-		34'h0000_1000: f_write_steps_onehot = 1'b1;
-		34'h0000_2000: f_write_steps_onehot = 1'b1;
-		34'h0000_4000: f_write_steps_onehot = 1'b1;
-		34'h0000_8000: f_write_steps_onehot = 1'b1;
-		34'h0001_0000: f_write_steps_onehot = 1'b1;
-		34'h0002_0000: f_write_steps_onehot = 1'b1;
-		34'h0004_0000: f_write_steps_onehot = 1'b1;
-		34'h0008_0000: f_write_steps_onehot = 1'b1;
-		34'h0010_0000: f_write_steps_onehot = 1'b1;
-		34'h0020_0000: f_write_steps_onehot = 1'b1;
-		34'h0040_0000: f_write_steps_onehot = 1'b1;
-		34'h0080_0000: f_write_steps_onehot = 1'b1;
-		34'h0100_0000: f_write_steps_onehot = 1'b1;
-		34'h0200_0000: f_write_steps_onehot = 1'b1;
-		34'h0400_0000: f_write_steps_onehot = 1'b1;
-		34'h0800_0000: f_write_steps_onehot = 1'b1;
-		34'h1000_0000: f_write_steps_onehot = 1'b1;
-		34'h2000_0000: f_write_steps_onehot = 1'b1;
-		34'h4000_0000: f_write_steps_onehot = 1'b1;
-		34'h8000_0000: f_write_steps_onehot = 1'b1;
-		34'h10000_0000: f_write_steps_onehot = 1'b1;
-		34'h20000_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0001: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0002: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0004: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0008: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0010: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0020: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0040: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0080: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0100: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0200: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0400: f_write_steps_onehot = 1'b1;
+		34'h0_0000_0800: f_write_steps_onehot = 1'b1;
+		34'h0_0000_1000: f_write_steps_onehot = 1'b1;
+		34'h0_0000_2000: f_write_steps_onehot = 1'b1;
+		34'h0_0000_4000: f_write_steps_onehot = 1'b1;
+		34'h0_0000_8000: f_write_steps_onehot = 1'b1;
+		34'h0_0001_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0002_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0004_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0008_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0010_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0020_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0040_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0080_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0100_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0200_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0400_0000: f_write_steps_onehot = 1'b1;
+		34'h0_0800_0000: f_write_steps_onehot = 1'b1;
+		34'h0_1000_0000: f_write_steps_onehot = 1'b1;
+		34'h0_2000_0000: f_write_steps_onehot = 1'b1;
+		34'h0_4000_0000: f_write_steps_onehot = 1'b1;
+		34'h0_8000_0000: f_write_steps_onehot = 1'b1;
+		34'h1_0000_0000: f_write_steps_onehot = 1'b1;
+		34'h2_0000_0000: f_write_steps_onehot = 1'b1;
 		default: begin end
 		endcase
 
@@ -1121,8 +1299,23 @@ module	enetctrl(i_clk, i_reset,
 
 	always @(*)
 	if ((f_write_steps == 0)&&(f_read_steps == 0))
+	begin
 		`ASSERT((ctrl_state == ECTRL_RESET)
 			||(ctrl_state == ECTRL_IDLE));
+
+		`ASSERT(!read_pending);
+		`ASSERT(!write_pending);
+	end
+	// }}}
 `endif // VERIFIC
+
+	// Make Verilator happy
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	unused_formal;
+	assign	unused_formal = &{ 1'b0, f_nreqs, f_nacks };
+	// Verilator lint_on  UNUSED
+	// }}}
 `endif
+// }}}
 endmodule
