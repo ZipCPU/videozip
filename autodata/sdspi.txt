@@ -1,7 +1,7 @@
 ################################################################################
 ##
-## Filename: 	sdspi.c
-##
+## Filename:	autodata/sdspi.txt
+## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Describes how to connect an SD-SPI peripheral to a wishbone
@@ -17,11 +17,11 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
-## Copyright (C) 2017-2019, Gisselquist Technology, LLC
-##
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
 ## This program is free software (firmware): you can redistribute it and/or
-## modify it under the terms of  the GNU General Public License as published
+## modify it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
 ## your option) any later version.
 ##
@@ -34,14 +34,14 @@
 ## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 ## target there if the PDF file isn't present.)  If not, see
 ## <http://www.gnu.org/licenses/> for a copy.
-##
+## }}}
 ## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
 ##		http://www.gnu.org/licenses/gpl.html
-##
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=sdcard
 @DEVID=SDSPI
 @NADDR=4
@@ -58,21 +58,30 @@
 		o_sd_sck, io_sd_cmd, io_sd, i_sd_cd_n
 @TOP.IODECL=
 	// SD Card
+	// {{{
 	output	wire		o_sd_sck;
 	inout	wire		io_sd_cmd;
 	inout	wire	[3:0]	io_sd;
 	input	wire		i_sd_cd_n;
+	// }}}
 @TOP.DEFNS=
+	// SD Card definitions
+	// {{{
 	wire		w_sd_cmd;
 	wire	[3:0]	w_sd_data;
 
 	wire		i_sd_cmd;
 	wire	[3:0]	i_sd;
+	// }}}
 @TOP.MAIN=
 		// SD Card
 		o_sd_sck, w_sd_cmd, w_sd_data, i_sd_cmd, i_sd, !i_sd_cd_n
 @TOP.INSERT=
+	//////////////////////////////////////////////////////////////////////
 	//
+	// SD Card SPI Controller
+	// {{{
+	//////////////////////////////////////////////////////////////////////
 	//
 	// Wires for setting up the SD Card Controller
 	//
@@ -92,13 +101,13 @@
 
 	IOBUF sd_cmd_buf(.T(1'b0),.O(i_sd_cmd), .I(w_sd_cmd), .IO(io_sd_cmd));
 	IOBUF sd_dat3_bf(.T(1'b0),.O(i_sd[3]),.I(w_sd_data[3]),.IO(io_sd[3]));
-	
-
+	// }}}
 @MAIN.PORTLIST=
 		// The SD-Card wires
 		o_sd_sck, o_sd_cmd, o_sd_data, i_sd_cmd, i_sd_data, i_sd_detect
 @MAIN.IODECL=
 	// SD-Card declarations
+	// {{{
 	output	wire		o_sd_sck, o_sd_cmd;
 	output	wire	[3:0]	o_sd_data;
 	// verilator lint_off UNUSED
@@ -106,20 +115,36 @@
 	input	wire	[3:0]	i_sd_data;
 	// verilator lint_on  UNUSED
 	input	wire		i_sd_detect;
+	// }}}
 @MAIN.DEFNS=
-	wire[31:0]	sdspi_debug;
+	// SD SPI definitions
+	// Verilator lint_off UNUSED
+	wire	[31:0]	sdspi_debug;
+	// Verilator lint_on  UNUSED
+	wire		w_sd_cs_n, w_sd_mosi, w_sd_miso;
 @MAIN.INSERT=
-	// SPI mapping
-	wire	w_sd_cs_n, w_sd_mosi, w_sd_miso;
+	////////////////////////////////////////////////////////////////////////
+	//
+	// SD Card SPI handling
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 
-	sdspi	@$(PREFIX)i(i_clk, sd_reset,
+	sdspi
+	@$(PREFIX)i(
+		// {{{
+		i_clk, sd_reset,
 		@$(SLAVE.PORTLIST),
 		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso, i_sd_detect,
-		@$(PREFIX)_int, 1'b1, sdspi_debug);
+		@$(PREFIX)_int, 1'b1, sdspi_debug
+		// }}}
+	);
 
 	assign	w_sd_miso = i_sd_data[0];
 	assign	o_sd_data = { w_sd_cs_n, 3'b111 };
 	assign	o_sd_cmd  = w_sd_mosi;
+	// }}}
 @MAIN.ALT=
 	assign	o_sd_sck   = 1'b1;
 	assign	o_sd_cmd   = 1'b1;
@@ -142,6 +167,13 @@
 @REGS.2= 2 R_@$(DEVID)_FIFOA	SDFIFOA, SDFIF0, SDFIFA
 @REGS.3= 3 R_@$(DEVID)_FIFOB	SDFIFOB, SDFIF1, SDFIFB
 @BDEF.DEFN=
+////////////////////////////////////////////////////////////////////////////////
+//
+// SD SPI constants
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+//
+//
 #define	@$(DEVID)_SETAUX	0x0000ff
 #define	@$(DEVID)_READAUX	0x0000bf
 #define	@$(DEVID)_CMD		0x000040
@@ -165,6 +197,7 @@
 typedef	struct @$(DEVID)_S {
 	unsigned	sd_ctrl, sd_data, sd_fifo[2];
 } @$(DEVID);
+// }}}
 @BDEF.IONAME=_sdcard
 @BDEF.IOTYPE=@$(DEVID)
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
@@ -187,6 +220,8 @@ typedef	struct @$(DEVID)_S {
 	}
 #endif // @$(ACCESS)
 @SIM.TICK=
+		// SD Card simulation
+		// {{{
 #ifdef	@$(ACCESS)
 		m_core->i_sd_data = m_sdcard((m_core->o_sd_data&8)?1:0,
 				m_core->o_sd_sck, m_core->o_sd_cmd);
@@ -194,10 +229,23 @@ typedef	struct @$(DEVID)_S {
 		m_core->i_sd_data |= (m_core->o_sd_data&0x0e);
 		m_core->i_sd_detect = 1;
 #endif	// @$(ACCESS)
+		// }}}
 @SIM.DEFINES=
+////////////////////////////////////////////////////////////////////////////////
+//
+// SD SPI Defines
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+//
+//
 
 #ifndef	VVAR
-#ifdef	NEW_VERILATOR
+#ifdef	ROOT_VERILATOR
+
+#include "Vmain___024root.h"
+#define	VVAR(A)	rootp->main__DOT_ ## A
+
+#elif	defined(NEW_VERILATOR)
 #define	VVAR(A)	main__DOT_ ## A
 #else
 #define	VVAR(A)	v__DOT_ ## A

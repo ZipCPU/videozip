@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	debouncer.v
-//
+// Filename:	rtl/debouncer.v
+// {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To "debounce" signals from within a group passed to this
@@ -44,8 +44,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2017-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -60,40 +60,44 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-//
-module	debouncer(i_clk, i_in, o_debounced);
-	parameter	NIN=16+5, LGWAIT=17;
-	input	wire			i_clk;
-	input	wire	[(NIN-1):0]	i_in;
-	output	reg	[(NIN-1):0]	o_debounced;
+// }}}
+module	debouncer #(
+		parameter	NIN=16+5, LGWAIT=17
+	) (
+		// {{{
+		input	wire			i_clk,
+		input	wire	[(NIN-1):0]	i_in,
+		output	reg	[(NIN-1):0]	o_debounced
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	reg			different, ztimer;
 	reg	[(NIN-1):0]	r_in, q_in, r_last;
 	reg	[(LGWAIT-1):0]	timer;
+	// }}}
 
-	// Synchronize our inputs to our clock
-	initial	q_in = 0;
-	initial	r_in = 0;
-	initial	different = 0;
-	always @(posedge i_clk)
-		q_in <= i_in;
-	always @(posedge i_clk)
-		r_in <= q_in;
+	// 2FF: Synchronize our inputs to our clock
+	// {{{
 	// Keep track of the last input, so we can line our logic with the
 	// clock later
-	always @(posedge i_clk)
-		r_last <= r_in;
 
+	initial	{ r_last, r_in, q_in } = 0;
+	always @(posedge i_clk)
+		{ r_last, r_in, q_in } <= { r_in, q_in, i_in };
+	// }}}
+
+	// timer & ztimer
+	// {{{
 	// Start a timer any time our inputs are different from our last
 	// outputs.  Once the counter runs out, check if things have changed
 	// and start over immediately if so.  Hence, in a highly dynamic
@@ -108,34 +112,41 @@ module	debouncer(i_clk, i_in, o_debounced);
 	initial	ztimer = 1'b1;
 	initial	timer  = 0;
 	always @(posedge i_clk)
-		if ((ztimer)&&(different))
-		begin
-			timer  <= {(LGWAIT) {1'b1} };
-			ztimer <= 1'b0;
-		end else if (!ztimer)
-		begin
-			timer  <= timer - 1'b1;
-			ztimer <= (timer[(LGWAIT-1):1] == 0);
-		end else begin
-			ztimer <= 1'b1;
-			timer  <= 0;
-		end
+	if ((ztimer)&&(different))
+	begin
+		timer  <= {(LGWAIT) {1'b1} };
+		ztimer <= 1'b0;
+	end else if (!ztimer)
+	begin
+		timer  <= timer - 1'b1;
+		ztimer <= (timer[(LGWAIT-1):1] == 0);
+	end else begin
+		ztimer <= 1'b1;
+		timer  <= 0;
+	end
+	// }}}
 
+	// different
+	// {{{
 	// Keep track of whether or not the timer needs to be restarted.
 	// different will get set to "true" any time r_in (our input)
 	// isn't equal to our output (o_debounced).
 	//
 	// Further, "different" will then need to remain true until ztimer
 	// is also true, to make sure that the timer restarts later.
+	initial	different = 0;
 	always @(posedge i_clk)
-		different <= ((different)&&(!ztimer))||(r_in != o_debounced);
+		different <= (different && !ztimer)||(r_in != o_debounced);
+	// }}}
 
+	// o_debounced
+	// {{{
 	// Set the output to the input anytime the timer is either not going,
 	// or when it has finished counting and (hence) the inputs have
 	// settled.
 	initial	o_debounced = { (NIN) {1'b0} };
 	always @(posedge i_clk)
-		if (ztimer)
-			o_debounced <= r_last;
-
+	if (ztimer)
+		o_debounced <= r_last;
+	// }}}
 endmodule

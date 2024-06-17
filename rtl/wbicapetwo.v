@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	wbicapetwo.v
-//
-// Project:	Wishbone to ICAPE2 interface conversion
+// Filename:	rtl/wbicapetwo.v
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This routine maps the configuration registers of a 7-series
 //		Xilinx part onto register addresses on a wishbone bus interface
@@ -18,7 +18,7 @@
 //		in register 5'h10.  Writing to this address, followed by
 //		issuing the IPROG command just mentioned will cause the
 //		FPGA to configure from that warm boot start address.
-// 
+//
 //		For more details on the configuration interface, the registers
 //		in question, their meanings and what they do, please see
 //		User's Guide 470, the "7 Series FPGAs Configuration" User
@@ -69,11 +69,11 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// }}}
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -82,48 +82,86 @@
 // FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 // for more details.
 //
+// You should have received a copy of the GNU General Public License along
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
 //
-`default_nettype	none
-//
-`define	MBOOT_IDLE	5'h00
-`define	MBOOT_START	5'h01
-`define	MBOOT_READ	5'h06
-`define	MBOOT_WRITE	5'h0f
-`define	MBOOT_DESYNC	5'h11
-module	wbicapetwo(i_clk,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_stall, o_wb_ack, o_wb_data);
-	parameter	LGDIV = 3; /// Log of the clock divide
-	input	wire		i_clk;
-	// Wishbone inputs
-	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[4:0]	i_wb_addr;
-	input	wire	[31:0]	i_wb_data;
-	input	wire	[3:0]	i_wb_sel;
-	// Wishbone outputs
-	output	reg		o_wb_stall, o_wb_ack;
-	output	reg	[31:0]	o_wb_data;
+`timescale		1ns/1ps
+`default_nettype none
+// }}}
+module	wbicapetwo #(
+		localparam	DW = 32,
+		parameter	LGDIV = 3 /// Log of the clock divide
+	) (
+		// {{{
+		input	wire		i_clk, i_reset,
+		// Wishbone inputs
+		input	wire		i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[4:0]	i_wb_addr,
+		input	wire [DW-1:0]	i_wb_data,
+		input	wire [DW/8-1:0]	i_wb_sel,
+		// Wishbone outputs
+		output	wire		o_wb_stall,
+		output	reg		o_wb_ack,
+		output	reg [DW-1:0]	o_wb_data
+		// }}}
+	);
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Local declarations
+	// {{{
+	localparam [4:0]	MBOOT_IDLE	= 5'h00,
+				MBOOT_START	= 5'h01,
+				MBOOT_END_OF_SYNC  = 5'h05,
+				MBOOT_READ	= 5'h06,
+				MBOOT_END_OF_READ  = 5'h0e,
+				MBOOT_WRITE	= 5'h0f,
+				MBOOT_END_OF_WRITE = 5'h10,
+				MBOOT_DESYNC	= 5'h11,
+				MBOOT_END	   = 5'h17;
+		localparam [31:0]	NOOP = 32'h2000_0000;
+
 	// ICAPE2 interface signals
 	//	These are kept internal to this block ...
 
-	reg		wb_req, r_we;
+	genvar	k;
+	reg		wb_req, r_we, pre_stall;
 	reg	[31:0]	r_data;
 	reg	[4:0]	r_addr;
 
+	reg	[31:0]	cfg_in;
+	reg		cfg_cs_n, cfg_rdwrn;
+	wire	[31:0]	cfg_out;
+	reg	[4:0]	state;
 
-	reg		clk_stb, clk_stall;
+	wire	[31:0]	bit_swapped_cfg_in;
+	wire	[31:0]	bit_swapped_cfg_out;
+
+	reg		clk_stb;
 	wire		slow_clk;
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Internal "Clock" generation
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 	generate
 	if (LGDIV <= 1)
-	begin
+	begin : DDRCK
+		// {{{
 		reg		r_slow_clk;
+
 		always @(posedge i_clk)
 		begin
 			r_slow_clk  <= (slow_clk + 1'b1);
@@ -131,36 +169,40 @@ module	wbicapetwo(i_clk,
 			// so therefore clk_stb must be true one clock before
 			// that, so we test for it one clock before that.
 			clk_stb   <= (slow_clk == 1'b1);
-			// CLK_STALL is set to true two clocks before any
-			// cycle that will, by necessity, stall.
-			clk_stall <= (slow_clk != 1'b0); //True all but 1ckcycle
 		end
 
 		assign	slow_clk = r_slow_clk;
-	end else begin
+		// }}}
+	end else begin : CLOCKGEN
+		// {{{
 		reg	[(LGDIV-1):0]	slow_clk_counter;
+		localparam [LGDIV-1:0]	MINUS_TWO = -2;
 
+		initial	slow_clk_counter = 0;
 		always @(posedge i_clk)
 		begin
 			slow_clk_counter  <= slow_clk_counter + 1'b1;
-			// We'll move on the positive edge of the clock, so therefore
-			// clk_stb must be true one clock before that, so we test for
-			// it one clock before that.
-			clk_stb   <= (slow_clk_counter=={{(LGDIV){1'b1}},1'b0});
-			// CLK_STALL is set to true two clocks before any cycle that
-			// will, by necessity, stall.
-			clk_stall <= (slow_clk_counter!={{(LGDIV){1'b0}},1'b1});
+			// We'll move on the negative edge of the clock, so
+			// therefore clk_stb must be true one clock before
+			// that, so we test for it one clock before that.
+			clk_stb <= (slow_clk_counter==MINUS_TWO);
 		end
 
 		assign	slow_clk = slow_clk_counter[(LGDIV-1)];
+		// }}}
 	end endgenerate
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Giant state machine
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 
-	reg	[31:0]	cfg_in;
-	reg		cfg_cs_n, cfg_rdwrn;
-	wire	[31:0]	cfg_out;
-	reg	[4:0]	state;
-	initial	state = `MBOOT_IDLE;
-	initial	cfg_cs_n = 1'b1;
+	initial	state = MBOOT_IDLE;
+	initial	cfg_cs_n  = 1'b1;
+	initial	cfg_rdwrn = 1'b1;
 	initial	o_wb_ack = 1'b0;
 	always @(posedge i_clk)
 	begin
@@ -174,183 +216,267 @@ module	wbicapetwo(i_clk,
 
 		// Turn any request "off", so that it will not be ack'd, if
 		// the wb_cyc line is ever lowered.
-		wb_req <= wb_req & i_wb_cyc;
-		o_wb_stall <= (state != `MBOOT_IDLE)||(clk_stall);
+		wb_req <= wb_req && i_wb_cyc;
+
+		pre_stall <= (state != MBOOT_IDLE);
 		if (clk_stb)
 		begin
 			state <= state + 5'h01;
 			case(state)
-			`MBOOT_IDLE: begin
+			MBOOT_IDLE: begin
+				// {{{
 				cfg_cs_n <= 1'b1;
 				cfg_rdwrn <= 1'b1;
 				cfg_in <= 32'hffffffff;	// Dummy word
 
-				state <= `MBOOT_IDLE;
+				state <= MBOOT_IDLE;
+				pre_stall <= 1'b0;
 
-				o_wb_ack <= 1'b0;
+				// Return a zero immediately if this isn't
+				// a word write for an entire word.
+				o_wb_ack  <= (i_wb_stb && !(&i_wb_sel));
+				o_wb_data <= 0;
 
 				r_addr <= i_wb_addr;
 				r_data <= i_wb_data;
 				r_we   <= i_wb_we;
 				if(i_wb_stb) // &&(!o_wb_stall)
 				begin
-					state <= `MBOOT_START;
-					wb_req <= 1'b1;
-					//
-					o_wb_ack <= 1'b0;
+					if (&i_wb_sel)
+					begin
+						state <= MBOOT_START;
+						wb_req <= 1'b1;
+						pre_stall <= 1'b1;
+					end else
+						o_wb_ack <= 1'b1;
 				end end
-			`MBOOT_START: begin
+				// }}}
+			MBOOT_START: begin
+				// {{{
 				cfg_in <= 32'hffffffff; // NOOP
 				cfg_cs_n <= 1'b1;
 				end
+				// }}}
 			5'h02: begin
+				// {{{
 				cfg_cs_n <= 1'b0; // Activate interface
 				cfg_rdwrn <= 1'b0;
 				cfg_in <= 32'h20000000;	// NOOP
 				end
-			5'h03: begin
+				// }}}
+			5'h03: begin // Sync word
+				// {{{
 				cfg_in <= 32'haa995566;	// Sync word
 				cfg_cs_n <= 1'b0;
 				end
-			5'h04: begin
+				// }}}
+			5'h04: begin // NOOP
+				// {{{
 				cfg_in <= 32'h20000000; // NOOP
 				cfg_cs_n <= 1'b0;
 				end
-			5'h05: begin
+				// }}}
+			5'h05: begin // NOOP
+				// {{{
+				// Opening/sync sequence is complete.  Continue
+				// now with either the read or write sequence
 				cfg_in <= 32'h20000000;	// NOOP
-				state <= (r_we) ? `MBOOT_WRITE : `MBOOT_READ;
+				state <= (r_we) ? MBOOT_WRITE : MBOOT_READ;
 				cfg_cs_n <= 1'b0;
 				end
-			`MBOOT_READ: begin
+				// }}}
+			MBOOT_READ: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= { 8'h28, 6'h0, r_addr, 13'h001 };
 				end
-			5'h07: begin
+				// }}}
+			5'h07: begin	// (Read, NOOP)
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h20000000; // NOOP
 				end
-			5'h08: begin
+				// }}}
+			5'h08: begin	// (Read, NOOP)
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h20000000; // NOOP
 				end
+				// }}}
 			5'h09: begin // Idle the interface before the read cycle
+				// {{{
 				cfg_cs_n <= 1'b1;
 				cfg_rdwrn <= 1'b1;
 				cfg_in <= 32'h20000000; // NOOP
 				end
-			5'h0a: begin // Re-activate the interface and wait 3 cycles
+				// }}}
+			5'h0a: begin // Re-activate the interface, wait 3 cycles
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_rdwrn <= 1'b1;
 				cfg_in <= 32'h20000000; // NOOP
 				end
-			5'h0b: begin // ... still waiting, cycle two
+				// }}}
+			5'h0b: begin // NOOP ... still waiting, cycle two
+				// {{{
 				cfg_in <= 32'h20000000; // NOOP
 				cfg_cs_n <= 1'b0;
 				end
-			5'h0c: begin // ... still waiting, cycle three
+				// }}}
+			5'h0c: begin // NOOP ... still waiting, cycle three
+				// {{{
 				cfg_in <= 32'h20000000; // NOOP
 				cfg_cs_n <= 1'b0;
 				end
-			5'h0d: begin // ... still waiting, cycle four
+				// }}}
+			5'h0d: begin // NOOP ... still waiting, cycle four
+				// {{{
 				cfg_in <= 32'h20000000; // NOOP
 				cfg_cs_n <= 1'b0;
 				end
-			5'h0e: begin // and now our answer is there
+				// }}}
+			MBOOT_END_OF_READ: begin // and now our answer is there
+				// {{{
 				cfg_cs_n <= 1'b1;
 				cfg_rdwrn <= 1'b1;
 				cfg_in <= 32'h20000000; // NOOP
 				//
 				// Wishbone return
-				o_wb_ack <= wb_req;
+				o_wb_ack <= i_wb_cyc && wb_req;
 				// o_wb_data <= cfg_out; // Independent of state
 				wb_req <= 1'b0;
 				//
-				state <= `MBOOT_DESYNC;
+				state <= MBOOT_DESYNC;
 				end
-			`MBOOT_WRITE: begin
-				// Issue a write command to the given address
+				// }}}
+			MBOOT_WRITE: begin // Issue write cmd to the given addr
+				// {{{
 				cfg_in <= { 8'h30, 6'h0, r_addr, 13'h001 };
 				cfg_cs_n <= 1'b0;
 				end
-			5'h10: begin
+				// }}}
+			MBOOT_END_OF_WRITE: begin
+				// {{{
 				cfg_in <= r_data;	// Write the value
 				cfg_cs_n <= 1'b0;
 				end
-			`MBOOT_DESYNC: begin
+				// }}}
+			MBOOT_DESYNC: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_rdwrn <= 1'b0;
 				cfg_in <= 32'h20000000;	// 1st NOOP
 				end
+				// }}}
 			5'h12: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h20000000;	// 2nd NOOP
 				end
+				// }}}
 			5'h13: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h30008001;	// Write to CMD register
 				end
+				// }}}
 			5'h14: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h0000000d;	// DESYNC command
 				end
+				// }}}
 			5'h15: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h20000000;	// NOOP
 				end
+				// }}}
 			5'h16: begin
+				// {{{
 				cfg_cs_n <= 1'b0;
 				cfg_in <= 32'h20000000;	// NOOP
 				end
-			5'h17: begin
-				// Acknowledge the bus transaction, it is now complete
-				o_wb_ack <= wb_req;
+				// }}}
+			MBOOT_END: begin // Acknowledge the bus transaction,
+				// {{{
+				// it is now complete
+				o_wb_ack <= i_wb_cyc && wb_req;
 				wb_req <= 1'b0;
 				//
 				cfg_cs_n <= 1'b1;
 				cfg_rdwrn <= 1'b0;
 				cfg_in <= 32'hffffffff;	// DUMMY
 				//
-				state <= `MBOOT_IDLE;
+				state <= MBOOT_IDLE;
+				pre_stall <= 1'b0;
 				end
+				// }}}
 			default: begin
+				// {{{
 				wb_req <= 1'b0;
 				cfg_cs_n <= 1'b1;
 				cfg_rdwrn <= 1'b0;
-				state <= `MBOOT_IDLE;
+				state <= MBOOT_IDLE;
+				pre_stall <= 1'b0;
 				cfg_in <= 32'hffffffff;	// DUMMY WORD
 				end
+				// }}}
 			endcase
 		end
 	end
 
-	genvar	k;
+	assign	o_wb_stall = pre_stall || !clk_stb;
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Bit-swap in and out registers
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 	//
 	// The data registers to the ICAPE2 interface are bit swapped within
 	// each byte.  Thus, in order to read from or write to the interface,
 	// we need to bit swap the bits in each byte.  These next lines
 	// accomplish that for both the input and output ports.
 	//
-	wire	[31:0]	bit_swapped_cfg_in;
-	generate
-	for(k=0; k<8; k=k+1)
-	begin
+	generate for(k=0; k<8; k=k+1)
+	begin : GEN_BITSWAP
 		assign bit_swapped_cfg_in[   k] = cfg_in[   7-k];
 		assign bit_swapped_cfg_in[ 8+k] = cfg_in[ 8+7-k];
 		assign bit_swapped_cfg_in[16+k] = cfg_in[16+7-k];
 		assign bit_swapped_cfg_in[24+k] = cfg_in[24+7-k];
 	end endgenerate
 
-	wire	[31:0]	bit_swapped_cfg_out;
-	generate
-	for(k=0; k<8; k=k+1)
-	begin
+	generate for(k=0; k<8; k=k+1)
+	begin : GEN_CFGOUT
 		assign cfg_out[   k] = bit_swapped_cfg_out[   7-k];
 		assign cfg_out[ 8+k] = bit_swapped_cfg_out[ 8+7-k];
 		assign cfg_out[16+k] = bit_swapped_cfg_out[16+7-k];
 		assign cfg_out[24+k] = bit_swapped_cfg_out[24+7-k];
 	end endgenerate
-
-	ICAPE2 #(.ICAP_WIDTH("X32")) reconfig(.CLK(slow_clk),
-			.CSIB(cfg_cs_n), .RDWRB(cfg_rdwrn),
-			.I(bit_swapped_cfg_in), .O(bit_swapped_cfg_out));
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Instantiate ICAPE2
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+`ifdef	VERILATOR
+	// Verilator lint_off UNUSED
+	wire	unused;
+	assign	unused = &{ 1'b0, slow_clk, cfg_cs_n, cfg_rdwrn };
+	assign	bit_swapped_cfg_out = bit_swapped_cfg_in;
+	// Verilator lint_on  UNUSED
+`else
+	ICAPE2 #(
+		.ICAP_WIDTH("X32")
+	) reconfig(
+		.CLK(slow_clk), .CSIB(cfg_cs_n), .RDWRB(cfg_rdwrn),
+		.I(bit_swapped_cfg_in), .O(bit_swapped_cfg_out)
+	);
+`endif
+	// }}}
 endmodule

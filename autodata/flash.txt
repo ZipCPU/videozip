@@ -1,7 +1,7 @@
 ################################################################################
 ##
-## Filename: 	flash.txt
-##
+## Filename:	autodata/flash.txt
+## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	Describes the flash in our new data format.
@@ -10,11 +10,11 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
-## Copyright (C) 2017-2019, Gisselquist Technology, LLC
-##
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
 ## This program is free software (firmware): you can redistribute it and/or
-## modify it under the terms of  the GNU General Public License as published
+## modify it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
 ## your option) any later version.
 ##
@@ -27,14 +27,14 @@
 ## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 ## target there if the PDF file isn't present.)  If not, see
 ## <http://www.gnu.org/licenses/> for a copy.
-##
+## }}}
 ## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
 ##		http://www.gnu.org/licenses/gpl.html
-##
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=flash
 @DEVID=FLASH
 @ACCESS=@$(DEVID)_ACCESS
@@ -42,7 +42,6 @@
 @$NADDR=(1<<(@$LGFLASHSZ-2))
 @$NBYTES=(1<<@$LGFLASHSZ)
 @NBYTES.FORMAT=0x%08x
-@ACCESS= FLASH_ACCESS
 @SLAVE.TYPE=MEMORY
 @SLAVE.BUS=wb
 @NDUMMY=6
@@ -144,10 +143,19 @@
 	output	wire	[1:0]	o_qspi_mod;
 @MAIN.DEFNS=
 	// Definitions for the @$(PREFIX) debug port
+	// Verilator lint_off UNUSED
 	wire		@$(PREFIX)_dbg_trigger;
 	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
-	qflexpress #(.LGFLASHSZ(@$LGFLASHSZ), .OPT_CLKDIV(1),
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Flash controller
+	// {{{
+	qflexpress #(
+		// {{{
+		.LGFLASHSZ(@$LGFLASHSZ), .OPT_CLKDIV(1),
+		.OPT_ENDIANSWAP(0),
 		.NDUMMY(@$(NDUMMY)), .RDDELAY(@$(RDDELAY)),
 		.OPT_STARTUP_FILE(@$(STARTUP_SCRIPT)),
 `ifdef	FLASHCFG_ACCESS
@@ -155,19 +163,29 @@
 `else
 		.OPT_CFG(1'b0)
 `endif
-		)
-		@$(PREFIX)i(i_clk, i_reset,
-			// Primary memory reading inputs
-			@$(SLAVE.PORTLIST),
-			// Configuration bus ports
-			@$(flashcfg.SLAVE.PORTLIST),
-			o_qspi_sck, o_qspi_cs_n, o_qspi_mod, o_qspi_dat, i_qspi_dat,
-			flash_dbg_trigger, flash_debug);
+		// }}}
+	) @$(PREFIX)i(
+		// {{{
+		.i_clk(i_clk), .i_reset(i_reset),
+		// Primary memory reading inputs
+		@$(SLAVE.ANSIPORTLIST),
+		// Configuration bus ports
+		@$(flashcfg.SLAVE.ANSIPORTLIST),
+		.o_qspi_sck(o_qspi_sck), .o_qspi_cs_n(o_qspi_cs_n),
+		.o_qspi_mod(o_qspi_mod), .o_qspi_dat(o_qspi_dat),
+			.i_qspi_dat(i_qspi_dat),
+		.o_dbg_trigger(flash_dbg_trigger), .o_debug(flash_debug)
+		// }}}
+	);
+	// }}}
 @MAIN.ALT=
 	assign	o_qspi_sck  = 1'b1;
 	assign	o_qspi_cs_n = 1'b1;
 	assign	o_qspi_mod  = 2'b01;
 	assign	o_qspi_dat  = 4'b1111;
+	// Verilator lint_off UNUSED
+	wire	@$(PREFIX)_unused = &{ 1'b0, i_qspi_dat };
+	// Verilator lint_on UNUSED
 @MEM.NAME= flash
 @MEM.ACCESS = rx
 @REGS.N= 1
@@ -222,6 +240,7 @@
 ##
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb
+@SLAVE.ANSPREFIX=cfg_
 @MAIN.INSERT=
 	// The Flash control interface is defined by the flash instantiation
 	// hence we don't need to do anything to define it here.

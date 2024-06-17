@@ -1,0 +1,57 @@
+################################################################################
+##
+## Filename:	autodata/i2sscope.txt
+## {{{
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	Describes how to connect the I2S debugging port from axisi2s.v
+##		to a (compressed) wishbone scope, then to be connected to the
+##	bus by autofpga.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+################################################################################
+##
+## }}}
+@PREFIX=i2sscope
+@DEPENDS=I2SAUDIO
+@DEVID=I2SSCOPE
+@TARGETPREFIX=i2saudio
+@TARGET=w_i2saudio
+@TRIGGER=w_i2saudio_debug[31]
+@LOG_CAPTURE_SIZE=14
+@INCLUDEFILE=wbscopc.txt
+@INT.I2SSCOPE.PIC=altpic
+@INT.I2SSCOPE.WIRE=@$(PREFIX)_int
+@$DEFHOLDOFF= (1<<20)-1
+@MAIN.DEFNS=
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/lli2si/o_lrclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/xclk_debug* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/lli2si/o_bclk* }] -to [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/xclk_debug* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/lli2si/o_dac* }] -to [get_cells -hier -filter {NAME=~ *u_@$(TARGETPREFIX)/xclk_debug* }] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *xgenclki/GEN_PLL.pll* }] -to [get_cells -hier -filter {NAME=~ *u_i2saudio/xclk_debug* }] 8.0
+

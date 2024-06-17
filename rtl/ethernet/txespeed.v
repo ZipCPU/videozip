@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	txespeed.v
-//
+// Filename:	rtl/ethernet/txespeed.v
+// {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	The RGMII ethernet core runs at 125MHz, no less.  It can
@@ -23,8 +23,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
@@ -39,44 +39,60 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
-	parameter		CK10M  = 50;
-	parameter		CK100M =  5;
-	parameter		CK1G   =   1;
-	localparam	[1:0]	SPD10M = 2'b10,
-				SPD100M= 2'b01,
-				SPD1G  = 2'b00;
-	input	wire		i_clk, i_reset;
-	input	wire	[1:0]	i_spd;
-	input	wire		i_v;
-	input	wire	[7:0]	i_d;
-	output	reg		o_v;
-	output	reg	[7:0]	o_d;
-	output	reg		o_ce;
-	output	reg	[1:0]	o_ck;
+// }}}
+module	txespeed #(
+		// {{{
+		parameter		CK10M  = 50,
+		parameter		CK100M =  5,
+		parameter		CK1G   =   1,
+		localparam	[1:0]	SPD10M = 2'b10,
+					SPD100M= 2'b01,
+					SPD1G  = 2'b00
+		// }}}
+	) (
+		// {{{
+		input	wire		i_clk, i_reset,
+		input	wire	[1:0]	i_spd,
+		input	wire		i_v,
+		input	wire	[7:0]	i_d,
+		output	reg		o_v,
+		output	reg	[7:0]	o_d,
+		output	reg		o_ce,
+		output	reg	[1:0]	o_ck
+		// }}}
+	);
+
+	// Signal declarations
+	// {{{
+	localparam [6:0] HLF10M  = { 1'b0, CK10M[6:1]  };
+	localparam [6:0] HLF100M = { 1'b0, CK100M[6:1] };
 
 	reg		r_ce, second_half;
 	reg	[1:0]	r_spd;
 	reg	[6:0]	ck_counter;
 	reg	[3:0]	r_buf;
+	// }}}
 
+	// r_spd
+	// {{{
 	initial	r_spd = SPD1G;
 	always @(posedge i_clk)
 	if (i_reset)
 		r_spd <= SPD1G;
 	else if (!o_v && ((r_spd == SPD1G) || (ck_counter == 1)))
 		r_spd <= i_spd;
+	// }}}
 
+	// ck_counter, r_ce
+	// {{{
 	initial	ck_counter = 0;
 	initial	r_ce = 1;
 	always @(posedge i_clk)
@@ -106,10 +122,10 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		r_ce       <= (ck_counter <= 1);
 		ck_counter <= (ck_counter - 1);
 	end
+	// }}}
 
-	localparam [6:0] HLF10M  = { 1'b0, CK10M[6:1]  };
-	localparam [6:0] HLF100M = { 1'b0, CK100M[6:1] };
-
+	// o_ck
+	// {{{
 	initial	o_ck = 2'b10;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -135,25 +151,37 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 		else
 			o_ck <= 2'b11;
 	end
+	// }}}
 
+	// r_buf
+	// {{{
 	always @(posedge i_clk)
 	if (r_ce)
 		r_buf <= i_d[7:4];
+	// }}}
 
+	// second_half
+	// {{{
 	initial	second_half = 1;
 	always @(posedge i_clk)
 	if (i_reset || r_spd == SPD1G)
 		second_half <= 1;
 	else if (r_ce)
 		second_half <= !second_half;
+	// }}}
 
+	// o_v
+	// {{{
 	initial	o_v = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_v <= 0;
 	else if (r_ce && (r_spd == SPD1G || !second_half))
 		o_v <= i_v;
+	// }}}
 
+	// o_d
+	// {{{
 	initial	o_d = 0;
 	always @(posedge i_clk)
 	if (r_ce)
@@ -177,11 +205,22 @@ module	txespeed(i_clk, i_reset, i_spd, i_v, i_d, o_v, o_d, o_ce, o_ck);
 			{ o_d[7], o_d[3] } <= 1;
 		end
 	end
+	// }}}
 
+	// o_ce
+	// {{{
 	initial	o_ce = 0;
 	always @(posedge i_clk)
 		o_ce <= i_reset || (r_ce && second_half);
-
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 	reg	f_past_valid, f_halfway;
 	initial	f_past_valid = 0;

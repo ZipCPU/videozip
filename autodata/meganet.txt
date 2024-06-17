@@ -1,0 +1,432 @@
+################################################################################
+##
+## Filename:	autodata/meganet.txt
+## {{{
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+################################################################################
+##
+## }}}
+@PREFIX=meganet
+@DEVID=MEGANET
+@ACCESS=@$(DEVID)_ACCESS
+@SLAVE.BUS=wb
+@NADDR=32
+@SLAVE.TYPE=OTHER
+@$BASEPORT=8543
+@$UARTDBGPORT=@$(BASEPORT)
+@$UARTPORT=@$(BASEPORT)+1
+@$UDPDBGPORT=@$(BASEPORT)+2
+@$DATAPORT=@$(BASEPORT)+3
+@$HWMAC.0=0x82
+@$HWMAC.1=0x33
+@$HWMAC.2=0x48
+@$HWMAC.3=0x02
+@$HWMAC.4=0xe1
+@$HWMAC.5=0xc8
+@$IPADDR.0=10
+@$IPADDR.1=254
+@$IPADDR.2=0
+@$IPADDR.3=2
+@TOP.PORTLIST=
+		// Ethernet control (packets) lines
+		o_net_reset_n,
+		i_net_rx_clk, i_net_rx_ctl, i_net_rxd,
+		o_net_tx_clk, o_net_tx_ctl, o_net_txd
+@TOP.IODECL=
+	// MegaNet I/O port declarations
+	// {{{
+	output	wire		o_net_reset_n;
+	input	wire		i_net_rx_clk, i_net_rx_ctl;
+	input	wire [3:0]	i_net_rxd;
+	output	wire	 	o_net_tx_clk, o_net_tx_ctl;
+	output	wire [3:0]	o_net_txd;
+	// }}}
+@TOP.DEFNS=
+	// Mega Net definitions
+	// {{{
+	wire	[7:0]		w_net_rxd, w_net_txd;
+	wire			w_net_rxdv, w_net_rxerr,
+				w_net_txctl;
+	wire	[1:0]		w_net_tx_clk;
+	reg	@$(PREFIX)_last_tck;
+	// }}}
+@TOP.MAIN=
+		// Ethernet (RGMII) connections
+		o_net_reset_n,
+		i_net_rx_clk, w_net_rxdv,  w_net_rxdv ^ w_net_rxerr, w_net_rxd,
+		w_net_tx_clk, w_net_txctl, w_net_txd
+@TOP.INSERT=
+	// RGMII control
+	// {{{
+	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
+	xiddr	rx1(i_net_rx_clk, i_net_rxd[1], { w_net_rxd[5], w_net_rxd[1] });
+	xiddr	rx2(i_net_rx_clk, i_net_rxd[2], { w_net_rxd[6], w_net_rxd[2] });
+	xiddr	rx3(i_net_rx_clk, i_net_rxd[3], { w_net_rxd[7], w_net_rxd[3] });
+	xiddr	rxc(i_net_rx_clk, i_net_rx_ctl, { w_net_rxdv,   w_net_rxerr });
+
+	//
+	// All of the below is about delaying the clock 90 degrees from the data
+	//
+	xoserdes	tx0(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[0]}}, {(2){w_net_txd[4]}} }, o_net_txd[0]);
+	xoserdes	tx1(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[1]}}, {(2){w_net_txd[5]}} }, o_net_txd[1]);
+	xoserdes	tx2(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[2]}}, {(2){w_net_txd[6]}} }, o_net_txd[2]);
+	xoserdes	tx3(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[3]}}, {(2){w_net_txd[7]}} }, o_net_txd[3]);
+
+	always @(posedge s_clk_125mhz)
+		@$(PREFIX)_last_tck <= w_net_tx_clk[0];
+
+	xoserdes	txc(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, {(4){w_net_txctl}}, o_net_tx_ctl );
+
+	xoserdes	txck(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, {@$(PREFIX)_last_tck, {(2){w_net_tx_clk[1]}},w_net_tx_clk[0]},o_net_tx_clk);
+	// xoserdes	txck(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_tx_clk[1]}},{(2){w_net_tx_clk[0]}} }, o_net_tx_clk);
+	// }}}
+@MAIN.PORTLIST=
+                // Ethernet control (packets) lines
+                o_net_reset_n,
+                // eth_int_b    // Interrupt, leave floating
+                // eth_pme_b    // Power management event, leave floating
+                i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
+                o_net_tx_clk, o_net_tx_ctl, o_net_txd
+@MAIN.PARAM=
+	parameter	[15:0]	UDP_DBGPORT  = @$(UDPDBGPORT);
+	parameter	[15:0]	UDP_DATAPORT = @$(DATAPORT);
+
+	localparam	[47:0]	DEF_HWMAC  = 48'h@$[%02x](HWMAC.0)_@$[%02x](HWMAC.1)_@$[%02x](HWMAC.2)_@$[%02x](HWMAC.3)_@$[%02x](HWMAC.4)_@$[%02x](HWMAC.5);
+	localparam	[31:0]	DEF_IPADDR = { 8'd@$(IPADDR.0), 8'd@$(IPADDR.1), 8'd@$(IPADDR.2), 8'd@$(IPADDR.3) };
+@MAIN.IODECL=
+        // Ethernet (RGMII) control
+	// {{{
+	// Verilator lint_off SYNCASYNCNET
+        output  wire            o_net_reset_n;
+	// Verilator lint_on  SYNCASYNCNET
+        input   wire            i_net_rx_clk, i_net_rx_dv, i_net_rx_err;
+        input   wire    [7:0]   i_net_rxd;
+        output  wire    [1:0]   o_net_tx_clk;
+        output  wire            o_net_tx_ctl;
+        output  wire    [7:0]   o_net_txd;
+	// }}}
+@MAIN.DEFNS=
+        // Ethernet (RGMII) control
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	[47:0]	my_hwmac, last_ping_hwmac;
+	wire	[31:0]	mega_ip_addr, last_ping_ipaddr;
+
+	wire		mega_cpu_tvalid, mega_cpu_tready;
+	wire	[31:0]	mega_cpu_tdata;
+
+	wire		mega_dbg_tvalid, mega_dbg_tready, mega_dbg_tlast;
+	wire	[31:0]	mega_dbg_tdata;
+
+	wire		net_adc_enable;
+
+	wire		net_debug_clk;
+	wire	[31:0]	net_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// MegaNET
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+	meganet #(
+		// {{{
+		.DEF_HWMAC(DEF_HWMAC),
+		.DEF_IPADDR(DEF_IPADDR),
+		.UDP_DBGPORT(UDP_DBGPORT)
+		// }}}
+	) u_meganet (
+		// {{{
+		.S_AXI_ACLK(i_clk), .S_AXI_ARESETN(!i_reset),
+		//
+		.o_hwmac(my_hwmac), .o_ipaddr(mega_ip_addr),
+		.o_ping_hwmac(last_ping_hwmac),
+			.o_ping_ipaddr(last_ping_ipaddr),
+			.o_net_adc_enable(net_adc_enable),
+			.i_addr_switch({ 2'b0, wb_spio_idata[10:9] }),
+		//
+		@$(SLAVE.ANSIPORTLIST),
+		.S_CPU_TVALID(1'b0),
+			.S_CPU_TREADY(mega_cpu_tready),
+			.S_CPU_TDATA(32'h0),
+`ifdef	NETBUS_ACCESS
+		.S_DBG_TVALID(netbus_tvalid),
+			.S_DBG_TREADY(netbus_tready),
+			.S_DBG_TDATA(netbus_tdata),
+`else
+		.S_DBG_TVALID(1'b0),
+			.S_DBG_TREADY(mega_dbg_tready),
+			.S_DBG_TDATA(32'h0),
+`endif
+		.S_DATA_TVALID(rxpkt_valid),
+			.S_DATA_TREADY(rxpkt_ready),
+			.S_DATA_TDATA(rxpkt_data),
+		.M_CPU_VALID(mega_cpu_tvalid),
+			.M_CPU_READY(1'b1),
+			.M_CPU_DATA(mega_cpu_tdata),
+`ifdef	NETBUS_ACCESS
+		.M_DBG_VALID(mega_dbg_tvalid),
+			.M_DBG_READY(mega_dbg_tready),
+			.M_DBG_DATA(mega_dbg_tdata),
+`else
+		.M_DBG_VALID(mega_dbg_tvalid),
+			.M_DBG_READY(1'b1),
+			.M_DBG_DATA(mega_dbg_tdata),
+`endif
+		//
+		.o_net_reset_n(o_net_reset_n),
+		.i_net_rx_clk(i_net_rx_clk), .i_net_rx_dv(i_net_rx_dv),
+		.i_net_rx_err(i_net_rx_err), .i_net_rxd(i_net_rxd),
+		//
+		.i_net_tx_clk(i_net_tx_clk), .o_net_tx_ck(o_net_tx_clk),
+		.o_net_tx_ctl(o_net_tx_ctl), .o_net_txd(o_net_txd),
+		//
+		.o_debug_clk(net_debug_clk),
+		.o_debug(net_debug)
+		// }}}
+	);
+
+	// }}}
+@REGDEFS.H.INCLUDE=
+#define	FPGAPORT	@$(BASEPORT)
+#define	UARTDBGPORT	@$(UARTDBGPORT)
+#define	UARTPORT	@$(UARTPORT)
+#define	UDP_DBGPORT	@$(UDPDBGPORT)
+#define	UDP_DATAPORT	@$(DATAPORT)
+@REGS.N=22
+@REGS.NOTE=// Meganet register definitions
+@REGS.0=   0 R_NET_RXCMD    NETRX
+@REGS.1=   1 R_NET_TXCMD    NETTX
+@REGS.2=   2 R_NET_MACHI    MACHI
+@REGS.3=   3 R_NET_MACLO    MACLO
+@REGS.4=   4 R_NET_IPADDR   IPADDR
+@REGS.5=   5 R_NET_RXMISS   NETMISS
+@REGS.6=   6 R_NET_RXERR    NETERR
+@REGS.7=   7 R_NET_RXCRC    NETCRCER
+@REGS.8=   8 R_NET_DBGSEL   NETDBGSL  NETDBGSEL
+@REGS.9=   8 R_NET_RXPKTS   NETRXPKT  NETRXPKTS RXPKTS
+@REGS.10=  9 R_NET_ARPRX    NETARPRX  ARPRX
+@REGS.11= 10 R_NET_ICMPRX   NETICMRX  NETICMPRX ICMPRX
+@REGS.12= 11 R_NET_TXPKTS   NETTXPKT  NETTXPKTS TXPKTS
+@REGS.13= 12 R_NET_ARPTX    NETARPTX  ARPTX
+@REGS.14= 13 R_NET_ICMPTX   NETICMTX  NETICMPTX ICMPTX
+@REGS.15= 14 R_NET_DATATX   NETDATTX  NETDATATX DATAPKTS
+@REGS.16= 15 R_NET_TXABORTS NETABRTS  TXABORTS
+@REGS.17= 16 R_NET_DBGRX    NETDBGRX  DBGRX
+@REGS.18= 17 R_NET_DBGTX    NETDBGTX  DBGTX
+@REGS.19= 18 R_NET_DROPS    DROPS
+@REGS.20= 19 R_NET_DROPCNT  DROPCNT
+@REGS.21= 20 R_NET_MONDATA  MONDATA
+
+@BDEF.INCLUDE=
+#define	UDP_DBGPORT	@$(UDPDBGPORT)
+#define	UDP_DATAPORT	@$(DATAPORT)
+@BDEF.DEFN=
+// Network stream/packet interface
+// {{{
+typedef struct ENETSTREAM_S {
+        unsigned        n_rxcmd, n_txcmd;
+        unsigned long   n_mac;
+	unsigned	n_ipaddr;
+        unsigned        n_rxmiss, n_rxerr, n_rxcrc;
+} ENETSTREAM;
+// }}}
+@BDEF.IONAME=io_enet
+@BDEF.IOTYPE=ENETSTREAM
+@BDEF.OSDEF=_BOARD_HAS_ENETS
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const _nets = ((ENETSTREAM *)@$[0x%08x](REGBASE));
+
+@RTL.MAKE.GROUP=ENET
+@RTL.MAKE.SUBD=net
+@RTL.MAKE.FILES=
+@CLOCK.NAME=net_rx_clk
+@$CLOCK.FREQUENCY=125000000
+@SIM.CLOCK=net_rx_clk
+@SIM.INCLUDE=
+#include "netsim.h"
+@SIM.DEFNS=
+		NETSIM	*m_net;
+@SIM.INIT=
+		// Network init
+		// {{{
+		m_net = new NETSIM();
+		m_net->external_mac[0] = 0xde;
+		m_net->external_mac[1] = 0xad;
+		m_net->external_mac[2] = 0xbe;
+		m_net->external_mac[3] = 0xef;
+		m_net->external_mac[4] = 0xda;
+		m_net->external_mac[5] = 0xdd;
+		m_net->external_ip[0] = 127;
+		m_net->external_ip[1] = 0;
+		m_net->external_ip[2] = 0;
+		m_net->external_ip[3] = 1;
+		m_net->local_mac[0] = @$[0x%02x](HWMAC.0); // Must match IP begin simulated
+		m_net->local_mac[1] = @$[0x%02x](HWMAC.1);
+		m_net->local_mac[2] = @$[0x%02x](HWMAC.2);
+		m_net->local_mac[3] = @$[0x%02x](HWMAC.3);
+		m_net->local_mac[4] = @$[0x%02x](HWMAC.4);
+		m_net->local_mac[5] = @$[0x%02x](HWMAC.5);
+		m_net->local_ip[0] = @$[%d](IPADDR.0);
+		m_net->local_ip[1] = @$[%d](IPADDR.1);
+		m_net->local_ip[2] = @$[%d](IPADDR.2);
+		m_net->local_ip[3] = @$[%d](IPADDR.3);
+		m_net->local_ipu = 0x@$[%02x](IPADDR.0)@$[%02x](IPADDR.1)@$[%02x](IPADDR.2)@$[%02x](IPADDR.3);
+		// }}}
+@SIM.TICK=
+		// Simulate the network
+		// {{{
+		{
+			unsigned rxtmp = (*m_net)(m_core->o_net_reset_n,
+					m_core->o_net_tx_ctl,
+					m_core->o_net_txd);
+
+			m_core->i_net_rx_err = 0;
+			if (rxtmp & 0x0100) {
+				m_core->i_net_rx_dv  = 1;
+				m_core->i_net_rxd = rxtmp & 0x0ff;
+			} else {
+				m_core->i_net_rx_dv  = 0;
+				m_core->i_net_rxd = 0x044;
+			}
+		}
+		// }}}
+##
+@PREFIX=comnet
+@RTL.MAKE.GROUP=COMMONNET
+@RTL.MAKE.SUBD=../../common/rtl/net
+@RTL.MAKE.FILES= enetstream.v
+        addecrc.v addemac.v addepad.v addepreamble.v
+        rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepacket.v rxepreambl.v
+	stream2pkt.v txespeed.v xiddr.v xoddr.v strmmerge.v
+@PREFIX=comproto
+@RTL.MAKE.GROUP=COMMONPROTO
+@RTL.MAKE.SUBD=../../common/rtl/proto
+@RTL.MAKE.FILES=arp.v ipheader.v pkt2udp.v udpmatch.v
+@PREFIX=nearnet
+@RTL.MAKE.GROUP=PROTO
+@RTL.MAKE.SUBD=proto
+@RTL.MAKE.FILES=icmpecho.v
+@XDC.INSERT=
+################################################################################
+#
+# MegaNET
+# {{{
+create_clock -period 8.0 -name NETRX -waveform { 0.0 4.0 } -add [get_ports {i_net_rx_clk} ];
+
+## All clocks
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *afifo*/wgray_r*}] -to [ get_cells -hier -filter {NAME =~ *afifo*/wgray_cross*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *afifo*/rgray_r*}] -to [ get_cells -hier -filter {NAME =~ *afifo*/rgray_cross*}] 8.0
+
+## CLK -> NETTX
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}] -to [ get_cells -hier -filter {NAME =~ *pre_tx_reset*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset*}]  -to [ get_cells -hier -filter {NAME =~*n_tx_reset*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_tx_reset*}]   -to [ get_cells -hier -filter {NAME =~*u_icmpstream/M_AXIN*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *meganet/*afifo*}]        -to [ get_cells -hier -filter {NAME =~*u_meganet/*afifo*/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*net_core/preq_tx_reset*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset*}]  -to [ get_cells -hier -filter {NAME =~*net_core/q_tx_reset*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_meganet/u_icmpstream/M_AXIN_VALID*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_meganet/u_icmpstream/M_AXIN_DATA*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_meganet/u_icmpstream/M_AXIN_LAST*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/tfrtxspd/a_req*}]  -to [ get_cells -hier -filter {NAME =~*u_meganet/net_core/tfrtxspd/b_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/tfrtxspd/a_data*}] -to [ get_cells -hier -filter {NAME =~*u_meganet/net_core/tfrtxspd/o_b_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]       -to [ get_cells -hier -filter {NAME =~*txmaci/r_hw*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netclk_stable*}]         -to [ get_cells -hier -filter {NAME =~*/reset_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *netclk_stable*}]         -to [ get_cells -hier -filter {NAME =~*/sync_reset*}] 8.0
+
+## NETTX -> CLK
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_adc/b_reset_n*}] -to [ get_cells -hier -filter {NAME =~ *u_adc/b_last*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_adc/b_reset_n*}] -to [ get_cells -hier -filter {NAME =~ *u_adc/b_pipe*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_adc/b_reset_n*}] -to [ get_cells -hier -filter {NAME =~ *u_adc/b_req*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_adc/b_reset_n*}] -to [ get_cells -hier -filter {NAME =~ *u_adc/o_b_valid*}] 8.0
+# set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/tx_spd*}] -to [ get_cells -hier -filter {NAME =~ *tfrtxspd/a_data*}] 8.0
+# set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/tx_spd*}] -to [ get_cells -hier -filter {NAME =~ *net_core/o_wb_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/tfrtxspd/b_last*}] -to [ get_cells -hier -filter {NAME =~ *tfrtxspd/a_pipe*}] 8.0
+
+## NETTX -> NETTX_D
+# set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/txspdi/o_ck*}] -to [ get_cells -hier -filter {NAME =~ txck/ODDR*}] 2.0
+
+## NETTX -> NETRX
+
+## CLK -> NETRX
+# set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]       -to [ get_cells -hier -filter {NAME =~ *net_core/pre_rx_reset*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]       -to [ get_cells -hier -filter {NAME =~ *net_core/preq_rx_reset*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]       -to [ get_cells -hier -filter {NAME =~ *tfrrxspd/a_ack*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]       -to [ get_cells -hier -filter {NAME =~*tfrrxspd/a_pipe*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]       -to [ get_cells -hier -filter {NAME =~ *tfrrxspd/a_req*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset_n*}]   -to [ get_cells -hier -filter {NAME =~ *n_rx_reset*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset_n*}]   -to [ get_cells -hier -filter {NAME =~ *q_rx_reset*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/tfrrxspd/b_last*}] -to [ get_cells -hier -filter {NAME =~ *tfrrxspd/a_pipe*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*o_no_match*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*o_match*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*rxipci/o_err*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*rxipci/o_err*}] 8.0
+## set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*rxmaci/r_hwmac*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*u_meganet/u_arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*u_meganet/u_arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_meganet/net_core/tfr_rxipaddr/b_last*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_meganet/net_core/tfr_rxipaddr/b_pipe*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_meganet/net_core/tfr_rxipaddr/b_req*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_meganet/arp_afifo/rgray_cross*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_meganet/arp_afifo/wgray*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/b_last*}]      -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/a_pipe*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/a_data*}]      -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/o_b_data*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/a_req*}]       -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/o_b_data*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/a_req*}]       -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/b_pipe*}] 8.0
+
+# NETRX ->CLK
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_ipaddr*}]     -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/shift_reg*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_mac*}]        -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/shift_reg*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_mac*}]        -to [ get_cells -hier -filter {NAME =~ *u_meganet/o_net_adc_enable*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_ipaddr*}]     -to [ get_cells -hier -filter {NAME =~ *u_meganet/o_net_adc_enable*}] 8.0
+#
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/tfrrxspd/a_data*}] -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/o_b_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b_last*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b_req*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_mac*}]        -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/valid_macaddr*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/u_icmp/o_ping_ipaddr*}]     -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/shift_reg*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/txclk_check*}]  -to [ get_cells -hier -filter {NAME =~ *net_core/net_reset_timer*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_crcerr*}]     -to [ get_cells -hier -filter {NAME =~ *net_core/rx_crc_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/tfrrxspd/a*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/rxclk_check*}]  -to [ get_cells -hier -filter {NAME =~ *net_core/net_reset_timer*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_miss*}]       -to [ get_cells -hier -filter {NAME =~ *net_core/rx_miss_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/tfr_*/a_data*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/tfr*/o_b_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/tfr_*/a_req*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/tfr*/b_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/tfr_*/b_last*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/tfr*/a_pipe*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_err*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/net_core/rx_err_pipe*}] 8.0
+# }}}

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	wbgpio.v
-//
+// Filename:	rtl/wbgpio.v
+// {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This extremely simple GPIO controller, although minimally
@@ -34,10 +34,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2020, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -50,16 +50,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 		o_wb_stall, o_wb_ack, o_wb_data,
 		i_gpio, o_gpio, o_int);
@@ -80,6 +79,13 @@ module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 	//
 	output	reg		o_int;
 
+	reg	[(NIN-1):0]	r_gpio;
+	(* ASYNC_REG *)	reg	[(NIN-1):0]	x_gpio, q_gpio;
+	wire	[15:0]	hi_bits, low_bits;
+
+	assign	o_wb_ack   = i_wb_stb;
+	assign	o_wb_stall = 1'b0;
+
 	// 9LUT's, 16 FF's
 	initial	o_gpio = DEFAULT;
 	always @(posedge i_clk)
@@ -87,26 +93,26 @@ module wbgpio(i_clk, i_wb_cyc, i_wb_stb, i_wb_we, i_wb_data, i_wb_sel,
 		o_gpio <= ((o_gpio)&(~i_wb_data[(NOUT+16-1):16]))
 			|((i_wb_data[(NOUT-1):0])&(i_wb_data[(NOUT+16-1):16]));
 
-	reg	[(NIN-1):0]	x_gpio, q_gpio, r_gpio;
 	// 3 LUTs, 33 FF's
 	always @(posedge i_clk)
 	begin
 		{ r_gpio, q_gpio, x_gpio } <= { q_gpio, x_gpio, i_gpio };
-		o_int  <= (r_gpio != q_gpio);
+		o_int  <= (q_gpio != r_gpio);
 	end
 
-	wire	[15:0]	hi_bits, low_bits;
 	assign	hi_bits[ (NIN -1):0] = r_gpio;
 	assign	low_bits[(NOUT-1):0] = o_gpio;
 	generate
 	if (NIN < 16)
+	begin : ASSIGN_UNUSED_INPUTS
 		assign hi_bits[ 15: NIN] = 0;
+	end
 	if (NOUT < 16)
+	begin : ASSIGN_UNUSED_OUTPUTS
 		assign low_bits[15:NOUT] = 0;
+	end
 	endgenerate
 
-	assign	o_wb_stall = 1'b0;
-	assign	o_wb_ack = i_wb_stb;
 	assign	o_wb_data = { hi_bits, low_bits };
 
 	// Make Verilator happy

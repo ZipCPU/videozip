@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	addepreamble.v
-//
-// Project:	Ethernet cores, a set of ethernet cores for RM interfaces
+// Filename:	rtl/ethernet/addepreamble.v
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To add the ethernet preamble to a stream of values (i.e., to
 //		an ethernet packet ...)
@@ -12,10 +12,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -28,35 +28,46 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
-	input	wire		i_clk, i_reset, i_ce, i_en;
-	input	wire		i_v;	// Valid
-	input	wire	[7:0]	i_d;	// Data Byte
-	output	reg		o_v;
-	output	reg	[7:0]	o_d;
+// }}}
+module addepreamble (
+		// {{{
+		input	wire		i_clk, i_reset, i_ce, i_en,
+		input	wire		i_v,	// Valid
+		input	wire	[7:0]	i_d,	// Data Byte
+		output	reg		o_v,
+		output	reg	[7:0]	o_d
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	reg	[8*9-1:0]	shiftreg;
+	// }}}
 
+	// o_v, o_d, shiftreg
+	// {{{
 	initial	o_v = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
+		// {{{
 		o_v <= 1'b0;
 		o_d <= 8'h0;
 		shiftreg <= {
 			9'h155, 9'h155, 9'h155, 9'h155,
 			9'h155, 9'h155, 9'h155, 9'h1d5 };
-	end else if (i_ce) begin
+		// }}}
+	end else if (i_ce)
+	begin
+		// {{{
 		shiftreg <= { shiftreg[62:0], { i_v, i_d }};
 		o_v <= shiftreg[71]&&((o_v)||(i_v));
 		o_d <= shiftreg[70:63];
@@ -77,8 +88,18 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 				shiftreg[8*9-1] <= 1'b0;
 			end
 		end
+		// }}}
 	end
-
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 	reg	[9-1:0]		f_v;
 	reg	[9*8-1:0]	f_d;
@@ -92,6 +113,11 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Incoming assumptions
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
 	always @(*)
 	if (!f_past_valid)
 		assume(i_reset);
@@ -111,7 +137,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 		assume($stable(i_v));
 		assume($stable(i_d));
 	end
-	
+
 	always @(posedge i_clk)
 	if ((f_past_valid)&&((i_v)||(o_v))&&(!$past(i_reset)))
 		assume($stable(i_en));
@@ -139,7 +165,10 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_v))&&(f_cnt < 9))
 		assume(i_v);
-
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
@@ -153,7 +182,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 
 	always @(posedge i_clk)
 	if (i_ce)
-		f_d <= { f_d[8*9-1:0], i_d };
+		f_d <= { f_d[8*8-1:0], i_d };
 
 	always @(posedge i_clk)
 	if ((f_past_valid)
@@ -180,6 +209,7 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	4'h6: assert((o_v)&&(o_d == 8'h55));
 	4'h7: assert((o_v)&&(o_d == 8'h55));
 	4'h8: assert((o_v)&&(o_d == 8'hd5));
+	default: begin end
 	endcase
 	else if ((f_past_valid)&&(f_cnt < 4'h9)&&(f_v[0]))
 		assert(!o_v);
@@ -187,13 +217,18 @@ module addepreamble(i_clk, i_reset, i_ce, i_en, i_v, i_d, o_v, o_d);
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(o_v)&&(f_cnt >= 9))
 		assert(o_d == f_d[9*8-1:8*8]);
-
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Cover properties
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_reset)))
 		cover($fell(o_v));
+	// }}}
 `endif
+// }}}
 endmodule

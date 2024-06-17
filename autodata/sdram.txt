@@ -1,7 +1,7 @@
 ################################################################################
 ##
-## Filename: 	sdram.txt
-##
+## Filename:	autodata/sdram.txt
+## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
 ## Purpose:	To describe how to provide access to an SDRAM controller
@@ -13,10 +13,10 @@
 ##
 ################################################################################
 ##
-## Copyright (C) 2017-2019, Gisselquist Technology, LLC
-##
+## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## {{{
 ## This program is free software (firmware): you can redistribute it and/or
-## modify it under the terms of  the GNU General Public License as published
+## modify it under the terms of the GNU General Public License as published
 ## by the Free Software Foundation, either version 3 of the License, or (at
 ## your option) any later version.
 ##
@@ -29,14 +29,14 @@
 ## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 ## target there if the PDF file isn't present.)  If not, see
 ## <http://www.gnu.org/licenses/> for a copy.
-##
+## }}}
 ## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
 ##		http://www.gnu.org/licenses/gpl.html
-##
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=sdram
 @DEVID=SDRAM
 @ACCESS=@$(DEVID)_ACCESS
@@ -51,10 +51,15 @@
 @$MADDR= @$(REGBASE)
 @MADDR.FORMAT=0x%08x
 @SLAVE.TYPE=MEMORY
-@SLAVE.BUS=rambus
-@BUS.NAME=rambus
-@BUS.CLOCK=clk
+@SLAVE.BUS=wbwide
+@SLAVE.ORDER=100
+# @CLOCK.NAME=clk
+# @CLOCK.FREQUENCY = 81250000
+@RAMW=16
+@BUS.NAME=wbwide
 @BUS.WIDTH=128
+@BUS.CLOCK=clk
+@BUS.TYPE=wb
 ## @ERROR.WIRE=@$(PREFIX)_err
 # 8-bit byte accesses
 @$ABITS=@$(LGMEMSZ)-@$(UNUSED)
@@ -68,6 +73,7 @@
 		ddr3_dq, ddr3_dm, ddr3_odt
 @TOP.IODECL=
 	// I/O declarations for the DDR3 SDRAM
+	// {{{
 	output	wire		ddr3_reset_n;
 	output	wire	[0:0]	ddr3_cke;
 	output	wire	[0:0]	ddr3_ck_p, ddr3_ck_n;
@@ -76,22 +82,21 @@
 	output	wire	[2:0]	ddr3_ba;
 	output	wire	[14:0]	ddr3_addr;
 	output	wire	[0:0]	ddr3_odt;
-	output	wire	[1:0]	ddr3_dm;
-	inout	wire	[1:0]	ddr3_dqs_p, ddr3_dqs_n;
-	inout	wire	[15:0]	ddr3_dq;
-
+	output	wire	[@$(RAMW)/8-1:0]	ddr3_dm;
+	inout	wire	[@$(RAMW)/8-1:0]	ddr3_dqs_p, ddr3_dqs_n;
+	inout	wire	[@$(RAMW)-1:0]	ddr3_dq;
+	// }}}
 @TOP.DEFNS=
 	// Wires necessary to run the SDRAM
-	//
+	// {{{
 	wire	@$(PREFIX)_cyc, @$(PREFIX)_stb, @$(PREFIX)_we,
 		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_err;
 	wire	[(@$(LGMEMSZ)-@$(UNUSED)-1):0]	@$(PREFIX)_addr;
 	wire	[(@$(BUS.WIDTH)-1):0]	@$(PREFIX)_wdata,
 					@$(PREFIX)_rdata;
 	wire	[(@$(BUS.WIDTH)/8-1):0]	@$(PREFIX)_sel;
-	wire	[31:0]			@$(PREFIX)_dbg;
 
-	//
+	// }}}
 	// Wires coming back from the SDRAM
 	wire	s_clk, s_reset;
 @TOP.MAIN=
@@ -101,13 +106,17 @@
 			@$(PREFIX)_addr, @$(PREFIX)_wdata, @$(PREFIX)_sel,
 			@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_rdata,
 			@$(PREFIX)_err
-			, @$(PREFIX)_dbg
 @TOP.INSERT=
 	wire	[31:0]	@$(PREFIX)_debug;
 
-	migsdram #(.AXIDWIDTH(1), .WBDATAWIDTH(@$(BUS.WIDTH)),
-			.DDRWIDTH(16),
-			.RAMABITS(@$(LGMEMSZ))) @$(PREFIX)i(
+	migsdram #(
+		// {{{
+		.AXIDWIDTH(1), .WBDATAWIDTH(@$(BUS.WIDTH)),
+		.DDRWIDTH(@$(RAMW)),
+		.RAMABITS(@$(LGMEMSZ))
+		// }}}
+	) @$(PREFIX)i(
+		// {{{
 		.i_clk(i_clk_buffered),
 		.i_clk_200mhz(s_clk_200mhz),
 		.o_sys_clk(s_clk),
@@ -130,8 +139,8 @@
 		.o_ddr_odt(ddr3_odt), .o_ddr_dm(ddr3_dm),
 		.io_ddr_dqs_p(ddr3_dqs_p), .io_ddr_dqs_n(ddr3_dqs_n),
 		.io_ddr_data(ddr3_dq)
-		,  .o_ram_dbg(@$(PREFIX)_dbg)
-		);
+		// }}}
+	);
  	
 @MAIN.PORTLIST=
 		// SDRAM ports
@@ -139,9 +148,9 @@
 				o_@$(PREFIX)_addr, o_@$(PREFIX)_data, o_@$(PREFIX)_sel,
 			i_@$(PREFIX)_stall, i_@$(PREFIX)_ack, i_@$(PREFIX)_data,
 			i_@$(PREFIX)_err
-			, i_@$(PREFIX)_dbg
 @MAIN.IODECL=
 	// SDRAM I/O declarations
+	// {{{
 	output	wire			o_@$(PREFIX)_cyc,
 					o_@$(PREFIX)_stb, o_@$(PREFIX)_we;
 	output	wire	[@$(ABITS)-1:0]	o_@$(PREFIX)_addr;
@@ -153,9 +162,13 @@
 	input	wire	[(@$(BUS.WIDTH)-1):0]	i_@$(PREFIX)_data;
 	// Verilator lint_off UNUSED
 	input	wire			i_@$(PREFIX)_err;
-	input	wire	[31:0]		i_@$(PREFIX)_dbg;
 	// Verilator lint_on  UNUSED
+	// }}}
 @MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Export the @$(PREFIX) bus to the top level
+	// {{{
 	assign	o_@$(PREFIX)_cyc  = @$(SLAVE.PREFIX)_cyc;
 	assign	o_@$(PREFIX)_stb  =(@$(SLAVE.PREFIX)_stb);
 	assign	o_@$(PREFIX)_we   = @$(SLAVE.PREFIX)_we;
@@ -165,7 +178,7 @@
 	assign	@$(SLAVE.PREFIX)_ack   = i_@$(PREFIX)_ack;
 	assign	@$(SLAVE.PREFIX)_stall = i_@$(PREFIX)_stall;
 	assign	@$(SLAVE.PREFIX)_idata = i_@$(PREFIX)_data;
-
+	// }}}
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)
 @REGDEFS.H.DEFNS=
@@ -188,16 +201,18 @@
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		// Simulate the SDRAM
+		// {{{
 		(*m_@$(PREFIX))(m_core->o_@$(PREFIX)_cyc,
 			m_core->o_@$(PREFIX)_stb,
 			m_core->o_@$(PREFIX)_we,
 			m_core->o_@$(PREFIX)_addr,
-			m_core->o_@$(PREFIX)_data,
+			(uint32_t *)&m_core->o_@$(PREFIX)_data,
 			m_core->o_@$(PREFIX)_sel,
 			m_core->i_@$(PREFIX)_stall,
 			m_core->i_@$(PREFIX)_ack,
-			m_core->i_@$(PREFIX)_data);
+			(uint32_t *)&m_core->i_@$(PREFIX)_data);
 		m_core->i_@$(PREFIX)_err = 0;
+		// }}}
 #endif	// @$(ACCESS)
 @SIM.LOAD=
 			m_@$(PREFIX)->load(start, &buf[offset], wlen);

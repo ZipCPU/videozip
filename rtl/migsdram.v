@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	migsdram.v
-//
+// Filename:	rtl/migsdram.v
+// {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To interface the Arty to a MIG Generated SDRAM
@@ -11,10 +11,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2015-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -27,10 +27,10 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -101,7 +101,8 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 
 `define	SDRAM_ACCESS
 `ifdef	SDRAM_ACCESS
-
+	// Local declarations
+	// {{{
 	wire	aresetn;
 	assign	aresetn = 1'b1; // Never reset
 
@@ -153,12 +154,14 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	wire		app_sr_req, app_ref_req, app_zq_req;
 	wire		w_sys_reset;
 	wire	[11:0]	w_device_temp;
+	// }}}
 
-
-	mig_axis	mig_sdram(
+	mig_axis
+	mig_sdram(
+		// {{{
 		.ddr3_ck_p(o_ddr_ck_p),		.ddr3_ck_n(o_ddr_ck_n),
 		.ddr3_reset_n(o_ddr_reset_n),	.ddr3_cke(o_ddr_cke),
-		// .ddr3_cs_n(o_ddr_cs_n),	
+		// .ddr3_cs_n(o_ddr_cs_n),
 		.ddr3_ras_n(o_ddr_ras_n),
 		.ddr3_we_n(o_ddr_we_n),		.ddr3_cas_n(o_ddr_cas_n),
 		.ddr3_ba(o_ddr_ba),		.ddr3_addr(o_ddr_addr),
@@ -201,90 +204,105 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 		.s_axi_arcache(s_axi_arcache),	.s_axi_arprot(s_axi_arprot),
 		.s_axi_arqos(s_axi_arqos),	.s_axi_arvalid(s_axi_arvalid),
 		.s_axi_arready(s_axi_arready),
-		// 
+		//
 		.s_axi_rready(s_axi_rready),	.s_axi_rid(s_axi_rid),
 		.s_axi_rdata(s_axi_rdata),	.s_axi_rresp(s_axi_rresp),
 		.s_axi_rlast(s_axi_rlast),	.s_axi_rvalid(s_axi_rvalid),
 		.init_calib_complete(init_calib_complete),
 		.sys_rst(i_rst),
 		.device_temp(w_device_temp)
-		);
+		// }}}
+	);
 
-	wbm2axisp	#( 
-			.C_AXI_ID_WIDTH(AXIDWIDTH),
-			.C_AXI_DATA_WIDTH(AXIWIDTH),
-			.C_AXI_ADDR_WIDTH(RAMABITS),
-			.AW(AW), .DW(DW)
-			)
-			bus_translator (
-				.i_clk(o_sys_clk),
-				.i_reset(o_sys_reset), // internally unused
-				// Write address channel signals
-				.o_axi_awid(	s_axi_awid), 
-				.o_axi_awaddr(	s_axi_awaddr), 
-				.o_axi_awlen(	s_axi_awlen), 
-				.o_axi_awsize(	s_axi_awsize), 
-				.o_axi_awburst(	s_axi_awburst), 
-				.o_axi_awlock(	s_axi_awlock), 
-				.o_axi_awcache(	s_axi_awcache), 
-				.o_axi_awprot(	s_axi_awprot),  // s_axi_awqos
-				.o_axi_awqos(	s_axi_awqos),  // s_axi_awqos
-				.o_axi_awvalid(	s_axi_awvalid), 
-				.i_axi_awready(	s_axi_awready), 
-			//
-				.i_axi_wready(	s_axi_wready),
-				.o_axi_wdata(	s_axi_wdata),
-				.o_axi_wstrb(	s_axi_wstrb),
-				.o_axi_wlast(	s_axi_wlast),
-				.o_axi_wvalid(	s_axi_wvalid),
-			//
-				.o_axi_bready(	s_axi_bready),
-				.i_axi_bid(	s_axi_bid),
-				.i_axi_bresp(	s_axi_bresp),
-				.i_axi_bvalid(	s_axi_bvalid),
-			//
-				.i_axi_arready(	s_axi_arready),
-				.o_axi_arid(	s_axi_arid),
-				.o_axi_araddr(	s_axi_araddr),
-				.o_axi_arlen(	s_axi_arlen),
-				.o_axi_arsize(	s_axi_arsize),
-				.o_axi_arburst(	s_axi_arburst),
-				.o_axi_arlock(	s_axi_arlock),
-				.o_axi_arcache(	s_axi_arcache),
-				.o_axi_arprot(	s_axi_arprot),
-				.o_axi_arqos(	s_axi_arqos),
-				.o_axi_arvalid(	s_axi_arvalid),
-			//
-				.o_axi_rready(	s_axi_rready),
-				.i_axi_rid(	s_axi_rid),
-				.i_axi_rdata(	s_axi_rdata),
-				.i_axi_rresp(	s_axi_rresp),
-				.i_axi_rlast(	s_axi_rlast),
-				.i_axi_rvalid(	s_axi_rvalid),
-			//
-				.i_wb_cyc(	i_wb_cyc),
-				.i_wb_stb(	i_wb_stb),
-				.i_wb_we(	i_wb_we),
-				.i_wb_addr(	i_wb_addr),
-				.i_wb_data(	i_wb_data),
-				.i_wb_sel(	i_wb_sel),
-			//
-				.o_wb_stall(	o_wb_stall),
-				.o_wb_ack(	o_wb_ack),
-				.o_wb_data(	o_wb_data),
-				.o_wb_err(	o_wb_err)
-			//
-				, .o_dbg(	o_ram_dbg)
-		);
+	wbm2axisp #(
+		// {{{
+		.C_AXI_ID_WIDTH(AXIDWIDTH),
+		.C_AXI_DATA_WIDTH(AXIWIDTH),
+		.C_AXI_ADDR_WIDTH(RAMABITS),
+		.AW(AW), .DW(DW)
+		// }}}
+	) bus_translator (
+		// {{{
+			.i_clk(o_sys_clk),
+			.i_reset(o_sys_reset), // internally unused
+			// Write address channel signals
+			.o_axi_awid(	s_axi_awid),
+			.o_axi_awaddr(	s_axi_awaddr),
+			.o_axi_awlen(	s_axi_awlen),
+			.o_axi_awsize(	s_axi_awsize),
+			.o_axi_awburst(	s_axi_awburst),
+			.o_axi_awlock(	s_axi_awlock),
+			.o_axi_awcache(	s_axi_awcache),
+			.o_axi_awprot(	s_axi_awprot),  // s_axi_awqos
+			.o_axi_awqos(	s_axi_awqos),  // s_axi_awqos
+			.o_axi_awvalid(	s_axi_awvalid),
+			.i_axi_awready(	s_axi_awready),
+		//
+			.i_axi_wready(	s_axi_wready),
+			.o_axi_wdata(	s_axi_wdata),
+			.o_axi_wstrb(	s_axi_wstrb),
+			.o_axi_wlast(	s_axi_wlast),
+			.o_axi_wvalid(	s_axi_wvalid),
+		//
+			.o_axi_bready(	s_axi_bready),
+			.i_axi_bid(	s_axi_bid),
+			.i_axi_bresp(	s_axi_bresp),
+			.i_axi_bvalid(	s_axi_bvalid),
+		//
+			.i_axi_arready(	s_axi_arready),
+			.o_axi_arid(	s_axi_arid),
+			.o_axi_araddr(	s_axi_araddr),
+			.o_axi_arlen(	s_axi_arlen),
+			.o_axi_arsize(	s_axi_arsize),
+			.o_axi_arburst(	s_axi_arburst),
+			.o_axi_arlock(	s_axi_arlock),
+			.o_axi_arcache(	s_axi_arcache),
+			.o_axi_arprot(	s_axi_arprot),
+			.o_axi_arqos(	s_axi_arqos),
+			.o_axi_arvalid(	s_axi_arvalid),
+		//
+			.o_axi_rready(	s_axi_rready),
+			.i_axi_rid(	s_axi_rid),
+			.i_axi_rdata(	s_axi_rdata),
+			.i_axi_rresp(	s_axi_rresp),
+			.i_axi_rlast(	s_axi_rlast),
+			.i_axi_rvalid(	s_axi_rvalid),
+		//
+			.i_wb_cyc(	i_wb_cyc),
+			.i_wb_stb(	i_wb_stb),
+			.i_wb_we(	i_wb_we),
+			.i_wb_addr(	i_wb_addr),
+			.i_wb_data(	i_wb_data),
+			.i_wb_sel(	i_wb_sel),
+		//
+			.o_wb_stall(	o_wb_stall),
+			.o_wb_ack(	o_wb_ack),
+			.o_wb_data(	o_wb_data),
+			.o_wb_err(	o_wb_err)
+		//
+			// , .o_dbg(	o_ram_dbg)
+		// }}}
+	);
+
+	// assign	o_ram_dbg = 32'h0;
 
 	// Convert from active low to active high, *and* hold the system in
-	// reset until the memory comes up.	
-	initial	o_sys_reset = 1'b1;
+	// reset until the memory comes up.
+
+	// o_sys_reset
+	// {{{
+	reg	r_sys_reset;
+	initial	r_sys_reset = 1'b1;
 	always @(posedge o_sys_clk)
-		o_sys_reset <= (w_sys_reset)
+		r_sys_reset <= (w_sys_reset)
 				||(!init_calib_complete)
 				||(!mmcm_locked);
+
+	BUFG resetbuf(.I(r_sys_reset), .O(o_sys_reset));
+	// }}}
 `else
+	// If not defined SDRAM_ACCESS
+	// {{{
 	BUFG	sysclk(i_clk, o_sys_clk);
 	initial	o_sys_reset <= 1'b1;
 	always	@(posedge i_clk)
@@ -305,9 +323,8 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 
 	OBUFDS	dqsbufa(.I(i_clk), .O(io_ddr_dqs_p[1]), .OB(io_ddr_dqs_n[1]));
 	OBUFDS	dqsbufb(.I(i_clk), .O(io_ddr_dqs_p[0]), .OB(io_ddr_dqs_n[0]));
-
+	// }}}
 `endif
-
 endmodule
 
 

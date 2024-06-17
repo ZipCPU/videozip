@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	addepad.v
-//
-// Project:	Ethernet cores, a set of ethernet cores for RM interfaces
+// Filename:	rtl/ethernet/addepad.v
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To force the minimum packet size of an ethernet frame to be
 //		a minimum of 64 bytes.  This assumes that the CRC will be
@@ -15,10 +15,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -31,16 +31,15 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module addepad(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_d);
 	parameter	MINOCTETS=60;
 	localparam	LGNCOUNT=(MINOCTETS<63)? 6
@@ -154,10 +153,12 @@ module addepad(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_d);
 
 	always  @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_reset)))
+	begin
 		assert(o_d == 0);
-	else if ((f_past_valid)&&(f_v))
+	end else if ((f_past_valid)&&(f_v))
+	begin
 		assert(o_d == f_d);
-	else if ((f_past_valid)&&(!f_v))
+	end else if ((f_past_valid)&&(!f_v))
 		assert(o_d == 0);
 
 	always @(posedge i_clk)

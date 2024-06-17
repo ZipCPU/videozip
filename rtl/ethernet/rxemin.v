@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	rxemin.v
-//
-// Project:	Ethernet cores, a set of ethernet cores for RM interfaces
+// Filename:	rtl/ethernet/rxemin.v
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To force the minimum received packet size of an ethernet frame
 //		to be a minimum of 64 bytes.  Packets less than 64-bytes
@@ -13,10 +13,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -29,35 +29,46 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
-	parameter	MINBYTES=60;
-	localparam	LGNCOUNT=  (MINBYTES< 63) ? 6
-				: ((MINBYTES<127) ? 7
-				: ((MINBYTES<255) ? 8:9));
-	input	wire		i_clk, i_reset, i_ce, i_en;
-	input	wire		i_v;	// Valid
-	output	reg		o_err;
+// }}}
+module rxemin #(
+		// {{{
+		parameter	MINBYTES=60,
+		localparam	LGNCOUNT= $clog2(MINBYTES+2)
+		// }}}
+	) (
+		// {{{
+		input	wire		i_clk, i_reset, i_ce, i_en,
+		input	wire		i_v,	// Valid
+		output	reg		o_err
+		// }}}
+	);
 
-	reg				last_v;
-	reg	[(LGNCOUNT-1):0]	r_ncnt;
+	// Local declarations
+	// {{{
+	reg			last_v;
+	reg	[LGNCOUNT:0]	r_ncnt;
+	// }}}
 
+	// last_v
+	// {{{
 	initial	last_v = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
 		last_v <= 1'b0;
 	else if (i_ce)
 		last_v <= i_v;
+	// }}}
 
+	// o_err, r_ncnt
+	// {{{
 	initial	o_err  = 0;
 	initial	r_ncnt = 0;
 	always @(posedge i_clk)
@@ -77,13 +88,23 @@ module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
 			o_err <= 0;
 		end else if (i_v)
 		begin
-			if (! (&r_ncnt))
+			if (!r_ncnt[LGNCOUNT])
 				r_ncnt <= r_ncnt + 1'b1;
 			o_err <= 0;
 		end else //  if ((!i_reset)&&(!i_v)&&(last_v))
-			o_err <= (i_en)&&(r_ncnt < MINBYTES);
+			o_err <= (i_en)&&(!r_ncnt[LGNCOUNT])
+						&&(r_ncnt < MINBYTES);
 	end
-
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 	reg	[1:0]	f_v;
 	reg		f_past_valid;
@@ -95,6 +116,9 @@ module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Input assumptions
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 	always @(*)
 	if (!f_past_valid)
@@ -117,10 +141,13 @@ module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
 	if ((f_past_valid)&&(i_v || $past(i_v)))
 		assume(i_en == $past(i_en));
 
-
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Safety Assertions
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 
 	always @(posedge i_clk)
@@ -131,8 +158,9 @@ module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
 
 	always @(posedge i_clk)
 	if ((!f_past_valid)||($past(i_reset)))
+	begin
 		assert(!o_err);
-	else if ($past(o_err && i_ce))
+	end else if ($past(o_err && i_ce))
 		assert(!o_err);
 
 	always @(posedge i_clk)
@@ -150,15 +178,21 @@ module rxemin(i_clk, i_reset, i_ce, i_en, i_v, o_err);
 	if ((f_past_valid)&&(!$past(i_reset))
 			&&($past(r_ncnt) > MINBYTES)&&($past(i_v)))
 		assert(r_ncnt > MINBYTES);
-
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Cover statements
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
 	always @(posedge i_clk)
 		cover(r_ncnt > MINBYTES);
 	always @(posedge i_clk)
 		cover(o_err);
 	always @(posedge i_clk)
 		cover(r_ncnt > MINBYTES && $fell(i_v));
+	// }}}
 `endif
+// }}}
 endmodule

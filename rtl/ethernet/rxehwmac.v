@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	rxehwmac.v
-//
-// Project:	Ethernet cores, a set of ethernet cores for RM interfaces
+// Filename:	rtl/ethernet/rxehwmac.v
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To remove MACs that aren't our own.  The input is a byte stream,
 //	where the first byte is the first byte of the destination MAC (our MAC).
@@ -15,10 +15,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (C) 2016-2019, Gisselquist Technology, LLC
-//
+// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -31,30 +31,37 @@
 // with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
-module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, o_broadcast);
-	input	wire		i_clk, i_reset, i_ce, i_en;
-	input	wire	[47:0]	i_hwmac;
-	input	wire		i_v;
-	input	wire	[7:0]	i_d;
-	output	reg		o_v;
-	output	reg	[7:0]	o_d;
-	output	reg		o_err;
-	output	reg		o_broadcast;
+// }}}
+module	rxehwmac (
+		// {{{
+		input	wire		i_clk, i_reset, i_ce, i_en,
+		input	wire	[47:0]	i_hwmac,
+		input	wire		i_v,
+		input	wire	[7:0]	i_d,
+		output	reg		o_v,
+		output	reg	[7:0]	o_d,
+		output	reg		o_err,
+		output	reg		o_broadcast
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	reg	[47:0]	r_hwmac;
 	reg		r_hwmatch, r_broadcast;
 	reg	[6:0]	r_p;
+	// }}}
 
+	// r_hwmac
+	// {{{
 	always @(posedge i_clk)
 	if (i_reset)
 		r_hwmac <= i_hwmac;
@@ -65,20 +72,27 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		else if ((i_v)&&(r_p[5]))
 			r_hwmac <= { r_hwmac[39:0], 8'h0 };
 	end
+	// }}}
 
+	// r_hwmatch, r_broadcast
+	// {{{
 	initial	r_hwmatch   = 1'b1;
 	initial	r_broadcast = 1'b1;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
+		// {{{
 		r_hwmatch   <= 1'b1;
 		r_broadcast <= 1'b1;
+		// }}}
 	end else if (i_ce)
 	begin
 		if ((!i_v)&&(!o_v))
 		begin
+			// {{{
 			r_hwmatch   <= 1'b1;
 			r_broadcast <= 1'b1;
+			// }}}
 		end else if (r_p[5]) begin	// Up until 6-bytes have past
 			if (r_hwmac[47:40] != i_d)
 				r_hwmatch <= 1'b0;
@@ -86,7 +100,10 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 				r_broadcast<= 1'b0;
 		end
 	end
+	// }}}
 
+	// o_broadcast
+	// {{{
 	initial	o_broadcast = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -98,10 +115,10 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		else if (!r_p[5])
 			o_broadcast <= (r_broadcast);
 	end
+	// }}}
 
-	//
 	// r_p
-	//
+	// {{{
 	initial	r_p = -1;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -113,7 +130,10 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		else
 			r_p <= { r_p[5:0], 1'b0 };
 	end
+	// }}}
 
+	// o_v, o_d
+	// {{{
 	initial	o_v = 1'b0;
 	initial	o_d = 8'h0;
 	always @(posedge i_clk)
@@ -127,8 +147,10 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		if ((i_en)&&(r_p[5]))
 			o_v <= 1'b0;
 	end
+	// }}}
 
-
+	// o_err
+	// {{{
 	initial	o_err = 1'b0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -140,7 +162,16 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		else if ((i_en)&&(r_p[6:5]==2'b10)&&(i_v))
 			o_err <= (!r_hwmatch)&&(!r_broadcast);
 	end
-
+	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 `ifdef	FORMAL
 `ifdef	RXEHWMAC
 `define	ASSUME	assume
@@ -159,6 +190,9 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Input assumptions
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 	always @(*)
 	if (!f_past_valid)
@@ -192,10 +226,13 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 	always @(posedge i_clk)
 	if ((f_past_valid)&&(!$past(i_ce))&&(i_v))
 		`ASSUME($stable(i_d));
-
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Assertions
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 	always @(posedge i_clk)
 	if ((f_past_valid)&&($past(i_reset)))
@@ -231,10 +268,12 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 	if ((f_past_valid)&&(!$past(i_reset)))
 	begin
 		if ((f_v[12:6] == 0)&&(|f_v[5:0])&&(i_en))
+		begin
 			assert(!o_v);
-		else if (|f_v)
+		end else if (|f_v)
+		begin
 			assert(o_v == f_v[0]);
-		else
+		end else
 			assert(!o_v);
 	end
 
@@ -249,15 +288,17 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 	end else if (f_v[8:0] == 9'h07f)
 	begin
 		if (&f_past_data[55:8])
+		begin
 			assert((o_v)&&(r_broadcast)&&(!o_err)&&(o_broadcast));
-		else if ((f_past_data[15:8]==i_hwmac[ 7: 0])
+		end else if ((f_past_data[15:8]==i_hwmac[ 7: 0])
 			&&(f_past_data[23:16]==i_hwmac[15: 8])
 			&&(f_past_data[31:24]==i_hwmac[23:16])
 			&&(f_past_data[39:32]==i_hwmac[31:24])
 			&&(f_past_data[47:40]==i_hwmac[39:32])
 			&&(f_past_data[55:48]==i_hwmac[47:40]))
+		begin
 			assert((o_v)&&(r_hwmatch)&&(!o_err)&&(!o_broadcast));
-		else
+		end else
 			assert(o_v && o_err && !o_broadcast);
 	end else if (!f_v[7])
 	begin
@@ -294,10 +335,13 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 		// else
 			// assert(o_d == f_past_data[7:0]);
 	end
-
+	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	//	Cover properties
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
 	//
 	always @(posedge i_clk)
 		cover((o_v)&&(i_en)&&(r_hwmatch));
@@ -313,6 +357,15 @@ module	rxehwmac(i_clk, i_reset, i_ce, i_en, i_hwmac, i_v, i_d, o_v, o_d, o_err, 
 
 	always @(posedge i_clk)
 		cover((o_v)&&(i_en)&&(!o_err)&&(!o_broadcast)&&(&f_v[9:0]));
+	// }}}
 
+	// Make Verilator happy
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	unused_formal;
+	assign	unused_formal = &{ 1'b0, f_past_data[63:56] };
+	// Verilator lint_on  UNUSED
+	// }}}
 `endif
+// }}}
 endmodule
