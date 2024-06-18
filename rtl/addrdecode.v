@@ -1,7 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	addrdecode.v
+// Filename:	rtl/addrdecode.v
 // {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+//
 // Purpose:	Supports bus crossbars by answering the question, which slave
 //		does the current address need to be routed to?  Requests are
 //	pipelined using valid/!stall handshaking.  For those familiar with
@@ -40,14 +42,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2022-2024, Symbiotic EDA, Gmbh
-//
-////////////////////////////////////////////////////////////////////////////////
-// }}}
-// Copyright (C) 2019, Gisselquist Technology, LLC
+// Copyright (C) 2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
-// modify it under the terms of  the GNU General Public License as published
+// modify it under the terms of the GNU General Public License as published
 // by the Free Software Foundation, either version 3 of the License, or (at
 // your option) any later version.
 //
@@ -57,13 +55,13 @@
 // for more details.
 //
 // You should have received a copy of the GNU General Public License along
-// with this program.  (It's in the $(ROOT)/doc directory, run make with no
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
 // target there if the PDF file isn't present.)  If not, see
 // <http://www.gnu.org/licenses/> for a copy.
-//
+// }}}
 // License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
 //		http://www.gnu.org/licenses/gpl.html
-//
 //
 ////////////////////////////////////////////////////////////////////////////////
 //

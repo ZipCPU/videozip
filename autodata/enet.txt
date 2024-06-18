@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,7 +34,7 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 ## Be able to support 2^14, or 16384 byte packets
 @$LGPKTBUFSZB=14
 ##

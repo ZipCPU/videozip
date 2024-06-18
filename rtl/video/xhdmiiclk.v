@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/xhdmiiclk.v
+// Filename:	rtl/video/xhdmiiclk.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -34,7 +34,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+`default_nettype none
+// }}}
 module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
 		o_hdmi_logic_clk, o_locked);
 	parameter	PHASE_BIAS = 0;

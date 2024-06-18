@@ -35,10 +35,10 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=meganet
+@PREFIX=net
 @DEVID=MEGANET
 @ACCESS=@$(DEVID)_ACCESS
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @NADDR=32
 @SLAVE.TYPE=OTHER
 @$BASEPORT=8543
@@ -52,31 +52,31 @@
 @$HWMAC.3=0x02
 @$HWMAC.4=0xe1
 @$HWMAC.5=0xc8
-@$IPADDR.0=10
-@$IPADDR.1=254
-@$IPADDR.2=0
-@$IPADDR.3=2
+@$IPADDR.0=192
+@$IPADDR.1=168
+@$IPADDR.2=15
+@$IPADDR.3=29
 @TOP.PORTLIST=
 		// Ethernet control (packets) lines
-		o_net_reset_n,
-		i_net_rx_clk, i_net_rx_ctl, i_net_rxd,
-		o_net_tx_clk, o_net_tx_ctl, o_net_txd
+		o_@$(PREFIX)_reset_n,
+		i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rx_ctl, i_@$(PREFIX)_rxd,
+		o_@$(PREFIX)_tx_clk, o_@$(PREFIX)_tx_ctl, o_@$(PREFIX)_txd
 @TOP.IODECL=
 	// MegaNet I/O port declarations
 	// {{{
-	output	wire		o_net_reset_n;
-	input	wire		i_net_rx_clk, i_net_rx_ctl;
-	input	wire [3:0]	i_net_rxd;
-	output	wire	 	o_net_tx_clk, o_net_tx_ctl;
-	output	wire [3:0]	o_net_txd;
+	// output	wire		o_@$(PREFIX)_reset_n;
+	input	wire		i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rx_ctl;
+	input	wire [3:0]	i_@$(PREFIX)_rxd;
+	output	wire	 	o_@$(PREFIX)_tx_clk, o_@$(PREFIX)_tx_ctl;
+	output	wire [3:0]	o_@$(PREFIX)_txd;
 	// }}}
 @TOP.DEFNS=
 	// Mega Net definitions
 	// {{{
-	wire	[7:0]		w_net_rxd, w_net_txd;
-	wire			w_net_rxdv, w_net_rxerr,
-				w_net_txctl;
-	wire	[1:0]		w_net_tx_clk;
+	wire	[7:0]		w_@$(PREFIX)_rxd, w_@$(PREFIX)_txd;
+	wire			w_@$(PREFIX)_rxdv, w_@$(PREFIX)_rxerr,
+				w_@$(PREFIX)_txctl;
+	wire	[1:0]		w_@$(PREFIX)_tx_clk;
 	reg	@$(PREFIX)_last_tck;
 	// }}}
 @TOP.MAIN=
@@ -87,35 +87,35 @@
 @TOP.INSERT=
 	// RGMII control
 	// {{{
-	xiddr	rx0(i_net_rx_clk, i_net_rxd[0], { w_net_rxd[4], w_net_rxd[0] });
-	xiddr	rx1(i_net_rx_clk, i_net_rxd[1], { w_net_rxd[5], w_net_rxd[1] });
-	xiddr	rx2(i_net_rx_clk, i_net_rxd[2], { w_net_rxd[6], w_net_rxd[2] });
-	xiddr	rx3(i_net_rx_clk, i_net_rxd[3], { w_net_rxd[7], w_net_rxd[3] });
-	xiddr	rxc(i_net_rx_clk, i_net_rx_ctl, { w_net_rxdv,   w_net_rxerr });
+	xiddr	@$(PREFIX)rx0(i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rxd[0], { w_@$(PREFIX)_rxd[4], w_@$(PREFIX)_rxd[0] });
+	xiddr	@$(PREFIX)rx1(i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rxd[1], { w_@$(PREFIX)_rxd[5], w_@$(PREFIX)_rxd[1] });
+	xiddr	@$(PREFIX)rx2(i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rxd[2], { w_@$(PREFIX)_rxd[6], w_@$(PREFIX)_rxd[2] });
+	xiddr	@$(PREFIX)rx3(i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rxd[3], { w_@$(PREFIX)_rxd[7], w_@$(PREFIX)_rxd[3] });
+	xiddr	@$(PREFIX)rxc(i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rx_ctl, { w_@$(PREFIX)_rxdv,   w_@$(PREFIX)_rxerr });
 
 	//
 	// All of the below is about delaying the clock 90 degrees from the data
 	//
-	xoserdes	tx0(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[0]}}, {(2){w_net_txd[4]}} }, o_net_txd[0]);
-	xoserdes	tx1(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[1]}}, {(2){w_net_txd[5]}} }, o_net_txd[1]);
-	xoserdes	tx2(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[2]}}, {(2){w_net_txd[6]}} }, o_net_txd[2]);
-	xoserdes	tx3(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_txd[3]}}, {(2){w_net_txd[7]}} }, o_net_txd[3]);
+	xoserdes	@$(PREFIX)tx0(s_clk_125mhz, pll_reset, s_clk_250mhz, { {(2){w_@$(PREFIX)_txd[0]}}, {(2){w_@$(PREFIX)_txd[4]}} }, o_@$(PREFIX)_txd[0]);
+	xoserdes	@$(PREFIX)tx1(s_clk_125mhz, pll_reset, s_clk_250mhz, { {(2){w_@$(PREFIX)_txd[1]}}, {(2){w_@$(PREFIX)_txd[5]}} }, o_@$(PREFIX)_txd[1]);
+	xoserdes	@$(PREFIX)tx2(s_clk_125mhz, pll_reset, s_clk_250mhz, { {(2){w_@$(PREFIX)_txd[2]}}, {(2){w_@$(PREFIX)_txd[6]}} }, o_@$(PREFIX)_txd[2]);
+	xoserdes	@$(PREFIX)tx3(s_clk_125mhz, pll_reset, s_clk_250mhz, { {(2){w_@$(PREFIX)_txd[3]}}, {(2){w_@$(PREFIX)_txd[7]}} }, o_@$(PREFIX)_txd[3]);
 
 	always @(posedge s_clk_125mhz)
-		@$(PREFIX)_last_tck <= w_net_tx_clk[0];
+		@$(PREFIX)_last_tck <= w_@$(PREFIX)_tx_clk[0];
 
-	xoserdes	txc(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, {(4){w_net_txctl}}, o_net_tx_ctl );
+	xoserdes	@$(PREFIX)txc(s_clk_125mhz, pll_reset, s_clk_250mhz, {(4){w_@$(PREFIX)_txctl}}, o_@$(PREFIX)_tx_ctl );
 
-	xoserdes	txck(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, {@$(PREFIX)_last_tck, {(2){w_net_tx_clk[1]}},w_net_tx_clk[0]},o_net_tx_clk);
-	// xoserdes	txck(s_clk_125mhz, !netclk_stable[3], s_clk_250mhz, { {(2){w_net_tx_clk[1]}},{(2){w_net_tx_clk[0]}} }, o_net_tx_clk);
+	xoserdes	@$(PREFIX)txck(s_clk_125mhz, pll_reset, s_clk_250mhz, {@$(PREFIX)_last_tck, {(2){w_@$(PREFIX)_tx_clk[1]}},w_@$(PREFIX)_tx_clk[0]},o_@$(PREFIX)_tx_clk);
+	// xoserdes	@$(PREFIX)txck(s_clk_125mhz, pll_reset, s_clk_250mhz, { {(2){w_@$(PREFIX)_tx_clk[1]}},{(2){w_@$(PREFIX)_tx_clk[0]}} }, o_@$(PREFIX)_tx_clk);
 	// }}}
 @MAIN.PORTLIST=
                 // Ethernet control (packets) lines
-                o_net_reset_n,
+                o_@$(PREFIX)_reset_n,
                 // eth_int_b    // Interrupt, leave floating
                 // eth_pme_b    // Power management event, leave floating
-                i_net_rx_clk, i_net_rx_dv, i_net_rx_err, i_net_rxd,
-                o_net_tx_clk, o_net_tx_ctl, o_net_txd
+                i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rx_dv, i_@$(PREFIX)_rx_err, i_@$(PREFIX)_rxd,
+                o_@$(PREFIX)_tx_clk, o_@$(PREFIX)_tx_ctl, o_@$(PREFIX)_txd
 @MAIN.PARAM=
 	parameter	[15:0]	UDP_DBGPORT  = @$(UDPDBGPORT);
 	parameter	[15:0]	UDP_DATAPORT = @$(DATAPORT);
@@ -128,35 +128,41 @@
 	// Verilator lint_off SYNCASYNCNET
         output  wire            o_net_reset_n;
 	// Verilator lint_on  SYNCASYNCNET
-        input   wire            i_net_rx_clk, i_net_rx_dv, i_net_rx_err;
-        input   wire    [7:0]   i_net_rxd;
-        output  wire    [1:0]   o_net_tx_clk;
-        output  wire            o_net_tx_ctl;
-        output  wire    [7:0]   o_net_txd;
+        input   wire            i_@$(PREFIX)_rx_clk, i_@$(PREFIX)_rx_dv, i_@$(PREFIX)_rx_err;
+        input   wire    [7:0]   i_@$(PREFIX)_rxd;
+        output  wire    [1:0]   o_@$(PREFIX)_tx_clk;
+        output  wire            o_@$(PREFIX)_tx_ctl;
+        output  wire    [7:0]   o_@$(PREFIX)_txd;
 	// }}}
 @MAIN.DEFNS=
         // Ethernet (RGMII) control
 	// {{{
 	// Verilator lint_off UNUSED
-	wire	[47:0]	my_hwmac, last_ping_hwmac;
-	wire	[31:0]	mega_ip_addr, last_ping_ipaddr;
+	wire	[47:0]	@$(PREFIX)_hwmac, @$(PREFIX)_last_ping_hwmac;
+	wire	[31:0]	@$(PREFIX)_ip_addr, @$(PREFIX)_last_ping_ipaddr;
 
-	wire		mega_cpu_tvalid, mega_cpu_tready;
-	wire	[31:0]	mega_cpu_tdata;
+	wire		@$(PREFIX)cpurx_valid, @$(PREFIX)cpurx_ready;
+	wire	[31:0]	@$(PREFIX)cpurx_data;
+	wire		@$(PREFIX)cpurx_last, @$(PREFIX)cpurx_abort;
 
-	wire		mega_dbg_tvalid, mega_dbg_tready, mega_dbg_tlast;
-	wire	[31:0]	mega_dbg_tdata;
+	wire		@$(PREFIX)cputx_tvalid, @$(PREFIX)cputx_tready;
+	wire	[31:0]	@$(PREFIX)cputx_tdata;
 
 	wire		net_adc_enable;
+	wire		@$(PREFIX)_dbg_tvalid, @$(PREFIX)_dbg_tready, @$(PREFIX)_dbg_tlast;
+	wire	[31:0]	@$(PREFIX)_dbg_tdata;
 
-	wire		net_debug_clk;
-	wire	[31:0]	net_debug;
+	wire		@$(PREFIX)_high_speed;
+
+	wire		@$(PREFIX)_debug_clk;
+	wire	[31:0]	@$(PREFIX)_debug;
+
 	// Verilator lint_on  UNUSED
 	// }}}
 @MAIN.INSERT=
 	////////////////////////////////////////////////////////////////////////
 	//
-	// MegaNET
+	// MegaNET @$(DEVID)
 	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -168,177 +174,205 @@
 		.DEF_IPADDR(DEF_IPADDR),
 		.UDP_DBGPORT(UDP_DBGPORT)
 		// }}}
-	) u_meganet (
+	) u_@$(PREFIX) (
 		// {{{
 		.S_AXI_ACLK(i_clk), .S_AXI_ARESETN(!i_reset),
 		//
-		.o_hwmac(my_hwmac), .o_ipaddr(mega_ip_addr),
-		.o_ping_hwmac(last_ping_hwmac),
-			.o_ping_ipaddr(last_ping_ipaddr),
+		.o_hwmac(@$(PREFIX)_hwmac), .o_ipaddr(@$(PREFIX)_ip_addr),
+		.o_ping_hwmac(@$(PREFIX)_last_ping_hwmac),
+			.o_ping_ipaddr(@$(PREFIX)_last_ping_ipaddr),
 			.o_net_adc_enable(net_adc_enable),
 			.i_addr_switch({ 2'b0, wb_spio_idata[10:9] }),
-		//
+		// Wishbone port
+		// {{{
 		@$(SLAVE.ANSIPORTLIST),
-		.S_CPU_TVALID(1'b0),
-			.S_CPU_TREADY(mega_cpu_tready),
-			.S_CPU_TDATA(32'h0),
-`ifdef	NETBUS_ACCESS
-		.S_DBG_TVALID(netbus_tvalid),
-			.S_DBG_TREADY(netbus_tready),
-			.S_DBG_TDATA(netbus_tdata),
+		// }}}
+		// ifdef @$(DEVID)CPUTX_ACCESS
+		// {{{
+		.S_CPU_TVALID(@$(PREFIX)cputx_tvalid),
+			.S_CPU_TREADY(@$(PREFIX)cputx_tready),
+			.S_CPU_TDATA(@$(PREFIX)cputx_tdata),
+		// }}}
+`ifdef	@$(DEVID)BUS_ACCESS
+		// {{{
+		.S_DBG_TVALID(@$(PREFIX)bus_tvalid),
+			.S_DBG_TREADY(@$(PREFIX)bus_tready),
+			.S_DBG_TDATA(@$(PREFIX)bus_tdata),
 `else
 		.S_DBG_TVALID(1'b0),
-			.S_DBG_TREADY(mega_dbg_tready),
+			.S_DBG_TREADY(@$(PREFIX)_dbg_tready),
 			.S_DBG_TDATA(32'h0),
 `endif
-		.S_DATA_TVALID(rxpkt_valid),
-			.S_DATA_TREADY(rxpkt_ready),
-			.S_DATA_TDATA(rxpkt_data),
-		.M_CPU_VALID(mega_cpu_tvalid),
-			.M_CPU_READY(1'b1),
-			.M_CPU_DATA(mega_cpu_tdata),
-`ifdef	NETBUS_ACCESS
-		.M_DBG_VALID(mega_dbg_tvalid),
-			.M_DBG_READY(mega_dbg_tready),
-			.M_DBG_DATA(mega_dbg_tdata),
+		// }}}
+		.S_DATA_TVALID(1'b0),
+			.S_DATA_TREADY(ign_rxpkt_@$(PREFIX)_ready),
+			.S_DATA_TDATA(32'h0),
+		// }}}
+		// ifdef @$(DEVID)CPURX_ACCESS
+		// {{{
+		.M_CPU_VALID(@$(PREFIX)cpurx_valid),
+			.M_CPU_READY(@$(PREFIX)cpurx_ready),
+			.M_CPU_DATA(@$(PREFIX)cpurx_data),
+			.M_CPU_LAST(@$(PREFIX)cpurx_last),
+			.M_CPU_ABORT(@$(PREFIX)cpurx_abort),
+		// }}}
+`ifdef	@$(DEVID)BUS_ACCESS
+		// {{{
+		.M_DBG_VALID(@$(PREFIX)_dbg_tvalid),
+			.M_DBG_READY(@$(PREFIX)_dbg_tready),
+			.M_DBG_DATA(@$(PREFIX)_dbg_tdata),
 `else
-		.M_DBG_VALID(mega_dbg_tvalid),
+		.M_DBG_VALID(@$(PREFIX)_dbg_tvalid),
 			.M_DBG_READY(1'b1),
-			.M_DBG_DATA(mega_dbg_tdata),
+			.M_DBG_DATA(@$(PREFIX)_dbg_tdata),
 `endif
+		// }}}
+		// Interface to top-level IOs
+		// {{{
+		.o_net_reset_n(o_@$(PREFIX)_reset_n),
+		.i_net_rx_clk(i_@$(PREFIX)_rx_clk), .i_net_rx_dv(i_@$(PREFIX)_rx_dv),
+		.i_net_rx_err(i_@$(PREFIX)_rx_err), .i_net_rxd(i_@$(PREFIX)_rxd),
 		//
-		.o_net_reset_n(o_net_reset_n),
-		.i_net_rx_clk(i_net_rx_clk), .i_net_rx_dv(i_net_rx_dv),
-		.i_net_rx_err(i_net_rx_err), .i_net_rxd(i_net_rxd),
-		//
-		.i_net_tx_clk(i_net_tx_clk), .o_net_tx_ck(o_net_tx_clk),
-		.o_net_tx_ctl(o_net_tx_ctl), .o_net_txd(o_net_txd),
-		//
-		.o_debug_clk(net_debug_clk),
-		.o_debug(net_debug)
+		.i_net_tx_clk(i_net_tx_clk), .o_net_tx_ck(o_@$(PREFIX)_tx_clk),
+		.o_net_tx_ctl(o_@$(PREFIX)_tx_ctl), .o_net_txd(o_@$(PREFIX)_txd),
+		// }}}
+		.o_debug_clk(@$(PREFIX)_debug_clk),
+		.o_debug(@$(PREFIX)_debug)
 		// }}}
 	);
 
+`ifndef	@$(DEVID)CPURX_ACCESS
+	// {{{
+	assign	@$(PREFIX)cpurx_ready = 1'b1;
+	// Verilator lint_off UNUSED
+	wire	unused_@$(PREFIX)_cpu_rx;
+	assign	unused_@$(PREFIX)_cpu_rx = &{ 1'b0,
+			@$(PREFIX)cpurx_valid, @$(PREFIX)cpurx_data,
+			@$(PREFIX)cpurx_abort, @$(PREFIX)cpurx_last };
+	// Verilator lint_on  UNUSED
+	// }}}
+`endif
+
+`ifndef	@$(DEVID)CPUTX_ACCESS
+	// {{{
+	assign	@$(PREFIX)cputx_tvalid = 1'b0;
+	assign	@$(PREFIX)cputx_tdata  = 32'h0;
+	// }}}
+`endif
+
+
 	// }}}
 @REGDEFS.H.INCLUDE=
+#ifndef	FPGAPORT
 #define	FPGAPORT	@$(BASEPORT)
 #define	UARTDBGPORT	@$(UARTDBGPORT)
 #define	UARTPORT	@$(UARTPORT)
 #define	UDP_DBGPORT	@$(UDPDBGPORT)
 #define	UDP_DATAPORT	@$(DATAPORT)
-@REGS.N=22
+#endif
+@REGS.N=19
 @REGS.NOTE=// Meganet register definitions
-@REGS.0=   0 R_NET_RXCMD    NETRX
-@REGS.1=   1 R_NET_TXCMD    NETTX
-@REGS.2=   2 R_NET_MACHI    MACHI
-@REGS.3=   3 R_NET_MACLO    MACLO
-@REGS.4=   4 R_NET_IPADDR   IPADDR
-@REGS.5=   5 R_NET_RXMISS   NETMISS
-@REGS.6=   6 R_NET_RXERR    NETERR
-@REGS.7=   7 R_NET_RXCRC    NETCRCER
-@REGS.8=   8 R_NET_DBGSEL   NETDBGSL  NETDBGSEL
-@REGS.9=   8 R_NET_RXPKTS   NETRXPKT  NETRXPKTS RXPKTS
-@REGS.10=  9 R_NET_ARPRX    NETARPRX  ARPRX
-@REGS.11= 10 R_NET_ICMPRX   NETICMRX  NETICMPRX ICMPRX
-@REGS.12= 11 R_NET_TXPKTS   NETTXPKT  NETTXPKTS TXPKTS
-@REGS.13= 12 R_NET_ARPTX    NETARPTX  ARPTX
-@REGS.14= 13 R_NET_ICMPTX   NETICMTX  NETICMPTX ICMPTX
-@REGS.15= 14 R_NET_DATATX   NETDATTX  NETDATATX DATAPKTS
-@REGS.16= 15 R_NET_TXABORTS NETABRTS  TXABORTS
-@REGS.17= 16 R_NET_DBGRX    NETDBGRX  DBGRX
-@REGS.18= 17 R_NET_DBGTX    NETDBGTX  DBGTX
-@REGS.19= 18 R_NET_DROPS    DROPS
-@REGS.20= 19 R_NET_DROPCNT  DROPCNT
-@REGS.21= 20 R_NET_MONDATA  MONDATA
+@REGS.0=   0 R_@$(DEVID)_RXCMD    @$(DEVID)RX
+@REGS.1=   1 R_@$(DEVID)_TXCMD    @$(DEVID)TX
+@REGS.2=   2 R_@$(DEVID)_MACHI    @$(DEVID)MACHI
+@REGS.3=   3 R_@$(DEVID)_MACLO    @$(DEVID)MACLO
+@REGS.4=   4 R_@$(DEVID)_IPADDR   @$(DEVID)IPADDR @$(DEVID)IP
+@REGS.5=   5 R_@$(DEVID)_RXMISS   @$(DEVID)MISS
+@REGS.6=   6 R_@$(DEVID)_RXERR    @$(DEVID)ERR
+@REGS.7=   7 R_@$(DEVID)_RXCRC    @$(DEVID)CRCER
+@REGS.8=   8 R_@$(DEVID)_DBGSEL   @$(DEVID)DBGSL
+@REGS.9=   8 R_@$(DEVID)_RXPKTS   @$(DEVID)RXPKT
+@REGS.10=  9 R_@$(DEVID)_ARPRX    @$(DEVID)ARPRX
+@REGS.11= 10 R_@$(DEVID)_ICMPRX   @$(DEVID)ICMRX
+@REGS.12= 11 R_@$(DEVID)_TXPKTS   @$(DEVID)TXPKT
+@REGS.13= 12 R_@$(DEVID)_ARPTX    @$(DEVID)ARPTX
+@REGS.14= 13 R_@$(DEVID)_ICMPTX   @$(DEVID)ICMTX
+@REGS.15= 14 R_@$(DEVID)_DATATX   @$(DEVID)DATTX
+@REGS.16= 15 R_@$(DEVID)_TXABORTS @$(DEVID)ABRTS
+@REGS.17= 16 R_@$(DEVID)_DBGRX    @$(DEVID)DBGRX
+@REGS.18= 17 R_@$(DEVID)_DBGTX    @$(DEVID)DBGTX
 
 @BDEF.INCLUDE=
+#ifndef	UDP_DBGPORT
 #define	UDP_DBGPORT	@$(UDPDBGPORT)
 #define	UDP_DATAPORT	@$(DATAPORT)
+#endif
 @BDEF.DEFN=
 // Network stream/packet interface
 // {{{
+#ifndef	ENETSTREAM_H
+#define	ENETSTREAM_H
 typedef struct ENETSTREAM_S {
         unsigned        n_rxcmd, n_txcmd;
         unsigned long   n_mac;
 	unsigned	n_ipaddr;
         unsigned        n_rxmiss, n_rxerr, n_rxcrc;
 } ENETSTREAM;
+#endif
 // }}}
-@BDEF.IONAME=io_enet
+@BDEF.IONAME=io_@$(PREFIX)
 @BDEF.IOTYPE=ENETSTREAM
-@BDEF.OSDEF=_BOARD_HAS_ENETS
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const _nets = ((ENETSTREAM *)@$[0x%08x](REGBASE));
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((ENETSTREAM *)@$[0x%08x](REGBASE));
 
 @RTL.MAKE.GROUP=ENET
 @RTL.MAKE.SUBD=net
-@RTL.MAKE.FILES=
-@CLOCK.NAME=net_rx_clk
+@RTL.MAKE.FILES= enetstream.v
+        addecrc.v addemac.v addepad.v addepreamble.v
+        rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepacket.v rxepreambl.v
+	stream2pkt.v txespeed.v xiddr.v xoddr.v strmmerge.v pkt2wide.v
+@CLOCK.NAME=@$(PREFIX)_rx_clk
 @$CLOCK.FREQUENCY=125000000
-@SIM.CLOCK=net_rx_clk
+@SIM.CLOCK=@$(PREFIX)_rx_clk
 @SIM.INCLUDE=
 #include "netsim.h"
 @SIM.DEFNS=
-		NETSIM	*m_net;
+		NETSIM	*m_@$(PREFIX);
 @SIM.INIT=
 		// Network init
 		// {{{
-		m_net = new NETSIM();
-		m_net->external_mac[0] = 0xde;
-		m_net->external_mac[1] = 0xad;
-		m_net->external_mac[2] = 0xbe;
-		m_net->external_mac[3] = 0xef;
-		m_net->external_mac[4] = 0xda;
-		m_net->external_mac[5] = 0xdd;
-		m_net->external_ip[0] = 127;
-		m_net->external_ip[1] = 0;
-		m_net->external_ip[2] = 0;
-		m_net->external_ip[3] = 1;
-		m_net->local_mac[0] = @$[0x%02x](HWMAC.0); // Must match IP begin simulated
-		m_net->local_mac[1] = @$[0x%02x](HWMAC.1);
-		m_net->local_mac[2] = @$[0x%02x](HWMAC.2);
-		m_net->local_mac[3] = @$[0x%02x](HWMAC.3);
-		m_net->local_mac[4] = @$[0x%02x](HWMAC.4);
-		m_net->local_mac[5] = @$[0x%02x](HWMAC.5);
-		m_net->local_ip[0] = @$[%d](IPADDR.0);
-		m_net->local_ip[1] = @$[%d](IPADDR.1);
-		m_net->local_ip[2] = @$[%d](IPADDR.2);
-		m_net->local_ip[3] = @$[%d](IPADDR.3);
-		m_net->local_ipu = 0x@$[%02x](IPADDR.0)@$[%02x](IPADDR.1)@$[%02x](IPADDR.2)@$[%02x](IPADDR.3);
+		m_@$(PREFIX) = new NETSIM(); // DBGPORT: @$(UDPDBGPORT), DATAPORT: @$(DATAPORT);
+		m_@$(PREFIX)->external_mac[0] = 0xde;
+		m_@$(PREFIX)->external_mac[1] = 0xad;
+		m_@$(PREFIX)->external_mac[2] = 0xbe;
+		m_@$(PREFIX)->external_mac[3] = 0xef;
+		m_@$(PREFIX)->external_mac[4] = 0xda;
+		m_@$(PREFIX)->external_mac[5] = 0xd0 | (@$(HWMAC.5) & 0x0f);
+		m_@$(PREFIX)->external_ip[0] = 127;
+		m_@$(PREFIX)->external_ip[1] = 0;
+		m_@$(PREFIX)->external_ip[2] = 0;
+		m_@$(PREFIX)->external_ip[3] = 1;
+		m_@$(PREFIX)->local_mac[0] = 0x@$[%02x](HWMAC.0) & 0x0ff;
+		m_@$(PREFIX)->local_mac[1] = 0x@$[%02x](HWMAC.1) & 0x0ff;
+		m_@$(PREFIX)->local_mac[2] = 0x@$[%02x](HWMAC.2) & 0x0ff;
+		m_@$(PREFIX)->local_mac[3] = 0x@$[%02x](HWMAC.3) & 0x0ff;
+		m_@$(PREFIX)->local_mac[4] = 0x@$[%02x](HWMAC.4) & 0x0ff;
+		m_@$(PREFIX)->local_mac[5] = 0x@$[%02x](HWMAC.5) & 0x0ff;
+		m_@$(PREFIX)->local_ip[0] = 0x@$[%02x](IPADDR.0) & 0x0ff; // @$[%3d](IPADDR.0)
+		m_@$(PREFIX)->local_ip[1] = 0x@$[%02x](IPADDR.1) & 0x0ff; // @$[%3d](IPADDR.1)
+		m_@$(PREFIX)->local_ip[2] = 0x@$[%02x](IPADDR.2) & 0x0ff; // @$[%3d](IPADDR.2)
+		m_@$(PREFIX)->local_ip[3] = 0x@$[%02x](IPADDR.3) & 0x0ff; // @$[%3d](IPADDR.3)
+		m_@$(PREFIX)->local_ipu = 0x@$[%02x](IPADDR.0)@$[%02x](IPADDR.1)@$[%02x](IPADDR.2)@$[%02x](IPADDR.3);
 		// }}}
 @SIM.TICK=
 		// Simulate the network
 		// {{{
 		{
-			unsigned rxtmp = (*m_net)(m_core->o_net_reset_n,
-					m_core->o_net_tx_ctl,
-					m_core->o_net_txd);
+			unsigned rxtmp = (*m_@$(PREFIX))(m_core->o_net_reset_n,
+					m_core->o_@$(PREFIX)_tx_ctl,
+					m_core->o_@$(PREFIX)_txd);
 
-			m_core->i_net_rx_err = 0;
+			m_core->i_@$(PREFIX)_rx_err = 0;
 			if (rxtmp & 0x0100) {
-				m_core->i_net_rx_dv  = 1;
-				m_core->i_net_rxd = rxtmp & 0x0ff;
+				m_core->i_@$(PREFIX)_rx_dv  = 1;
+				m_core->i_@$(PREFIX)_rxd = rxtmp & 0x0ff;
 			} else {
-				m_core->i_net_rx_dv  = 0;
-				m_core->i_net_rxd = 0x044;
+				m_core->i_@$(PREFIX)_rx_dv  = 0;
+				m_core->i_@$(PREFIX)_rxd = 0x044;
 			}
 		}
 		// }}}
 ##
-@PREFIX=comnet
-@RTL.MAKE.GROUP=COMMONNET
-@RTL.MAKE.SUBD=../../common/rtl/net
-@RTL.MAKE.FILES= enetstream.v
-        addecrc.v addemac.v addepad.v addepreamble.v
-        rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepacket.v rxepreambl.v
-	stream2pkt.v txespeed.v xiddr.v xoddr.v strmmerge.v
-@PREFIX=comproto
-@RTL.MAKE.GROUP=COMMONPROTO
-@RTL.MAKE.SUBD=../../common/rtl/proto
-@RTL.MAKE.FILES=arp.v ipheader.v pkt2udp.v udpmatch.v
-@PREFIX=nearnet
-@RTL.MAKE.GROUP=PROTO
-@RTL.MAKE.SUBD=proto
-@RTL.MAKE.FILES=icmpecho.v
 @XDC.INSERT=
 ################################################################################
 #

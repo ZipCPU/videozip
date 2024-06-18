@@ -12,7 +12,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -45,7 +45,7 @@
 `define	STEP_BIT	8
 `define	HALT_BIT	10
 `define	CLEAR_CACHE_BIT	11
-//
+// }}}
 module	zipbones(i_clk, i_reset,
 		// Wishbone master interface from the CPU
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data, o_wb_sel,

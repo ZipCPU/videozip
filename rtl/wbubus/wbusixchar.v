@@ -21,7 +21,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -45,9 +45,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module	wbusixchar(i_clk, i_stb, i_bits, o_stb, o_char, o_busy, i_busy);
 	input	wire		i_clk;
 	input	wire		i_stb;

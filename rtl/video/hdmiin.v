@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/hdmiin.v
+// Filename:	rtl/video/hdmiin.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -49,7 +49,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -73,9 +73,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module	hdmiin(i_wb_clk, i_pix_clk, i_ck_pps,
 		i_delay_actual_r,
 		i_delay_actual_g,

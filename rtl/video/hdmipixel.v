@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/hdmipixel.v
+// Filename:	rtl/video/hdmipixel.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -34,7 +34,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+`default_nettype none
+// }}}
 module	hdmipixel(i_wb_clk, i_hclk, i_hdmi_r, i_hdmi_g, i_hdmi_b,
 		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data,
 		o_wb_stall, o_wb_ack, o_wb_data);

@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,9 +35,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype none
-//
+// }}}
 module	busexpander(i_clk, i_reset,
 		i_s_cyc, i_s_stb, i_s_we, i_s_addr, i_s_data, i_s_sel,
 			o_s_stall, o_s_ack, o_s_data, o_s_err,

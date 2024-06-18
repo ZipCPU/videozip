@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/tmdsdecode.v
+// Filename:	rtl/video/tmdsdecode.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -34,7 +34,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+`default_nettype none
+// }}}
 module	tmdsdecode(i_clk, i_word, o_pv, o_pix, o_sync);
 	input	wire	i_clk;
 	input	wire	[9:0]	i_word;

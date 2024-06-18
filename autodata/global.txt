@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,17 +34,17 @@
 ##
 ################################################################################
 ##
-##
-@LEGAL=../autodata/legalgen.txt
+## }}}
+@LEGAL=legalgen.txt
 @PROJECT=VideoZip, a ZipCPU SoC supporting video functionality
 #
 # @KEYS.TRIMLIST is a list of all string keys that need to be trimmed (have
 # spaces removed from either side) before being used
 # @KEYS.INTLIST is a list of all things that need to be converted to integers
 @KEYS.INTLIST= BUS_ADDRESS_WIDTH NADDR NPIC NSCOPES PIC.MAX REGS.N ID
-@DEFAULT.BUS=wb
-# @$RESET_ADDRESS=@$flash.REGBASE+(@$flash.NADDR)
-# @RESET_ADDRESS.FORMAT=32'h%08x
+@DEFAULT.BUS=wbwide
+@$RESET_ADDRESS=@$flash.REGBASE+(@$flash.NADDR)
+@RESET_ADDRESS.FORMAT=32'h%08x
 @REGISTER.BUS=wbu
 @VERILATOR_PREFIX=v
 @XDC.FILE=../nexysv.xdc
@@ -76,14 +76,6 @@ unsigned	addrdecode(const char *v) {
 		for(int i=0; i<NREGS; i++)
 			if (strcasecmp(v, bregs[i].m_name)==0)
 				return bregs[i].m_addr;
-#ifdef	R_ZIPCTRL
-		if (strcasecmp(v, "CPU")==0)
-			return R_ZIPCTRL;
-#endif	// R_ZIPCTRL
-#ifdef	R_ZIPDATA
-		if (strcasecmp(v, "CPUD")==0)
-			return R_ZIPDATA;
-#endif	// R_ZIPDATA
 		fprintf(stderr, "Unknown register: %s\n", v);
 		exit(-2);
 	} else
@@ -105,9 +97,15 @@ const	char *addrname(const unsigned v) {
 #include "design.h"
 #include "regdefs.h"
 #include "testb.h"
-@PREFIX=wb
-@BUS.NAME=wb
+@PREFIX=wb32
+@BUS.NAME=wb32
 @BUS.TYPE=wb
 @$BUS.WIDTH=32
 @BUS.CLOCK=clk
 @$BUS.NULLSZ=0x400
+@PREFIX=wbwide
+@BUS.NAME=wbwide
+@BUS.WIDTH=512
+@BUS.CLOCK=clk
+@BUS.TYPE=wb
+@BUS.RESET=i_reset

@@ -12,7 +12,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,9 +36,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype none
-//
+// }}}
 module wbufifo(i_clk, i_reset, i_wr, i_data, i_rd, o_data, o_empty_n, o_err);
 	parameter	BW=66, LGFLEN=10;
 	input	wire		i_clk, i_reset;

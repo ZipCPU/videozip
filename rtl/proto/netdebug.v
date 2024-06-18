@@ -123,16 +123,17 @@ module	netdebug #(
 		// {{{
 		input	wire	i_clk, i_reset,
 		//
-		input	wire	[7:0]	i_gpio,
-		output	wire	[7:0]	o_gpio,
+		input	wire	[9:0]	i_gpio,
+		output	wire	[9:0]	o_gpio,
 		input	wire	[31:0]	i_my_ipaddr,
+		input	wire		i_interrupt,
 		//
 		// Wishbone bus master
 		// {{{
 		output	wire			o_wb_cyc, o_wb_stb, o_wb_we,
 		output	wire	[AW-1:0]	o_wb_addr,
 		output	wire	[DW-1:0]	o_wb_data,
-		// output	wire	[DW/8-1:0]	o_wb_sel,
+		output	wire	[DW/8-1:0]	o_wb_sel,
 		input	wire			i_wb_stall,
 		input	wire			i_wb_ack,
 		input	wire	[DW-1:0]	i_wb_data,
@@ -164,54 +165,63 @@ module	netdebug #(
 	// Local declarations
 	// {{{
 	// localparam	LGINPUT_FIFO  = 4;
-	localparam	LGOUTPUT_FIFO = 4;
+	localparam	LGOUTPUT_FIFO = 8;
 
 	// Incoming packet payload processing
 	wire		pl_valid, pl_busy, pl_ready, pl_last;
 	wire	[7:0]	pl_data;
+	wire	[7:0]	proto_gpio;
+	reg	[1:0]	ex_gpio;
 
-	wire		soft_reset, ignored_reset;
-	reg		r_wdt_reset;
+	wire		cmd_reset, ignored_reset;
+	reg		r_wdt_reset, r_active, null_valid, compress_last,
+			past_active;
 
+
+	wire		iword_stb, iword_busy, iword_active;
+	wire	[34:0]	iword_data;
 
 	// Incoming code word, once processed
-	wire		in_stb;
-	wire	[35:0]	in_word;
+	wire		in_stb, in_busy;
+	wire	[34:0]	in_word;
+	wire		in_active;
 
 	// Input FIFO
-	wire		ififo_rd;
-	wire	[35:0]	ififo_codword;
-	wire		ififo_empty_n, ififo_full;
-
+	// (Not used or required)
 
 	// Code word outputs from running the bus
 	wire		exec_stb;
-	wire	[35:0]	exec_word;
+	wire	[34:0]	exec_word;
 
 	// Output FIFO
-	wire		ofifo_rd;
-	wire	[35:0]	ofifo_codword;
-	wire		ofifo_err, ofifo_empty_n;
+	wire		ofifo_rd, ofifo_full, ofifo_empty, ofifo_valid;
+	wire	[34:0]	ofifo_data;
+	reg		ofifo_err;
+	wire	[LGOUTPUT_FIFO:0]	ign_ofifo_fill;
 
-	wire		w_bus_busy, w_bus_reset;
+	wire		bus_busy, w_bus_reset;
 	reg	[(LGWATCHDOG-1):0]	r_wdt_timer;
 	reg		handler_busy;
 
-	wire		out_stb;
-	reg		out_last;
-	wire	[7:0]	out_byte;
-	wire		output_busy;
-	wire		in_active;
-	wire		out_active;
+	wire		compress_valid, compress_busy, compress_active;
+	wire	[34:0]	compress_data;
 
-	wire		w_sync, w_repeat_stb;
+	wire		idle_valid, idle_last, idle_busy;
+	wire	[34:0]	idle_data;
+	wire	[6:0]	idle_null;
+
+	wire		deword_valid, deword_last, deword_busy;
+	wire	[6:0]	deword_byte;
+
+
+	wire		w_sync, w_repeat_stb, w_null_pkt;
 	wire	[47:0]	host_mac;
 	wire	[31:0]	host_ip;
 	wire	[15:0]	host_sport;
 	wire	[15:0]	host_frameid;
 
-	wire		pkt_pvalid, pkt_pready, pkt_plast, pkt_busy,
-			pkt_ready, pkt_active, pkt_pabort;
+	wire		pkt_pvalid, pkt_pready, pkt_plast,
+			pkt_ready, pkt_pabort;
 	wire	[31:0]	pkt_pdata;
 
 	wire		udp_hdr_valid, udp_hdr_ready, udp_hdr_last;
@@ -221,8 +231,6 @@ module	netdebug #(
 	wire		dbgtx_overflow;
 	reg		interrupt_flag, int_ackd, err_flag, overflow_flag;
 	reg	[15:0]	return_gpio;
-
-	reg	r_soft_reset;
 
 	// Verilator lint_off UNUSED
 	wire	[31:0]	main_debug, dbgrx_debug, dbgtx_debug, udp_debug;
@@ -239,25 +247,15 @@ module	netdebug #(
 	// handler_busy
 	// {{{
 	always @(posedge i_clk)
-	if (i_reset)
+	if (i_reset || cmd_reset)
 		handler_busy <= 0;
-	else if (pl_valid || exec_stb || w_sync || w_repeat_stb || out_active)
+	else if (pl_valid || iword_stb || iword_active
+			|| in_stb || in_active
+			|| bus_busy || exec_stb
+			|| ofifo_valid)
 		handler_busy <= 1;
-	else if (pkt_pvalid && (!pkt_plast || !pkt_pready))
-		handler_busy <= 1;
-	else if (pkt_pvalid)
+	else if (pkt_pvalid && pkt_pready && pkt_plast)
 		handler_busy <= 0;
-	// }}}
-
-	// out_last
-	// {{{
-	always @(posedge i_clk)
-	if (i_reset)
-		out_last <= 0;
-	else if (pl_valid || in_active || w_bus_busy || in_stb || exec_stb)
-		out_last <= 0;
-	else
-		out_last <= 1;
 	// }}}
 
 	netdbgrx #(
@@ -272,8 +270,9 @@ module	netdebug #(
 		.S_AXI_TREADY(S_AXI_TREADY),
 		.S_AXI_TDATA(S_AXI_TDATA),
 		// }}}
-		.o_gpio(o_gpio),
+		.o_gpio(proto_gpio),
 		.o_sync(w_sync), .o_repeat_stb(w_repeat_stb),
+			.o_null_pkt(w_null_pkt),
 		.o_host_mac(host_mac), .o_host_ip(host_ip),
 		.o_host_udpport(host_sport), .o_host_frameid(host_frameid),
 		.i_handler_busy(handler_busy),
@@ -289,25 +288,42 @@ module	netdebug #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Decode ASCII input requests into WB bus cycle requests
+	// Decode ASCII input requests into bus requests
 	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
 
-	wbuinput
-	getinput(
+	exmkword #(
+		.OPT_EXTSYNC(1'b1)
+	) mkword(
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
+		.i_sync(!r_active && !pl_valid),
 		.i_stb(pl_valid && pl_data[7]), .o_busy(pl_busy),
-			.i_byte({ 1'b0, pl_data[6:0] }),
-		.o_soft_reset(ignored_reset),
-		.o_stb(in_stb), .o_codword(in_word), .i_busy(ififo_full),
-			.o_active(in_active)
+			.i_data(pl_data[6:0]),
+		.o_reset_bridge(cmd_reset),
+		.o_reset_design(ignored_reset),
+		.o_stb(iword_stb), .i_busy(iword_busy),
+			.o_data(iword_data),
+		.o_active(iword_active)
 		// }}}
 	);
 
 	assign	pl_ready = !pl_busy;
+
+	exdecompress
+	decompress (
+		// {{{
+		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),
+		.i_stb(iword_stb), .o_busy(iword_busy),
+			.i_word(iword_data),
+		.o_stb(in_stb), .i_busy(in_busy),
+			.o_word(in_word),
+		.o_active(in_active)
+		// }}}
+	);
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -323,32 +339,8 @@ module	netdebug #(
 	// here instead.
 	//
 
-	assign	ififo_empty_n = in_stb;
-	assign	ififo_codword = in_word;
-
-	assign	ififo_rd      = ififo_empty_n;
-	assign	ififo_full    = w_bus_busy;
-
-	assign	w_bus_reset = r_wdt_reset;
-	/*
-	assign	ififo_rd = (!w_bus_busy)&&(ififo_empty_n);
-
-	sfifo	#(
-		// {{{
-		.BW(36),.LGFLEN(LGINPUT_FIFO)
-		// }}}
-	) padififo(
-		// {{{
-		.i_clk(i_clk), .i_reset(w_bus_reset),
-		.i_wr(in_stb), .i_data(in_word),
-			.o_full(ififo_full), .o_fill(ififo_fill),
-		.i_rd(ififo_rd), .o_data(ififo_codword),
-			.o_empty(ififo_empty)
-		// }}}
-	);
-
-	assign	ififo_empty_n = !ififo_empty;
-	*/
+	assign	in_busy = bus_busy;
+	assign	w_bus_reset = r_wdt_reset || cmd_reset;
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -359,24 +351,28 @@ module	netdebug #(
 	//
 	//
 
-	// Take requests in, Run the bus, send results out
-	// This only works if no requests come in while requests
-	// are pending.
-	wbuexec #(
-		.OPT_COUNT_FIFO(1'b1),
-		.LGFIFO(LGOUTPUT_FIFO),
-		.AW(AW)
-	) runwb (
-		// {{{
-		.i_clk(i_clk), .i_reset(r_wdt_reset || soft_reset),
-		.i_valid(ififo_rd), .i_codword(ififo_codword),
-			.o_busy(w_bus_busy),
+	always @(posedge i_clk)
+	if (i_reset || cmd_reset)
+		ex_gpio <= 2'b00;
+	else if (in_stb && !in_busy || in_word[34:33] == 2'b11)
+		ex_gpio <= in_word[32:31];
+
+	assign	o_gpio = { ex_gpio, proto_gpio };
+
+	exwb #(
+		.ADDRESS_WIDTH(AW)
+	) genbus (
+		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),
+		.i_cmd_stb(in_stb), .i_cmd_word(in_word), .o_cmd_busy(bus_busy),
+		//
+		.o_cmd_stb(exec_stb), .o_cmd_word(exec_word),
+		//
 		.o_wb_cyc(o_wb_cyc), .o_wb_stb(o_wb_stb), .o_wb_we(o_wb_we),
-			.o_wb_addr(o_wb_addr), .o_wb_data(o_wb_data),
-		.i_wb_stall(i_wb_stall), .i_wb_ack(i_wb_ack),
-			.i_wb_data(i_wb_data), .i_wb_err(i_wb_err),
-		.o_stb(exec_stb), .o_codword(exec_word), .i_fifo_rd(ofifo_rd)
-		// }}}
+		.o_wb_addr(o_wb_addr), .o_wb_data(o_wb_data),
+			.o_wb_sel(o_wb_sel),
+		.i_wb_stall(i_wb_stall),
+		.i_wb_ack(i_wb_ack), .i_wb_data(i_wb_data),
+			.i_wb_err(i_wb_err)
 	);
 
 	// }}}
@@ -388,19 +384,25 @@ module	netdebug #(
 	//
 	//
 
-	assign	ofifo_rd = ofifo_empty_n && !output_busy;
-	wbufifo #(
-		.BW(36), .LGFLEN(LGOUTPUT_FIFO)
-	) busoutfifo (
+	exfifo #(
+		.BW(35), .LGFLEN(LGOUTPUT_FIFO)
+	) ofifo (
 		// {{{
-		.i_clk(i_clk), .i_reset(r_wdt_reset || soft_reset),
+		.i_clk(i_clk), .i_reset(r_wdt_reset || cmd_reset),
 		.i_wr(exec_stb), .i_data(exec_word),
-		.i_rd(ofifo_rd), .o_data(ofifo_codword),
-			.o_empty_n(ofifo_empty_n),
-			.o_err(ofifo_err)
+			.o_full(ofifo_full), .o_fill(ign_ofifo_fill),
+		.i_rd(ofifo_rd), .o_data(ofifo_data),
+			.o_empty(ofifo_empty)
 		// }}}
 	);
 
+	assign	ofifo_rd = !compress_busy;
+	assign	ofifo_valid = !ofifo_empty;
+	always @(posedge i_clk)
+	if (i_reset || cmd_reset)
+		ofifo_err <= 1'b0;
+	else if (exec_stb && ofifo_full)
+		ofifo_err <= 1'b1;
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -410,21 +412,86 @@ module	netdebug #(
 	//
 	//
 
-	wbuoutput #(
-		.OPT_COMPRESSION(1'b1),
-		.OPT_IDLES(1'b0)
-	) wroutput(
-		// {{{
-		.i_clk(i_clk), .i_reset(i_reset || soft_reset),
-			.i_soft_reset(w_sync || w_bus_reset || soft_reset),
-		.i_stb(ofifo_rd), .i_codword(ofifo_codword),
-			.o_busy(output_busy),
-		.i_wb_cyc(o_wb_cyc), .i_int(1'b0),
-			.i_bus_busy(exec_stb || ofifo_empty_n),
-		.o_stb(out_stb), .o_char(out_byte), .i_tx_busy(pkt_busy),
-			.o_active(out_active)
-		// }}}
+	// excompress: idle_*, compress_valid, compress_data, compress_active
+	// {{{
+	excompress
+	compress(
+		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),
+		.i_stb(ofifo_valid), .i_word(ofifo_data),
+			.o_busy(compress_busy),
+		.o_stb(compress_valid), .o_word(compress_data),
+			.i_busy(idle_busy),
+		.o_active(compress_active)
 	);
+	// }}}
+
+	// compress_last
+	// {{{
+	always @(posedge i_clk)
+	if (i_reset || cmd_reset)
+		r_active <= 1'b0;
+	else if (pl_valid || iword_stb || iword_active
+			|| in_stb || in_active || bus_busy || exec_stb
+			|| ofifo_valid)
+		r_active <= 1'b1;
+	else
+		r_active <= 1'b0;
+
+	initial	past_active = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset || cmd_reset)
+		past_active <= 1'b0;
+	else if (r_active)
+		past_active <= 1'b1;
+	else if ((compress_valid && !compress_last) || compress_active)
+		past_active <= 1'b1;
+	else
+		past_active <= 1'b0;
+
+	initial	null_valid = 1'b0;
+	always @(posedge i_clk)
+	if (i_reset || cmd_reset)
+		null_valid <= 1'b0;
+	else if (r_active)
+		null_valid <= 1'b0;
+	else if (past_active && !compress_active && !compress_valid)
+		null_valid <= 1'b1;
+	else
+		null_valid <= 1'b0;
+
+	always @(*)
+		compress_last = !r_active && compress_valid && !compress_active;
+	// }}}
+
+	// exidle: ofifo* -> idle_valid, idle_data
+	// {{{
+	exidle #(
+		.OPT_IDLE(1'b0)
+	) idle(
+		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),
+		.i_stb(compress_valid || null_valid || w_null_pkt),
+			.i_word(null_valid ? { idle_null, compress_data[27:0] }
+					: compress_data),
+			.i_last(null_valid || compress_last),
+			.o_busy(idle_busy),
+		.i_aux(i_gpio[9:8]), .i_cts(1'b1), .i_int(i_interrupt),
+			.i_fifo_err(ofifo_err),
+		.o_stb(idle_valid), .o_word(idle_data), .o_null(idle_null),
+			.o_last(idle_last), .i_busy(deword_busy)
+	);
+	// }}}
+
+	// exdeword: -> deword_valid, deword_byte
+	// {{{
+	exdeword
+	deword(
+		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),//.i_gpio(i_gpio),
+		.i_stb(idle_valid), .i_word(idle_data),
+			.i_last(idle_last), .o_busy(deword_busy),
+		.o_stb(deword_valid), .o_byte(deword_byte),
+			.o_last(deword_last), .i_busy(!pkt_ready)
+	);
+	// }}}
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -439,7 +506,7 @@ module	netdebug #(
 	initial	r_wdt_reset = 1'b0;
 	initial	r_wdt_timer = 0;
 	always @(posedge i_clk)
-	if (i_reset || soft_reset)
+	if (i_reset || cmd_reset)
 	begin
 		r_wdt_timer <= 0;
 		r_wdt_reset <= 1'b1;
@@ -470,15 +537,6 @@ module	netdebug #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	always @(posedge i_clk)
-	if (i_reset)
-		r_soft_reset <= 1'b0;
-	else if (pkt_pvalid && !pkt_pready && o_gpio[1])
-		r_soft_reset <= 1'b1;
-	else if (!pkt_pvalid || pkt_pready)
-		r_soft_reset <= 1'b0;
-
-	assign	soft_reset = o_gpio[1] || r_soft_reset;
 
 	always @(posedge i_clk)
 	if (i_reset)
@@ -521,11 +579,9 @@ module	netdebug #(
 	//
 	//
 
-	assign	pkt_busy = !pkt_ready;
-
 	always @(*)
 	begin
-		return_gpio = { i_gpio, o_gpio };
+		return_gpio = { i_gpio[7:0], o_gpio[7:0] };
 		if (interrupt_flag)
 			return_gpio[8] = 1'b1;
 		if (err_flag)
@@ -541,12 +597,14 @@ module	netdebug #(
 		//
 		.i_sync(w_sync), .i_gpio(return_gpio),
 		.i_repeat_stb(w_repeat_stb), .i_hostid(host_frameid),
-		.o_busy(pkt_active),
-		.S_AXI_TVALID(out_stb), .S_AXI_TREADY(pkt_ready),
-		.S_AXI_TDATA(out_byte), .S_AXI_TLAST(out_last && !out_active),
+		//
+		.S_AXI_TVALID(deword_valid), .S_AXI_TREADY(pkt_ready),
+		.S_AXI_TDATA({ 1'b1, deword_byte }), .S_AXI_TLAST(deword_last),
+		//
 		.M_AXIN_VALID(pkt_pvalid), .M_AXIN_READY(pkt_pready),
 		.M_AXIN_DATA(pkt_pdata), .M_AXIN_LAST(pkt_plast),
 		.M_AXIN_ABORT(pkt_pabort),
+		//
 		.o_overflow(dbgtx_overflow),
 
 		.o_debug(dbgtx_debug)
@@ -584,7 +642,7 @@ module	netdebug #(
 		//
 		.S_AXIN_VALID(pkt_pvalid), .S_AXIN_READY(pkt_pready),
 		.S_AXIN_DATA( pkt_pdata),  .S_AXIN_LAST( pkt_plast),
-		.S_AXIN_ABORT(soft_reset),
+		.S_AXIN_ABORT(cmd_reset),
 		//
 		.S_HDR_VALID(udp_hdr_valid), .S_HDR_READY(udp_hdr_ready),
 		.S_HDR_DATA( udp_hdr_data),  .S_HDR_LAST( udp_hdr_last),
@@ -619,12 +677,12 @@ module	netdebug #(
 
 			S_AXI_TVALID, // S_AXI_TREADY,
 
-			w_sync, in_stb, out_last, out_active, // exec_stb
+			w_sync, in_stb, 2'b00,
 			pl_valid, pl_ready, pl_last, pl_data[6:0],
 
 			M_AXI_TVALID, M_AXI_TREADY,			// 16
 			M_AXI_TLAST, pkt_pvalid, pkt_pready, pkt_plast, //
-			out_stb, pkt_ready, out_byte
+			10'h0
 			};
 
 	// assign	o_debug = dbgrx_debug;
@@ -637,7 +695,8 @@ module	netdebug #(
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = &{ 1'b0, ofifo_err, i_gpio, pl_last, pkt_pabort,
-			M_AXI_TLAST, pkt_active, ignored_reset };
+			M_AXI_TLAST, ignored_reset,
+			ign_ofifo_fill };
 	// verilator lint_on  UNUSED
 	// }}}
 endmodule

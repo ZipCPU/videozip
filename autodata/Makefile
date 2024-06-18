@@ -13,7 +13,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -37,8 +37,8 @@
 ##
 ################################################################################
 ##
-##
 .PHONY: all
+## }}}
 all:	data
 #
 # Could also depend upon load, if desired, but not necessary

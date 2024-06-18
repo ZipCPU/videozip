@@ -119,7 +119,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -143,8 +143,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
+// }}}
 module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 			o_stall, o_ack, o_data,
 		o_sck, o_mosi, o_dbit, o_pwr, o_int);

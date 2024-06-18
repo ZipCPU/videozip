@@ -29,7 +29,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -55,7 +55,7 @@
 //
 //
 `default_nettype	none
-//
+// }}}
 module	pipefetch(i_clk, i_rst, i_new_pc, i_clear_cache, i_stall_n, i_pc,
 			o_i, o_pc, o_v,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,

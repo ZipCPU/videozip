@@ -25,7 +25,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -49,9 +49,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype none
-//
+// }}}
 // All input words are valid codewords.  If we can, we make them
 // better here.
 module	wbucompress(i_clk, i_reset, i_stb, i_codword, i_busy, o_stb, o_cword,

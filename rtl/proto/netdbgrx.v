@@ -58,7 +58,7 @@ module	netdbgrx #(
 		// }}}
 		// Outgoing interface
 		// {{{
-		output	reg		o_sync, o_repeat_stb,
+		output	reg		o_sync, o_repeat_stb, o_null_pkt,
 		output	reg	[47:0]	o_host_mac,
 		output	reg	[31:0]	o_host_ip,
 		output	reg	[15:0]	o_host_udpport,
@@ -79,8 +79,9 @@ module	netdbgrx #(
 
 	// Local declarations
 	// {{{
-	reg	[15:0]	pktlen, addr;
-	reg		nomatch, drop;
+	reg	[15:0]	pktlen;
+	reg	[5:0]	addr;
+	reg		nomatch, drop, r_syncd;
 	reg		word_valid;
 	reg	[31:0]	word_data;
 	reg	[3:0]	word_last;
@@ -108,34 +109,78 @@ module	netdbgrx #(
 	assign	S_AXI_TREADY = (addr < 10)|| drop ||(!word_valid || word_ready);
 	assign	word_ready = (!M_AXI_TVALID ||(M_AXI_TREADY && !m_loaded[2]));
 
+	// addr
+	// {{{
+	always @(posedge S_AXI_ACLK)
+	if (!S_AXI_ARESETN)
+		addr    <= 0;
+	else if (S_AXI_TVALID && S_AXI_TREADY)
+	begin
+		if (pktlen > 4 || (addr == 0 && S_AXI_TDATA[15:0] > 4))
+		begin
+			if (!addr[5])
+				addr <= addr + 1;
+		end else
+			addr <= 0;
+	end
+`ifdef	FORMAL
+	always @(*)
+	if (S_AXI_ARESETN)
+		assert((addr == 0) == (pktlen == 0));
+`endif
+	// }}}
+
+	// pktlen
+	// {{{
+	initial	pktlen = 0;
+	always @(posedge S_AXI_ACLK)
+	if (!S_AXI_ARESETN)
+		pktlen	<= 0;
+	else if (S_AXI_TVALID && S_AXI_TREADY)
+	begin
+		if (addr == 0)
+			pktlen <= (S_AXI_TDATA[15:0] > 4) ? (S_AXI_TDATA[15:0] - 4) : 0;
+		else if (pktlen <= 4)
+			pktlen <= 0;
+		else
+			pktlen <= pktlen - 4;
+	end
+	// }}}
+
+	// o_null_pkt
+	// {{{
+	always @(posedge S_AXI_ACLK)
+	if (!S_AXI_ARESETN || !r_syncd)
+		o_null_pkt    <= 0;
+	else if (S_AXI_TVALID && S_AXI_TREADY && addr == 10 && !nomatch
+				&& r_syncd
+				&& S_AXI_TDATA[31:16] != o_host_frameid
+				&& S_AXI_TDATA[31:16] != 0)
+		o_null_pkt <= (pktlen == 4) && (!i_handler_busy)
+				&& !word_valid && !m_valid;
+	else
+		o_null_pkt <= 1'b0;
+	// }}}
+
+	initial	word_last  = 4'b0;
+	initial	o_gpio     = DEF_GPIO;
+	initial	o_repeat_stb  = 1'b0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 	begin
 		// {{{
 		nomatch <= 0;
 		o_gpio  <= DEF_GPIO;
-		addr    <= 0;
-		word_valid <= 0;
-		word_last  <= 4'h0;
+		o_repeat_stb  <= 1'b0;
 		// }}}
 	end else if (S_AXI_TVALID && S_AXI_TREADY)
 	begin
 		o_gpio <= o_gpio & ~GPIO_AUTO_CLEAR;
-		word_valid <= 0;
-		word_last  <= 4'h0;
-		if (pktlen >= 4)
-			pktlen <= pktlen - 4;
-		else
-			pktlen <= 0;
-		addr <= addr + 1;
 		o_repeat_stb <= 0;
 
 		case(addr)
 		0: begin // Capture the packet length
 			// {{{
-			pktlen <= 0;
-			if (S_AXI_TDATA[15:0] > 4)
-				pktlen <= S_AXI_TDATA[15:0]-4;
 			nomatch <= 0;
 			drop <= 0;
 			end
@@ -177,7 +222,7 @@ module	netdbgrx #(
 			if (S_AXI_TDATA[31:16] != 0 && nomatch)
 				drop <= 1;
 			else begin
-				if (!i_handler_busy)
+				if (!i_handler_busy && !word_valid && !m_valid)
 				begin
 					o_host_mac <= tmp_mac;
 					o_host_ip <= tmp_ip;
@@ -185,7 +230,8 @@ module	netdbgrx #(
 					o_host_frameid <= S_AXI_TDATA[31:16];
 				end
 
-				drop <= i_handler_busy;
+				if (S_AXI_TDATA[31:16] == 0)
+					drop <= 1;
 				if (OPT_REPEAT_SUPPRESSION
 					&& S_AXI_TDATA[31:16]== o_host_frameid
 					&& o_host_frameid != 0)
@@ -193,8 +239,9 @@ module	netdbgrx #(
 					drop <= 1;
 					o_repeat_stb <= 1'b1;
 				end
-				if (i_handler_busy)
-					o_repeat_stb <= 1'b0;
+
+				if (i_handler_busy || m_valid || word_valid || !r_syncd)
+					{ drop, o_repeat_stb } <= 2'b10;
 
 				o_gpio <= (o_gpio & ~(S_AXI_TDATA[15:8]
 						| GPIO_AUTO_CLEAR))
@@ -203,40 +250,61 @@ module	netdbgrx #(
 			// }}}
 		default: begin // Process (or skip) the payload data
 			// {{{
-			word_last <= 0;
-
 			if (pktlen <= 4)
 			begin
-				addr    <= 0;
 				nomatch <= 0;
 				drop    <= 0;
-			end
-
-			if (addr >= 11)
-			begin
-				word_valid <= !drop;
-				word_data  <= S_AXI_TDATA;
-				word_last[3] <= (pktlen == 1);
-				word_last[2] <= (pktlen == 2);
-				word_last[1] <= (pktlen == 3);
-				word_last[0] <= (pktlen == 4);
 			end end
 			// }}}
 		endcase
 	end else begin
-		if (word_ready)
-			word_valid <= 0;
 		o_repeat_stb <= 0;
-		if (pktlen == 0)
-			addr <= 0;
 	end
 
+	initial	word_valid = 1'b0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
+	begin
+		// {{{
+		word_valid <= 0;
+		word_last  <= 4'h0;
+		word_data  <= 0;
+		// }}}
+	end else if (!word_valid || word_ready)
+	begin
+		word_valid <= 0;
+		word_last  <= 4'h0;
+
+		if (addr > 10 && !drop)
+		begin
+			word_valid <= S_AXI_TVALID && S_AXI_TREADY;
+			word_data  <= S_AXI_TDATA;
+			word_last[3] <= (pktlen == 1) && S_AXI_TVALID && S_AXI_TREADY;
+			word_last[2] <= (pktlen == 2) && S_AXI_TVALID && S_AXI_TREADY;
+			word_last[1] <= (pktlen == 3) && S_AXI_TVALID && S_AXI_TREADY;
+			word_last[0] <= (pktlen == 4) && S_AXI_TVALID && S_AXI_TREADY;
+		end
+	end
+
+	// On entrance, we know this packet is to us, its to our IP address,
+	// its a UDP packet, and its to our UDP port.  Now we need to know
+	// if it is a synch packet:
+	// 1. It must have a frame ID of zero.
+	initial	o_sync  = 1'b0;
+	initial	r_syncd = 1'b0;
+	always @(posedge S_AXI_ACLK)
+	if (!S_AXI_ARESETN)
+	begin
 		o_sync <= 0;
-	else
-		o_sync <= S_AXI_TVALID && S_AXI_TREADY && (addr == 10)
-			&& (S_AXI_TDATA[31:16] == 0) && !i_handler_busy;
+		r_syncd <= 0;
+	end else if (S_AXI_TVALID && S_AXI_TREADY && (addr == 10)
+			&& (S_AXI_TDATA[31:16] == 0) && !i_handler_busy)
+	begin
+		o_sync <= 1'b1;
+		r_syncd <= 1'b1;
+	end else
+		o_sync <= 1'b0;
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -248,6 +316,10 @@ module	netdbgrx #(
 
 	assign	new_load = ~(word_last - 1);
 
+	initial	m_valid = 0;
+	initial	m_loaded = 0;
+	initial m_last   = 0;
+	initial	m_data   = 0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 	begin
@@ -260,6 +332,7 @@ module	netdbgrx #(
 	end else if (!M_AXI_TVALID || M_AXI_TREADY)
 	begin
 		// {{{
+		// Step everything forward by one byte by default
 		m_loaded <= { m_loaded[1:0], 1'b0 };
 		m_last   <= { m_last[2:0],   1'b0 };
 		m_data   <= { m_data[23:0],  8'b0 };
@@ -301,4 +374,15 @@ module	netdbgrx #(
 	assign	unused = &{ 1'b0, new_load[3] };
 	// Verilator lint_on  UNUSED
 	// }}}
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+// Formal properties
+// {{{
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+`ifdef	FORMAL
+`endif
 endmodule

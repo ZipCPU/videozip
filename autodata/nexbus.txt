@@ -1,0 +1,147 @@
+################################################################################
+##
+## Filename:	autodata/nexbus.txt
+## {{{
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	Makes a debugging bus available via UDP over the ethernet.
+##		It uses roughly the same logic as the WBUBUS to handle the
+##	payload.  As with WBUBUS, this bus takes 7-bit transfer codes with
+##	the high bit set--even though the console port is ignored.
+##
+##	A proper network console will require the stack running on the CPU.
+##	That's not handled here.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+################################################################################
+##
+## }}}
+@PREFIX=netbus
+@DEVID=NETBUS
+@ACCESS=NETBUS_ACCESS
+@DEPENDS=ETH0_ACCESS
+@MASTER.BUS=wbu
+@MASTER.TYPE=HOST
+@MASTER.PREFIX=@$(PREFIX)
+@CLOCK.NAME=clk
+@CLOCK.RESET=i_reset
+@$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
+@NET=eth0
+@NETADDR=eth0_ip_addr
+@NETVALID=eth0_dbg_tvalid
+@NETREADY=eth0_dbg_tready
+@NETDATA=eth0_dbg_tdata
+@MAIN.PARAM=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// NETBUS parameters
+	// {{{
+	localparam	@$(DEVID)WATCHDOG_RAW = 5 + 9;
+	localparam	@$(DEVID)WATCHDOG = (@$(DEVID)WATCHDOG_RAW > 19)
+				? @$(DEVID)WATCHDOG_RAW : 19;
+	// }}}
+@MAIN.DEFNS=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// NETBUS signals
+	// {{{
+	// Verilator lint_off UNUSED
+	wire	[29:0]	@$(MASTER.PREFIX)_tmp_addr;
+	wire	[9:0]	@$(PREFIX)_gpout;
+	// Verilator lint_on  UNUSED
+
+	wire		@$(PREFIX)_tvalid, @$(PREFIX)_tready;
+	wire	[31:0]	@$(PREFIX)_tdata;
+	wire		w_@$(PREFIX)_int; // 1'b0;
+	// Verilator lint_off UNUSED
+	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// NETBUS: UDP driven bus master
+	// {{{
+`ifdef	BUSPIC_ACCESS
+	assign	w_@$(PREFIX)_int = w_bus_int;
+`else
+	assign	w_@$(PREFIX)_int = 1'b0;
+`endif
+
+	netdebug #(
+		// {{{
+		.LGWATCHDOG(@$(DEVID)WATCHDOG),
+		.DBG_UDPPORT(UDP_DBGPORT)
+		// }}}
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(CLOCK.WIRE)), .i_reset(@$(CLOCK.RESET)),
+		// Config
+		// {{{
+		.i_gpio({ 9'h0, w_@$(PREFIX)_int }), .o_gpio(@$(PREFIX)_gpout),
+		.i_my_ipaddr(@$(NETADDR)),
+		.i_interrupt(w_@$(PREFIX)_int),
+		// }}}
+		// Wishbone
+		// {{{
+		.o_wb_cyc(@$(MASTER.PREFIX)_cyc), .o_wb_stb(@$(MASTER.PREFIX)_stb),
+			.o_wb_we(@$(MASTER.PREFIX)_we),
+			.o_wb_addr(@$(MASTER.PREFIX)_tmp_addr),
+			.o_wb_data(@$(MASTER.PREFIX)_data),
+			.o_wb_sel(@$(MASTER.PREFIX)_sel),
+		.i_wb_stall(@$(MASTER.PREFIX)_stall),
+			.i_wb_ack(@$(MASTER.PREFIX)_ack),
+		.i_wb_data(@$(MASTER.PREFIX)_idata),
+		.i_wb_err(@$(MASTER.PREFIX)_err),
+		// }}}
+		// Incoming network data
+		// {{{
+		.S_AXI_TVALID(@$(NETVALID)), .S_AXI_TREADY(@$(NETREADY)),
+			.S_AXI_TDATA(@$(NETDATA)),
+		// }}}
+		// Return network data
+		// {{{
+		.M_AXI_TVALID(@$(PREFIX)_tvalid),
+			.M_AXI_TREADY(@$(PREFIX)_tready),
+			.M_AXI_TDATA(@$(PREFIX)_tdata),
+		// }}}
+		.o_debug(@$(PREFIX)_debug)
+		// }}}
+	);
+
+	assign	@$(MASTER.PREFIX)_addr = @$(MASTER.PREFIX)_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
+	// }}}
+@MAIN.ALT=
+	assign	@$(PREFIX)_tvalid = 1'b0;
+	assign	@$(PREFIX)_tdata  = 32'h0;
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbg_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbg_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+@RTL.MAKE.GROUP= NETBUS
+@RTL.MAKE.SUBD=proto
+@RTL.MAKE.FILES= netdebug.v netdbgrx.v netdbgtx.v

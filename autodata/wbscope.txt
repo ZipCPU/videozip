@@ -11,7 +11,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -35,13 +35,13 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=scope
 @DEVID=SCOPE
 @NADDR= 2
 @ACCESS=@$(DEVID)_SCOPE
 @SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @LOG_CAPTURE_SIZE=12
 @DATA_CLOCK=i_clk
 @CAPTURECE=1'b1
@@ -49,6 +49,7 @@
 @CORE=wbscope
 @TRIGGER=@$(TARGET)_dbg_trigger
 @DEBUG=@$(TARGET)_debug
+@$DEFHOLDOFF= (1<<(@$(LOG_CAPTURE_SIZE)-1))-4
 @MAIN.DEFNS=
 	// Remove this scope tag via inheritance when/if you connect the
 	// scope interrupt
@@ -57,13 +58,22 @@
 	wire	@$(PREFIX)_int;
 	// Virilator lint_on  UNUSED
 @MAIN.INSERT=
-	@$(CORE) #(.LGMEM(@$(LOG_CAPTURE_SIZE)),
-		.SYNCHRONOUS(@$(SYNCHRONOUS)))
-	@$(PREFIX)i(@$(DATA_CLOCK), @$(CAPTURECE), @$(TRIGGER), @$(DEBUG),
-		@$(SLAVE.BUS.CLOCK.WIRE), @$(SLAVE.PORTLIST),
-		@$(PREFIX)_int);
+	@$(CORE) #(
+		// {{{
+		.LGMEM(@$(LOG_CAPTURE_SIZE)),
+		.SYNCHRONOUS(@$(SYNCHRONOUS)),
+		.DEFAULT_HOLDOFF(@$(DEFHOLDOFF))
+		// }}}
+	) @$(PREFIX)i(
+		// {{{
+		.i_data_clk(@$(DATA_CLOCK)), .i_ce(@$(CAPTURECE)),
+		.i_trigger(@$(TRIGGER)), .i_data(@$(DEBUG)),
+		.i_wb_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_interrupt(@$(PREFIX)_int)
+		// }}}
+	);
 @MAIN.ALT=
-	assign	@$(PREFIX)_int = 0;
 @REGS.NOTE=// @$(PREFIX) scope
 @REGS.N=2
 @REGS.0=0 R_@$(DEVID)  @$(DEVID)

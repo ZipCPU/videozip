@@ -17,7 +17,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -41,13 +41,16 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=zipscope
 @NADDR=2
 @DEVID=ZIPSCOPE
 @DEPENDS=INCLUDE_ZIPCPU
 @TARGET=zip
 @TRIGGER=zip_trigger
-@LOG_CAPTURE_SIZE=13
+@$LOG_CAPTURE_SIZE=13
 @INCLUDEFILE=wbscope.txt
 ##
+@INT.CPUSCOPE.PIC=syspic
+@INT.CPUSCOPE.WIRE=@$(PREFIX)_int
+@MAIN.DEFNS=

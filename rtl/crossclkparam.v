@@ -17,7 +17,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -41,9 +41,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module	crossclkparam(i_a_clk, i_b_clk, i_params, o_params);
 	parameter			PW=32;
 	input	wire			i_a_clk, i_b_clk;

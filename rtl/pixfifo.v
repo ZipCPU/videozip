@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,9 +35,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module pixfifo(i_wr_clk, i_pix_reset, i_rd_clk, i_wr, i_data, i_rd, o_data);
 	parameter	BW=97;	// Four pixels, plus a pixel v address flag
 	parameter [3:0]	LGFLEN=11;	// Enough for 2x lines

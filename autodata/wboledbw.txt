@@ -11,7 +11,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -39,7 +39,7 @@
 @PREFIX=oled
 @NADDR=4
 @SLAVE.TYPE=DOUBLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS=OLEDBW_ACCESS
 @INT.OLED.WIRE=	oled_int
 @INT.OLED.PIC=altpic

@@ -21,7 +21,7 @@
 //	packet request doesn't come often enough, data will be lost.  This
 //	is understood.  Requests come with an amount of data to be produced.
 //	This is to allow console packets to be appended to packets that may have
-//	already been assembled for other purpoess (such as the debug packet
+//	already been assembled for other purposes (such as the debug packet
 //	stream) if necessary.
 //
 //	Other than redundancy, that is other than by sending the same console
@@ -31,7 +31,7 @@
 //
 // Concept: Accepts a write data (AXI) stream of characters.  Then, upon
 //	request and available packet size, generates a packet of console
-//	characters.  There's protection against lost data.  If no packet
+//	characters.  There's no protection against lost data.  If no packet
 //	request arrives in time, characters may be lost.
 //
 //	While a packet is outgoing, the READY signal will be used to prevent
@@ -60,8 +60,8 @@
 //		EVEN IF other characters arrive in the meantime.
 //	(CHDAT)	This will all be followed by the character data.  Unlike the
 //		first character, there is no marking, other than the LAST
-//		output tag, is provided to mark the last character in the
-//		sequence.
+//		output tag (i.e. the end of the packet), to mark the last
+//		character in the sequence.
 //
 //	If 24'hLEN is less than the desired packet length, the packet will
 //		be truncated before the requested length.  If it is longer,
@@ -143,8 +143,8 @@ module pktconsole #(
 
 	reg	[24:0]		wrposn;
 	reg	[23:0]		rdposn;
-	reg	[LGFIFO-1:0]	wraddr;
-	reg	[LGFIFO-1:0]	rdstart, rdptr, rdend;
+	wire	[LGFIFO-1:0]	wraddr, rdend;
+	reg	[LGFIFO-1:0]	rdstart, rdptr;
 	reg	[2:0]		m_fsm;
 
 	reg	[LGFIFO-1:0]	reqlen;

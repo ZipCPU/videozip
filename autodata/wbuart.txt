@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,7 +34,7 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 # The prefix is used to create a series of bus data lines for interaction with
 # the bus.  In this case, these will be uart_sel, uart_stall, uart_ack, and
 # uart_data.

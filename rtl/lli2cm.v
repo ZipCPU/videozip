@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -59,7 +59,7 @@
 `define I2CMSTOPPD		4'he
 `define I2CMFINAL		4'hf
 //
-//
+// }}}
 module lli2cm(i_clk, i_clocks, i_cyc, i_stb, i_we, i_data,
 				o_ack, o_busy, o_err, o_data,
 			i_scl, i_sda, o_scl, o_sda, o_dbg);

@@ -15,7 +15,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -39,9 +39,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype none
-//
+// }}}
 module	wbuidleint(i_clk, i_stb, i_codword, i_cyc, i_busy, i_int,
 		o_stb, o_codword, o_busy,
 		i_tx_busy);

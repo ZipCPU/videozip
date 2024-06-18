@@ -67,11 +67,11 @@
 //	4'h0		NOP
 //	4'h1		START
 //	4'h2		STOP
-//	4'h3		RXK
-//	4'h4		RXN	// RX byte, NAK result
-//	4'h5		RXLK	// Cn't include STOP, bc we might want rptd strt
-//	4'h6		RXLN	// ditto
-//	4'h7		SEND
+//	4'h3		SEND
+//	4'h4		RXK
+//	4'h5		RXN	// RX byte, NAK result
+//	4'h6		RXLK	// Cn't include STOP, bc we might want rptd strt
+//	4'h7		RXLN	// ditto
 //	4'h8		WAIT
 //	4'h9		HALT
 //	4'ha		ABORT
@@ -214,11 +214,11 @@ module	wbi2ccpu #(
 	localparam	[3:0]	CMD_NOOP  = 4'h0,
 				// CMD_START = 4'h1,
 				CMD_STOP  = 4'h2,
-				// CMD_RXK   = 4'h3,
-				// CMD_RXN   = 4'h4,
-				// CMD_RXLK  = 4'h5,
-				// CMD_RXLN  = 4'h6,
-				CMD_SEND  = 4'h7,
+				CMD_SEND  = 4'h3,
+				CMD_RXK   = 4'h4,
+				CMD_RXN   = 4'h5,
+				CMD_RXLK  = 4'h6,
+				CMD_RXLN  = 4'h7,
 				CMD_WAIT  = 4'h8,
 				CMD_HALT  = 4'h9,
 				CMD_ABORT = 4'ha,

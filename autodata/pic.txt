@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,11 +34,12 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=buspic
 @DEVID=BUSPIC
+@ACCESS=BUSPIC_ACCESS
 @NADDR=1
-@BUSP=wb
+@BUSP=wb32
 @ACCESS=BUSPIC_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=@$(BUSP)
@@ -53,9 +54,13 @@
 	//
 	// The BUS Interrupt controller
 	//
-	icontrol #(15)	@$(PREFIX)i(@$(SLAVE.BUS.CLOCK.WIRE), 1'b0,
-			@$(SLAVE.PORTLIST),
-			bus_int_vector, w_bus_int);
+	icontrol #(15)
+	@$(PREFIX)i(
+		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(1'b0),
+		@$(SLAVE.ANSIPORTLIST),
+		.i_brd_ints(bus_int_vector),
+		.o_interrupt(w_bus_int)
+	);
 @MAIN.ALT=
 @REGS.N=1
 @REGS.0= 0 R_PIC PIC
@@ -64,5 +69,5 @@
 @BDEF.OSDEF= _BOARD_HAS_@$(DEVID)
 @BDEF.OSVAL= static volatile @$BDEF.IOTYPE *const @$BDEF.IONAME = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP= BUSPIC
-@RTL.MAKE.SUBD= cpu
+@RTL.MAKE.SUBD=cpu
 @RTL.MAKE.FILES=icontrol.v

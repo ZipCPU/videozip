@@ -13,7 +13,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -37,11 +37,10 @@
 ##
 ################################################################################
 ##
-##
-##
+## }}}
 @PREFIX=mem_flash_bkram
 @MASTER.TYPE=SCRIPT
-@MASTER.BUS=wb
+@MASTER.BUS=wbwide
 @LD.FILE=board.ld
 @LD.DEFNS=
 /* LD.DEFNS from zipmaster.txt */

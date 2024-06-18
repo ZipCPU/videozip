@@ -15,7 +15,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -48,7 +48,7 @@
 `define	WB_ACK			3'b011
 `define	WB_WAIT_ON_NEXT_WRITE	3'b100
 `define	WB_FLUSH_WRITE_REQUESTS	3'b101
-
+// }}}
 module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
 			i_wb_stall, i_wb_ack, i_wb_err, i_wb_data,

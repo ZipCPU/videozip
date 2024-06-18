@@ -20,7 +20,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -59,7 +59,7 @@
 `define	OLED_MOD_SPI	2'b00
 `define	OLED_MOD_QOUT	2'b10
 `define	OLED_MOD_QIN	2'b11
-
+// }}}
 module	lloled(i_clk,
 		// Module interface
 		i_wr, i_dbit, i_word, i_len, o_busy,

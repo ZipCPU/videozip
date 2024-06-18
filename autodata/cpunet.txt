@@ -1,0 +1,225 @@
+################################################################################
+##
+## Filename:	autodata/cpunet.txt
+## {{{
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	Controls two virtual packet FIFOs for the CPU.  In each of
+##		these, the CPU controls one end--whether the read or write
+##	pointer.  Once set up, packets on arrival will be placed into a circular
+##	area of memory allocated for the receiver.  From there, the CPU can read##	the packet out of memory.  As the CPU updates its read pointer,
+##	memory will be freed.  Similarly, the CPU can place a packet to be
+##	sent in the transmit buffer.  Packets may be filled so much so that
+##	they wrap around the beginning.  Once placed there, the CPU can then
+##	tell the transmitter that its buffer has moved forward, and so the
+##	transmitter will transmit that packet.
+##
+##	All packets stored in memory will begin with a 32-bit length word,
+##	containing the number of bytes in the packet.  If you could this many
+##	bytes from one packet, plus the four for the length word, you should
+##	get to the beginning of the second packet.  In this way, the packet
+##	handling for the CPU is only limited by the amount of memory the CPU
+##	allocates to it.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2022-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+################################################################################
+##
+## }}}
+@PREFIX=cpunet
+@DEVID=CPUNET
+@NADDR=32
+@ACCESS=@$(DEVID)_ACCESS
+@DEPENDS=ETH_ROUTER
+@SLAVE.BUS=wb32
+@SLAVE.TYPE=OTHER
+@SLAVE.PREFIX=@$(SLAVE.BUS.NAME)_@$(PREFIX)s
+@MASTER.TYPE=CPU
+@MASTER.BUS=wbwide
+@MASTER.PREFIX=@$(MASTER.BUS.NAME)_@$(PREFIX)m
+@MASTER.ANSPREFIX=dma_
+@SGP=@$(BUS.PREFIX)
+@WBP=@$(SLAVE.BUS.PREFIX)
+@IDW=2
+@INT.RXNET.PIC=syspic
+@INT.RXNET.WIRE=@$(PREFIX)_rx_int
+@INT.TXNET.PIC=syspic
+@INT.TXNET.WIRE=@$(PREFIX)_tx_int
+@MAIN.DEFNS=
+	// CPUNet Controller
+	// {{{
+	// Verilator lint_off UNUSED
+	wire		@$(PREFIX)_rx_valid,
+			@$(PREFIX)_rx_ready,
+			@$(PREFIX)_rx_last,
+			@$(PREFIX)_rx_abort;
+	wire	[127:0]	@$(PREFIX)_rx_data;
+	wire	[3:0]	@$(PREFIX)_rx_bytes;
+
+	wire		@$(PREFIX)_tx_valid,
+			@$(PREFIX)_tx_ready,
+			@$(PREFIX)_tx_last,
+			@$(PREFIX)_tx_abort;
+	wire	[127:0]	@$(PREFIX)_tx_data;
+	wire	[3:0]	@$(PREFIX)_tx_bytes;
+
+	wire	[31:0]	@$(PREFIX)_debug;
+	// Verilator lint_on  UNUSED
+	// }}}
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// CPU Network
+	// {{{
+
+	cpunet #(
+		.AW(@$(MASTER.BUS.AWID)),
+		.BUSDW(@$(MASTER.BUS.WIDTH)),
+		.PKTDW(128)
+	) u_@$(PREFIX) (
+		// {{{
+		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		//
+		.RX_VALID(@$(PREFIX)_rx_valid),
+		.RX_READY(@$(PREFIX)_rx_ready),
+		.RX_DATA( @$(PREFIX)_rx_data),
+		.RX_BYTES(@$(PREFIX)_rx_bytes),
+		.RX_LAST( @$(PREFIX)_rx_last),
+		.RX_ABORT(@$(PREFIX)_rx_abort),
+		//
+		.TX_VALID(@$(PREFIX)_tx_valid),
+		.TX_READY(@$(PREFIX)_tx_ready),
+		.TX_DATA( @$(PREFIX)_tx_data),
+		.TX_BYTES(@$(PREFIX)_tx_bytes),
+		.TX_LAST( @$(PREFIX)_tx_last),
+		.TX_ABORT(@$(PREFIX)_tx_abort),
+		//
+		@$(MASTER.ANSIPORTLIST),
+		//
+		.o_rx_int(@$(PREFIX)_rx_int),
+		.o_tx_int(@$(PREFIX)_tx_int),
+		.o_debug(@$(PREFIX)_debug)
+		// }}}
+	);
+
+	// }}}
+@MAIN.ALT=
+	assign	@$(PREFIX)_rx_valid = 0;
+	assign	@$(PREFIX)_rx_ready = 1;
+	assign	@$(PREFIX)_rx_last  = 0;
+	assign	@$(PREFIX)_rx_abort = 0;
+	assign	@$(PREFIX)_rx_data  = 0;
+	assign	@$(PREFIX)_rx_bytes = 0;
+
+	assign	@$(PREFIX)_tx_valid = 0;
+	assign	@$(PREFIX)_tx_ready = 1;
+	assign	@$(PREFIX)_tx_last  = 0;
+	assign	@$(PREFIX)_tx_abort = 0;
+	assign	@$(PREFIX)_tx_data  = 0;
+	assign	@$(PREFIX)_tx_bytes = 0;
+##
+## regdefs.h / regdefs.cpp
+##
+@REGS.N=21
+@REGS.NOTE=// CPU Net Controller registers
+@REGS.0=  0 R_@$(DEVID)		@$(DEVID)
+@REGS.1=  1 R_@$(DEVID)MAC1	CPUMAC1
+@REGS.2=  2 R_@$(DEVID)MAC2	CPUMAC2
+@REGS.3=  3 R_@$(DEVID)IPV4	CPUIPV4
+@REGS.4=  4 R_@$(DEVID)IPV6P1	CPUIP6P1
+@REGS.5=  5 R_@$(DEVID)IPV6P2	CPUIP6P2
+@REGS.6=  6 R_@$(DEVID)IPV6P3	CPUIP6P3
+@REGS.7=  7 R_@$(DEVID)IPV6P4	CPUIP6P4
+@REGS.8=  8 R_@$(DEVID)RXDROPS	RXDROPS
+@REGS.9=  9 R_@$(DEVID)RXPKTS	RXPKTS
+@REGS.10= 10 R_@$(DEVID)TXPKTS	TXPKTS
+@REGS.11= 16 R_@$(DEVID)TX_BASE	CNTXBASE @$(DEVID)TXBASE
+@REGS.12= 17 R_@$(DEVID)TX_LEN	CNTXLEN  @$(DEVID)TXLEN
+@REGS.13= 18 R_@$(DEVID)TX_RPTR	CNTXRPTR @$(DEVID)TXRPTR
+@REGS.14= 19 R_@$(DEVID)TX_WPTR	CNTXWPTR @$(DEVID)TXWPTR
+@REGS.15= 20 R_@$(DEVID)RX_BASE	CNRXBASE @$(DEVID)RXBASE
+@REGS.16= 21 R_@$(DEVID)RX_LEN	CNRXLEN  @$(DEVID)RXLEN
+@REGS.17= 22 R_@$(DEVID)RX_RPTR	CNRXRPTR @$(DEVID)RXRPTR
+@REGS.18= 23 R_@$(DEVID)RX_WPTR	CNRXWPTR @$(DEVID)RXWPTR
+@REGS.19= 24 R_@$(DEVID)RX_DBG	CNRXDBG  @$(DEVID)RXDBG
+@REGS.20= 25 R_@$(DEVID)TX_DBG	CNTXDBG  @$(DEVID)TXDBG
+##
+## board.h
+##
+@BDEF.DEFN=
+#ifndef	@$(DEVID)_H
+#define	@$(DEVID)_H
+	////////////////////////////////////////////////////////////////////////
+	//
+	// CPU Net virtual packet FIFO structures
+	// {{{
+	////////////////////////////////////////////////////////////////////////
+	//
+	//
+
+#define	CPUNET_PROMISCUOUS	1
+#define	CPUNET_EN		2
+#define	CPUNET_ERROR		4
+#define	CPUNET_RDRESET		8
+#define	CPUNET_TXRESET		8
+#define	CPUNET_WRRESET		16
+#define	CPUNET_RXRESET		16
+
+typedef struct  @$(DEVID)_S        {
+	// Control registers
+	volatile unsigned	net_control;
+		unsigned	net_mac[2];
+		unsigned	net_ip[5];
+	volatile unsigned	net_rxdrops;
+	volatile unsigned	net_rxpkts;
+	volatile unsigned	net_txpkts;
+		unsigned	net_unused[5];
+	//
+	// RX side
+		char		*net_txbase;
+		unsigned	net_txlen;
+	volatile char		*net_txwptr, *net_txrptr;
+	//
+	// TX side
+		char		*net_rxbase;
+		unsigned	net_rxlen;
+	volatile char		*net_rxwptr, *net_rxrptr;
+} @$(DEVID);
+
+#endif	// @$(DEVID)_H
+	// }}}
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=@$(DEVID)
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME)=((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+##
+## Makefile insert info
+##
+## @RTL.MAKE.GROUP=@$(DEVID)
+## @RTL.MAKE.SUBD=net
+## @RTL.MAKE.FILES=

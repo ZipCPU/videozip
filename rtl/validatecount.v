@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,7 +36,7 @@
 //
 //
 // `define	BYPASS_TEST
-//
+// }}}
 module	validatecount(i_clk, i_reset, i_v, i_val, o_val);
 	//
 	parameter		NBITS=16;

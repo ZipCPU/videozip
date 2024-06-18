@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,13 +34,14 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=version
 @DEVID=VERSION
+@ACCESS=VERSION_ACCESS
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-@MAIN.DEFNS=
+@SLAVE.BUS=wb32
+@MAIN.INCLUDE=
 `include "builddate.v"
 @MAIN.INSERT=
 	assign	@$(SLAVE.PREFIX)_idata = `DATESTAMP;
@@ -56,10 +57,10 @@
 ##
 ##
 @PREFIX=buildtime
-@DEVID=BUILDTIME
+@DEVID=BLDTIME
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @MAIN.DEFNS=
 // BUILDTIME doesnt need to include builddate.v a second time
 // `include "builddate.v"
@@ -68,7 +69,7 @@
 	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
 	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
 @REGS.N=1
-@REGS.0= 0 R_@$(DEVID) @$(DEVID)
+@REGS.0= 0 R_@$(DEVID) @$(DEVID) BUILDTIME
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_@$(DEVID)

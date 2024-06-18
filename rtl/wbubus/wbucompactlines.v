@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -54,7 +54,7 @@
 // last word.  If the last word was a  <incomplete-thought>
 //
 `default_nettype none
-//
+// }}}
 module	wbucompactlines(i_clk, i_stb, i_nl_hexbits, o_stb, o_nl_hexbits,
 		i_bus_busy, i_tx_busy, o_busy);
 	localparam	[6:0]	MAX_LINE_LENGTH = 79;

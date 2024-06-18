@@ -22,7 +22,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -46,9 +46,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype	none
-//
+// }}}
 module	rxewrite(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_addr, o_data, o_len);
 	parameter	AW = 12;
 	localparam	DW = 32;

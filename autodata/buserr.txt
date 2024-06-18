@@ -11,7 +11,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -35,11 +35,11 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=buserr
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @SINGLE.INPUT= r_bus_err
 @CLOCK.NAME=clk
 @$RWID=(@$(zip.MASTER.BUS.AWID) > @$(wbu.MASTER.BUS.AWID)) ? @$(zip.MASTER.BUS.AWID) : @$(wbu.MASTER.BUS.AWID)

@@ -55,10 +55,12 @@ module	ledbouncer #(
 	wire	[4:0]	br_ctr;
 	// }}}
 
+	initial	{ led_clk, led_ctr } = 0;
 	always @(posedge i_clk)
 		{ led_clk, led_ctr } <= led_ctr + {{(CTRBITS-2){1'b0}},2'b11};
 
 	initial	led_owner = { {(NLEDS-1){1'b0}}, 1'b1};
+	initial	led_dir = 1'b0;
 	always @(posedge i_clk)
 	if (led_owner == 0)
 	begin
@@ -79,6 +81,8 @@ module	ledbouncer #(
 
 	generate for(k=0; k<(NLEDS); k=k+1)
 	begin : LED_DIMMER
+
+		initial	led_pwm[k] = 5'h0;
 		always@(posedge i_clk)
 		if (led_clk)
 		begin

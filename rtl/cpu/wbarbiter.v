@@ -33,7 +33,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -58,7 +58,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 `default_nettype	none
-//
 `define	WBA_ALTERNATING
 // }}}
 module	wbarbiter #(

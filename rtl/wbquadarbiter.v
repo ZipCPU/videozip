@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,8 +35,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `define	WBA_ALTERNATING
+// }}}
 module	wbquadarbiter(i_clk, i_rst, 
 	// Bus A
 	i_a_cyc, i_a_stb, i_a_we, i_a_adr, i_a_dat, i_a_sel, o_a_stall, o_a_ack, o_a_err,

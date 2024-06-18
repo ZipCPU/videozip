@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/hdmipxslip.v
+// Filename:	rtl/video/hdmipxslip.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //

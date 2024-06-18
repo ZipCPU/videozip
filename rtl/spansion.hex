@@ -1,32 +1,53 @@
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-7ff
-0ff
-0ff
-7ff
-7ff
-0eb
-200
-200
-200
-2a0
-200
-300
-300
-7ff
-7ff
+////////////////////////////////////////////////////////////////////////////////
+//
+// Filename:	rtl/spansion.hex
+// {{{
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
+//
+// Purpose:	This hex file is used to pre-load a QSPI startup script into
+//		the QSPI engine.  This startup script is then used to 1) bring
+//	the QSPI memory from a known state back to its SPI state, and then
+//	2) to execute an QSPI memory read instruction that will leave the
+//	QSPI chip in QSPI XiP mode.  Ever after, the memory will no longer have
+//	to issue any QSPI read commands.  Subsequent transactions will begin
+//	with the address.
+//
+//	This device is specific to the Spansion flash memories.  Other vendors
+//	may require QSPI mode to be enabled, the IO speed adjusted (via
+//	capacitance control), or the delay between request and response tuned
+//	for a particular clock frequency.  Check with your flash vendor
+//	first, to know which of these you might need.
+//
+// Creator:	Dan Gisselquist, Ph.D.
+//		Gisselquist Technology, LLC
+//
+////////////////////////////////////////////////////////////////////////////////
+// }}}
+// Copyright (C) 2024, Gisselquist Technology, LLC
+// {{{
+// This program is free software (firmware): you can redistribute it and/or
+// modify it under the terms of the GNU General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
+//
+// This program is distributed in the hope that it will be useful, but WITHOUT
+// ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+// FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+// for more details.
+//
+// You should have received a copy of the GNU General Public License along
+// with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+// target there if the PDF file isn't present.)  If not, see
+// <http://www.gnu.org/licenses/> for a copy.
+// }}}
+// License:	GPL, v3, as defined and found on www.gnu.org,
+// {{{
+//		http://www.gnu.org/licenses/gpl.html
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+// }}}
+@00	7ff 7ff 7ff 7ff 7ff 7ff 7ff 7ff
+@08	7ff 7ff 7ff 7ff 7ff 7ff 7ff 7ff
+@10	7ff 7ff 0ff 0ff 7ff 7ff 0eb 200
+@18	200 200 2a0 200 300 300 7ff 7ff

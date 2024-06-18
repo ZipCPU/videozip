@@ -11,16 +11,12 @@
 //
 //	This IP is limited to packets that are a multiple of 4 bytes long.
 //
-// STATUS:	Recently verified the full linked list structure.  Found
-//		some bugs that might've caused to it to seize before.  Should
-//	now be ready to try in hardware again.
-//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// Copyright (C) 2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published

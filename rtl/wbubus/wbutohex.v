@@ -21,7 +21,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -45,7 +45,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+`default_nettype none
+// }}}
 module	wbutohex(i_clk, i_stb, i_byte, o_stb, o_valid, o_hexbits);
 	input	wire		i_clk, i_stb;
 	input	wire	[7:0]	i_byte;

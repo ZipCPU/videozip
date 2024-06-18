@@ -11,7 +11,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -35,26 +35,30 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=rtccount
 @NADDR=1
+@CLOCK.NAME=clk
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-@$STEP=(1<<32)/@$(CLOCK.FREQUENCY)
+@SLAVE.BUS=wb32
+@$STEP=((1<<32) + @$(CLOCK.FREQUENCY)/2)/@$(CLOCK.FREQUENCY)
 @MAIN.DEFNS=
-	reg		r_@$(PREFIX)_ack;
 	reg	[31:0]	r_@$(PREFIX)_data;
 @MAIN.INSERT=
-	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	////////////////////////////////////////////////////////////////////////
+	//
+	// RTC Counter
+	// {{{
+	//
+	// Using clock @$(CLOCK.WIRE) with frequency @$(CLOCK.FREQUENCY)
+	//
 
-	initial	r_@$(PREFIX)_ack = 32'h0;
-	always @(posedge i_clk)
-		r_@$(PREFIX)_ack <= @$(SLAVE.PREFIX)_stb;
-	assign	@$(SLAVE.PREFIX)_ack = r_@$(PREFIX)_ack;
+	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
+	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
 
 	initial	r_@$(PREFIX)_data = 32'h0;
 	always @(posedge i_clk)
-		r_@$(PREFIX)_data <= r_@$(PREFIX) + @$(STEP);
+		r_@$(PREFIX)_data <= r_@$(PREFIX)_data + @$(STEP);
 	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
 @REGS.N=1
 @REGS.0= 0 R_RTCCOUNT RTCCOUNT

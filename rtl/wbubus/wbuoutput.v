@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -38,9 +38,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 `default_nettype none
-//
+// }}}
 module	wbuoutput(i_clk, i_rst, i_stb, i_codword,
 		i_wb_cyc, i_int, i_bus_busy,
 		o_stb, o_char, i_tx_busy, o_fifo_err);

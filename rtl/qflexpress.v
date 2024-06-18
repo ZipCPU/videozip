@@ -861,7 +861,7 @@ module	qflexpress #(
 		// Notice that this is only for
 		// regular bus reads, and so the check for
 		// !pipe_req
-		clk_ctr <= 5'd14 + NDUMMY + (OPT_ADDR32 ? 2:0)+(OPT_ODDR ? 0:1);
+		clk_ctr <= 5'd14 + NDUMMY[3:0] + (OPT_ADDR32 ? 2:0)+(OPT_ODDR ? 0:1);
 	else if (bus_request) // && pipe_req
 		// Otherwise, if this is a piped read, we'll
 		// reset the counter back to eight.
@@ -1020,7 +1020,7 @@ module	qflexpress #(
 		if (i_reset)
 			r_actual_sck <= 1'b0;
 		else
-			r_actual_sck <= ((ckpos && OPT_CLKDIV==2) || o_qspi_sck)&&(ckpre)&&(clk_ctr > 0);
+			r_actual_sck <= (ckpos || o_qspi_sck)&&(ckpre)&&(clk_ctr > 0);
 
 		assign	actual_sck = r_actual_sck;
 

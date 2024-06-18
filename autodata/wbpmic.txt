@@ -11,7 +11,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -39,7 +39,7 @@
 @PREFIX=pmic
 @NADDR=	2
 @SLAVE.TYPE=	OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS= MICROPHONE_ACCESS
 @$SAMPLERATE=48000
 @$CLKSPERSAMPLE.EXPR=@$CLKFREQHZ/@$.SAMPLERATE

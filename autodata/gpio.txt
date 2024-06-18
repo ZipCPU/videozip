@@ -10,7 +10,7 @@
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
-##
+## }}}
 ## Copyright (C) 2015-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
@@ -34,15 +34,15 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=gpio
 @DEVID=GPIO
 @NADDR=1
 @ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
-# @SINGLE.OUTPUTS= o_gpio
-# @SINGLE.INPUTS=  i_gpio
+@SLAVE.BUS=wb32
+@NUMOUTPUT=16
+@NUMINPUT=2
 @INT.GPIO.WIRE=gpio_int
 @INT.GPIO.PIC=altpic
 @TOP.PORTLIST=
@@ -55,7 +55,7 @@
 		o_sd_reset,
 		i_gps_3df
 @TOP.IODECL=
-	// GPIO wires
+	// @$(DEVID) ports
 	inout	wire	io_hdmi_in_cec;
 	output	wire	o_hdmi_in_hpa;
 	output	wire	o_hdmi_in_txen;
@@ -64,17 +64,18 @@
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 @TOP.DEFNS=
-	// GPIO declarations.  The two wire busses are just virtual lists of
+	// @$(DEVID) declarations.  The two wire busses are just virtual lists of
 	// input (or output) ports.
-	wire	[15:0]	i_@$(PREFIX), o_@$(PREFIX);
+	wire	[@$(NUMINPUT)-1:0]	i_@$(PREFIX);
+	wire	[@$(NUMOUTPUT)-1:0]	o_@$(PREFIX);
 	wire		w_hdmi_out_en;
 	wire		w_hdmi_bypass_sda;
 	wire		w_hdmi_bypass_scl;
 @TOP.MAIN=
-		// GPIO wires
+		// @$(DEVID) wires
 		i_@$(PREFIX), o_@$(PREFIX)
 @TOP.INSERT=
-	assign	i_gpio = { 10'h0,
+	assign	i_@$(PREFIX) = { 10'h0,
 			w_hdmi_in_pll_locked,
 			sysclk_locked, i_gps_3df,
 			!i_hdmi_out_hpd_n, !i_sd_cd_n,
@@ -88,13 +89,13 @@
 	assign	o_sd_reset      = o_gpio[6];
 	assign	w_hdmi_out_en   = o_gpio[7];
 @MAIN.PORTLIST=
-		// GPIO ports
+		// @$(DEVID) ports
 `ifdef	VERILATOR
 		o_trace, o_halt,
 `endif
 		i_@$(PREFIX), o_@$(PREFIX)
 @MAIN.IODECL=
-	localparam	NGPI = @$(NGPI), NGPO=@$(NGPO);
+	localparam	NGPI = @$(NUMINPUT), NGPO=@$(NUMOUTPUT);
 	// @$(DEVID) ports
 `ifdef	VERILATOR
 	output	wire			o_trace;
