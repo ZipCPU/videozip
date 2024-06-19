@@ -4,7 +4,7 @@
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	Convert incoming TMDS data into usable pixel and packet data.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -36,97 +36,112 @@
 //
 `default_nettype none
 // }}}
-module	tmdsdecode(i_clk, i_word, o_pv, o_pix, o_sync);
-	input	wire	i_clk;
-	input	wire	[9:0]	i_word;
-	output	wire		o_pv;
-	output	wire	[13:0]	o_pix;
-	output	wire	[1:0]	o_sync;
+module	tmdsdecode(
+		// {{{
+		input	wire		i_clk,
+		input	wire	[9:0]	i_word,
+		output	wire	[1:0]	o_ctl,
+		output	wire	[6:0]	o_aux,
+		output	wire	[7:0]	o_pix
+		// }}}
+	);
 
-
+	// Local declarations
+	// {{{
+	reg	[1:0]	r_ctl;
+	reg	[6:0]	r_aux;
 	reg	[7:0]	r_pix;
 	wire	[9:0]	first_midp;
+	wire	[9:0]	brev_word;
+	// }}}
+
+	// r_pix generation
+	// {{{
 	assign	first_midp = {
 			((i_word[0]) ? (~i_word[9:2]) : (i_word[9:2])),
 			i_word[1:0] };
-	always @(posedge i_clk)
-	begin
-		if (first_midp[1])
-		begin
-			r_pix[0] <= !(first_midp[9]);
-			r_pix[1] <= !(first_midp[8] ^ first_midp[9]);
-			r_pix[2] <= !(first_midp[7] ^ first_midp[8]);
-			r_pix[3] <= !(first_midp[6] ^ first_midp[7]);
-			r_pix[4] <= !(first_midp[5] ^ first_midp[6]);
-			r_pix[5] <= !(first_midp[4] ^ first_midp[5]);
-			r_pix[6] <= !(first_midp[3] ^ first_midp[4]);
-			r_pix[7] <= !(first_midp[2] ^ first_midp[3]);
-		end else begin
-			r_pix[0] <= first_midp[9];
-			r_pix[1] <= first_midp[8] ^ first_midp[9];
-			r_pix[2] <= first_midp[7] ^ first_midp[8];
-			r_pix[3] <= first_midp[6] ^ first_midp[7];
-			r_pix[4] <= first_midp[5] ^ first_midp[6];
-			r_pix[5] <= first_midp[4] ^ first_midp[5];
-			r_pix[6] <= first_midp[3] ^ first_midp[4];
-			r_pix[7] <= first_midp[2] ^ first_midp[3];
-		end
-	end
 
-	wire	[9:0]	brev_word;
+	always @(posedge i_clk)
+	if (first_midp[1])
+	begin
+		r_pix[0] <= (first_midp[9]);
+		r_pix[1] <= (first_midp[8] ^ first_midp[9]);
+		r_pix[2] <= (first_midp[7] ^ first_midp[8]);
+		r_pix[3] <= (first_midp[6] ^ first_midp[7]);
+		r_pix[4] <= (first_midp[5] ^ first_midp[6]);
+		r_pix[5] <= (first_midp[4] ^ first_midp[5]);
+		r_pix[6] <= (first_midp[3] ^ first_midp[4]);
+		r_pix[7] <= (first_midp[2] ^ first_midp[3]);
+	end else begin
+		r_pix[0] <=  first_midp[9];
+		r_pix[1] <= !(first_midp[8] ^ first_midp[9]);
+		r_pix[2] <= !(first_midp[7] ^ first_midp[8]);
+		r_pix[3] <= !(first_midp[6] ^ first_midp[7]);
+		r_pix[4] <= !(first_midp[5] ^ first_midp[6]);
+		r_pix[5] <= !(first_midp[4] ^ first_midp[5]);
+		r_pix[6] <= !(first_midp[3] ^ first_midp[4]);
+		r_pix[7] <= !(first_midp[2] ^ first_midp[3]);
+	end
+	// }}}
+
+	// Bit-reverse i_word
+	// {{{
 	genvar	k;
 	generate for(k=0; k<10; k=k+1)
+	begin : GEN_BIT_REVERSE
 		assign brev_word[k] = i_word[9-k];
-	endgenerate
+	end endgenerate
+	// }}}
 
-	reg		r_pv;
-	reg	[5:0]	apix;
-	reg	[1:0]	r_sync;
+	// AUX and control channel decoding
+	// {{{
 	always @(posedge i_clk)
 	begin
-		r_pv   <= 1'b0;
-		apix   <= 6'h0;
-		r_sync <= 2'b00;
+		r_aux <= 7'h0;
+		r_ctl <= 2'b00;
 		//
 		case(brev_word)
 		// 2-bit control period coding
-		10'h354: begin apix <= 6'h00; r_sync <= 2'h0; end
-		10'h0ab: begin apix <= 6'h01; r_sync <= 2'h1; end
-		10'h154: begin apix <= 6'h02; r_sync <= 2'h2; end
-		10'h2ab: begin apix <= 6'h03; r_sync <= 2'h3; end
+		10'h354: begin r_aux <= 7'h10; r_ctl <= 2'h0; end
+		10'h0ab: begin r_aux <= 7'h11; r_ctl <= 2'h1; end
+		10'h154: begin r_aux <= 7'h12; r_ctl <= 2'h2; end
+		10'h2ab: begin r_aux <= 7'h13; r_ctl <= 2'h3; end
 		// TERC4 coding
-		10'h29c: begin apix <= 6'h10; r_sync <= 2'h0; end
-		10'h263: begin apix <= 6'h11; r_sync <= 2'h1; end
-		10'h2e4: begin apix <= 6'h12; r_sync <= 2'h2; end
-		10'h2e2: begin apix <= 6'h13; r_sync <= 2'h3; end
-		10'h171: begin apix <= 6'h14; r_sync <= 2'h0; end
-		10'h11e: begin apix <= 6'h15; r_sync <= 2'h1; end
-		10'h18e: begin apix <= 6'h16; r_sync <= 2'h2; end
-		10'h13c: begin apix <= 6'h17; r_sync <= 2'h3; end
+		10'h29c: begin r_aux <= 7'h20; r_ctl <= 2'h0; end
+		10'h263: begin r_aux <= 7'h21; r_ctl <= 2'h1; end
+		10'h2e4: begin r_aux <= 7'h22; r_ctl <= 2'h2; end
+		10'h2e2: begin r_aux <= 7'h23; r_ctl <= 2'h3; end
+		10'h171: begin r_aux <= 7'h24; r_ctl <= 2'h0; end
+		10'h11e: begin r_aux <= 7'h25; r_ctl <= 2'h1; end
+		10'h18e: begin r_aux <= 7'h26; r_ctl <= 2'h2; end
+		10'h13c: begin r_aux <= 7'h27; r_ctl <= 2'h3; end
 		// This next pixel is also a guard pixel
-		10'h2cc: begin apix <= 6'h38; r_sync <= 2'h0; end
+		10'h2cc: begin r_aux <= 7'h68; r_ctl <= 2'h0; end
 		//
-		10'h139: begin apix <= 6'h19; r_sync <= 2'h1; end
-		10'h19c: begin apix <= 6'h1a; r_sync <= 2'h2; end
-		10'h2c6: begin apix <= 6'h1b; r_sync <= 2'h3; end
-		10'h28e: begin apix <= 6'h1c; r_sync <= 2'h0; end
-		10'h271: begin apix <= 6'h1d; r_sync <= 2'h1; end
-		10'h163: begin apix <= 6'h1e; r_sync <= 2'h2; end
-		10'h2c3: begin apix <= 6'h1f; r_sync <= 2'h3; end
+		10'h139: begin r_aux <= 7'h29; r_ctl <= 2'h1; end
+		10'h19c: begin r_aux <= 7'h2a; r_ctl <= 2'h2; end
+		10'h2c6: begin r_aux <= 7'h2b; r_ctl <= 2'h3; end
+		10'h28e: begin r_aux <= 7'h2c; r_ctl <= 2'h0; end
+		10'h271: begin r_aux <= 7'h2d; r_ctl <= 2'h1; end
+		10'h163: begin r_aux <= 7'h2e; r_ctl <= 2'h2; end
+		10'h2c3: begin r_aux <= 7'h2f; r_ctl <= 2'h3; end
 		// Guard band characters
-		//10'h2cc:apix<= 8'h38; // done above
-		10'h133: begin apix <= 6'h21; r_sync <= 2'h0; end
-		default: r_pv <= 1'b1;
+		//10'h2cc:r_aux<= 8'h38; // done above
+		10'h133: begin r_aux <= 7'h41; r_ctl <= 2'h0; end
+		default: begin end
 		endcase
 	end
+	// }}}
 
-	assign	o_pv   = r_pv;
-	assign	o_pix  = { apix, r_pix };
-	assign	o_sync = r_sync;
+	assign	o_ctl  = r_ctl;
+	assign	o_aux  = r_aux;
+	assign	o_pix  = r_pix;
 
 	// Make verilator happy
+	// {{{
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = first_midp[0];
 	// verilator lint_on  UNUSED
+	// }}}
 endmodule

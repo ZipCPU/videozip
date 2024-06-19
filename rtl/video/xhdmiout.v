@@ -4,10 +4,8 @@
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	This is a Xilinx-specific I/O driver designed to convert
-//		the 10-bits data words of HDMI into a serial channel to be
-//	sent to the HDMI hardware.  It does this via an appropriate pair of
-//	OSERDES module.
+// Purpose:	Encapsulates Xilinx's 7-series 10:1 OSERDES element in a fashion
+//		that works nicely with the rest of my HDMI infrastructure.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -40,113 +38,83 @@
 `default_nettype	none
 // `define	BYPASS_SERDES
 // }}}
-module	xhdmiout #(
-		parameter [0:0]		BITREVERSE = 1'b0
-	) (
+module	xhdmiout (
 		// {{{
-		// i_clk, i_hsclk, i_ce, i_word, o_hs_wire);
-		input	wire		i_clk, i_hsclk, i_ce,
+		input	wire		i_clk,
+		input	wire		i_hsclk,
+		input	wire		i_reset_n,
 		input	wire	[9:0]	i_word,
-		output	wire	[1:0]	o_hs_wire
+		output	wire	[1:0]	o_port
 		// }}}
 	);
 
 	// Local declarations
 	// {{{
-	localparam	DLY = 0;
-
 	wire	[5:0]	ignored_data;
 	wire	[1:0]	slave_to_master;
 
-	reg	sync_ce, q_ce, qq_ce, reset;
+	(* ASYNC_REG="TRUE" *) reg		sync_reset_n;
+	(* ASYNC_REG="TRUE" *) reg	[1:0]	reset_pipe;
 
-	wire	[9:0]	brev_input, w_in_word;
-
-	reg	[9:0]	d_word;
-	wire	w_hs_wire;
+	wire	[9:0]	w_word;
+	wire	[9:0]	w_in_word;
+	wire		w_hs_wire;
 	// }}}
 
-	// Reset synchronizer
+	// Generate a synchronous reset and CE signals
 	// {{{
-	initial	reset = 1'b1;
-	initial	{ sync_ce, qq_ce, q_ce } = 0;
-	always @(posedge i_clk)
-		{ sync_ce, qq_ce, q_ce } <= { qq_ce, q_ce, i_ce };
-	always @(posedge i_clk)
-		reset <= !sync_ce;
+	always @(posedge i_clk or negedge i_reset_n)
+	if (!i_reset_n)
+		{ sync_reset_n, reset_pipe} <= 1'b0;
+	else
+		{ sync_reset_n, reset_pipe} <= { reset_pipe, 1'b1 };
 	// }}}
 
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Optionally bitreverse the input word
+	// (Optionally) bit reverse the input (not necessary)
 	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
+	localparam	[0:0]	OPT_BITREVERSE =1'b0;
+	generate if (OPT_BITREVERSE)
+	begin : GEN_BITREVERSE
+		// Arrange for (optionally) bit reversing the input
+		//
+		wire	[9:0]	brev_input;
 
-	// Arrange for (optionally) bit reversing the input
-	//
-	assign	brev_input[0] = i_word[9];
-	assign	brev_input[1] = i_word[8];
-	assign	brev_input[2] = i_word[7];
-	assign	brev_input[3] = i_word[6];
-	assign	brev_input[4] = i_word[5];
-	assign	brev_input[5] = i_word[4];
-	assign	brev_input[6] = i_word[3];
-	assign	brev_input[7] = i_word[2];
-	assign	brev_input[8] = i_word[1];
-	assign	brev_input[9] = i_word[0];
+		assign	brev_input[0] = i_word[9];
+		assign	brev_input[1] = i_word[8];
+		assign	brev_input[2] = i_word[7];
+		assign	brev_input[3] = i_word[6];
+		assign	brev_input[4] = i_word[5];
+		assign	brev_input[5] = i_word[4];
+		assign	brev_input[6] = i_word[3];
+		assign	brev_input[7] = i_word[2];
+		assign	brev_input[8] = i_word[1];
+		assign	brev_input[9] = i_word[0];
 
-	assign	w_in_word = (BITREVERSE) ? brev_input : i_word;
+		assign	w_in_word = brev_input;
+	end else begin : NO_BITREVERSE
+		assign	w_in_word = i_word;
+	end endgenerate
 	// }}}
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Sub-word delay -- if necessary
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
 
-	// According to the Artix-7 SelectIO resources guide, OSERDESE2
-	// latencies section, there is a 5 clock latency for a 10:1 DDR
-	// OSERDESE2.  Hence, to keep things aligned, we'll need to pre-delay
-	// the output by 5 clocks.  If we keep track of a previous output word,
-	// such that:
-	//	r_word, i_word
-	// describes our sequence, we can delay by 5 clocks as in:
-	//
-	// We'll also use this opportunity to register our inputs, before
-	// sending them out the door.
-	generate
-	if (DLY != 0)
+	// (Optionally) delay the output bits
+	// {{{
+	localparam	DLY = 0;
+	generate if (DLY != 0)
 	begin
-		reg	[(DLY-1):0]	r_word;
+		reg	[(DLY-1):0]	r_word, d_word;
 
 		always @(posedge i_clk)
 			r_word <= w_in_word[(DLY-1):0];
 		always @(posedge i_clk)
-			d_word <= (i_ce) ? { r_word, w_in_word[9:DLY] }: 10'h00;
+			d_word <= { r_word, w_in_word[9:DLY] };
 
-	end else
-		always @(posedge i_clk)
-			d_word <= w_in_word;
-	endgenerate
+		assign	w_word = d_word;
+	end else begin : ZERO_DELAY
+		assign	w_word = w_in_word;
+	end endgenerate
 	// }}}
-	////////////////////////////////////////////////////////////////////////
-	//
-	// The outgoing SERDES itself
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-`ifdef	BYPASS_SERDES
-	// We place this here to simplify the debugging of the following, so
-	// that the rest of the design may move forward before we come back to
-	// debugging this
-	assign	w_hs_wire = 1'b0;
-`else
 
-	OSERDESE2	#(
+	OSERDESE2	#(		 // Master SERDES, for the upper bits
 		// {{{
 		.DATA_RATE_OQ("DDR"),
 		.DATA_RATE_TQ("SDR"),
@@ -156,28 +124,30 @@ module	xhdmiout #(
 		// }}}
 	) lowserdes(
 		// {{{
-		.OCE(sync_ce),	.OFB(),
+		// Verilator lint_off PINCONNECTEMPTY
+		.OCE(1'b1),	.OFB(),
 		.TCE(1'b0),	.TFB(), .TQ(),
 		.CLK(i_hsclk),	// HS clock
 		.CLKDIV(i_clk),
 		.OQ(w_hs_wire),
-		.D1(d_word[9]),
-		.D2(d_word[8]),
-		.D3(d_word[7]),
-		.D4(d_word[6]),
-		.D5(d_word[5]),
-		.D6(d_word[4]),
-		.D7(d_word[3]),
-		.D8(d_word[2]),
-		.RST(reset),
+		.D1(w_word[9]),
+		.D2(w_word[8]),
+		.D3(w_word[7]),
+		.D4(w_word[6]),
+		.D5(w_word[5]),
+		.D6(w_word[4]),
+		.D7(w_word[3]),
+		.D8(w_word[2]),
+		.RST(!sync_reset_n),
 		.TBYTEIN(1'b0), .TBYTEOUT(),
 		.T1(1'b0), .T2(1'b0), .T3(1'b0), .T4(1'b0),
 		.SHIFTIN1(slave_to_master[0]), .SHIFTIN2(slave_to_master[1]),
 		.SHIFTOUT1(), .SHIFTOUT2()
+		// Verilator lint_on  PINCONNECTEMPTY
 		// }}}
 	);
 
-	OSERDESE2	#(
+	OSERDESE2	#(	 // Slave SERDES, for the lower two bits
 		// {{{
 		.DATA_RATE_OQ("DDR"),
 		.DATA_WIDTH(10),
@@ -187,42 +157,29 @@ module	xhdmiout #(
 		// }}}
 	) hiserdes(
 		// {{{
-		.OCE(sync_ce),	.OFB(), .OQ(),
+		// Verilator lint_off PINCONNECTEMPTY
+		.OCE(1'b1),	.OFB(), .OQ(),
 		.TCE(1'b0),	.TFB(), .TQ(),
 		.CLK(i_hsclk),	// HS clock
 		.CLKDIV(i_clk),
 		.D1(1'h0),
 		.D2(1'h0),
-		.D3(d_word[1]),
-		.D4(d_word[0]),
+		.D3(w_word[1]),
+		.D4(w_word[0]),
 		.D5(1'h0),
 		.D6(1'h0),
 		.D7(1'h0),
 		.D8(1'h0),
-		.RST(reset),
+		.RST(!sync_reset_n),
 		.TBYTEIN(1'b0), .TBYTEOUT(),
 		.T1(1'b0), .T2(1'b0), .T3(1'b0), .T4(1'b0),
 		.SHIFTIN1(1'b0), .SHIFTIN2(1'b0),
 		.SHIFTOUT1(slave_to_master[0]), .SHIFTOUT2(slave_to_master[1])
-		// }}}
-	);
-`endif
-	// }}}
-	////////////////////////////////////////////////////////////////////////
-	//
-	// The outgoing OBUF itself
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-
-	OBUFDS
-	hdmibuf(
-		// {{{
-		.I(w_hs_wire),
-		.O(o_hs_wire[1]),
-		.OB(o_hs_wire[0])
+		// Verilator lint_on  PINCONNECTEMPTY
 		// }}}
 	);
 
-	// }}}
+	// Turn this high speed output into a pair of differential pins
+	OBUFDS	hdmibuf(.I(w_hs_wire), .O(o_port[1]), .OB(o_port[0]));
+
 endmodule

@@ -4,7 +4,8 @@
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	A wrapper for the 1:10 ISERDES+IOBUF capability required to
+//		support HDMI ingestion.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -36,27 +37,49 @@
 //
 `default_nettype	none
 // }}}
-module	xhdmiin(i_clk, i_hsclk, i_ce, i_delay, o_delay,
-			i_hs_wire, o_word);
-	parameter	DC = 0;
-	input	wire		i_clk;
-	input	wire		i_hsclk;
-	//
-	input	wire		i_ce;
-	input	wire	[4:0]	i_delay;
-	output	wire	[4:0]	o_delay;
-	input	wire	[1:0]	i_hs_wire;
-	output	wire	[9:0]	o_word;
+module	xhdmiin #(
+		parameter	DC = 0
+	) (
+		// {{{
+		input	wire		i_clk,		// Pixel clock
+					i_hsclk,	// 10x pixel clock
+					i_reset_n,
+		input	wire	[4:0]	i_delay,
+		output	wire	[4:0]	o_delay,
+		input	wire	[1:0]	i_hs_wire,
+		output	wire	[9:0]	o_word
+		// }}}
+	);
 
+	// Local declarations
+	// {{{
 	wire		w_ignored;
 	wire	[9:0]	w_word;
 
 	wire	w_hs_wire, w_hs_delayed_wire;
-	IBUFDS	hdmibuf(
-			.I(i_hs_wire[1]), .IB(i_hs_wire[0]),
-			.O(w_hs_wire));
+	// }}}
 
-	xhdmiin_deserdes the_deserdes(i_clk, i_hsclk,
-		 i_ce, i_delay, o_delay, w_hs_wire, w_ignored, o_word);
+	// Convert from differential to internal
+	// {{{
+	IBUFDS
+	hdmibuf(
+		.I(i_hs_wire[1]), .IB(i_hs_wire[0]),
+		.O(w_hs_wire)
+	);
+	// }}}
 
+	// Now separate us into the various bits
+	// {{{
+	xhdmiin_deserdes
+	the_deserdes(
+		.i_clk(i_clk),
+		.i_hsclk(i_hsclk),
+		.i_reset_n(i_reset_n),
+		.i_delay(i_delay),
+		.o_delay(o_delay),
+		.i_pin(w_hs_wire),
+		.o_wire(w_ignored),
+		.o_word(o_word)		// Decoded data to send to 10B/8B decode
+	);
+	// }}}
 endmodule

@@ -4,7 +4,9 @@
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	
+// Purpose:	Generate automatic synchronization information to sync to one of
+//		the three HDMI color channels.  The output is a bit-synchronized
+//	channel word.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -36,131 +38,130 @@
 //
 `default_nettype	none
 // }}}
-module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
-	input	wire		i_clk, i_reset;
-	input	wire	[9:0]	i_px;
-	output	wire	[4:0]	o_sync;
-	output	reg	[9:0]	o_pix;
+module	hdmipixelsync (
+		// {{{
+		input	wire		i_clk, i_reset,
+		input	wire	[9:0]	i_px,
+		output	wire	[4:0]	o_sync,
+		output	reg	[9:0]	o_pix,
+		output	reg	[31:0]	o_debug
+		// }}}
+	);
 
-	reg	[18:0]	pre_match_win;
+	// Register/wire declarations
+	// {{{
+	integer	ik;
+	genvar	gk;
+	reg [2*10-2:0]	pre_match_win;
 	wire	[18:0]	pre_pix;
-	reg	[9:0]	pre_test, nxt_match;
 	//
-	reg		valid_match, nxt_valid;
-	reg	[3:0]	match_loc;
+	reg		valid_match;
+	reg	[3:0]	match_loc, w_match_loc;
+	//
+	wire	[3:0]	chosen_match_loc;
+	reg		sync_valid;
+	reg	[15:0]	lost_sync_counter;
+	reg	[9:0]	sync;
+
+	reg	[11:0]	dbg_trigger_count;
+	// }}}
 
 	always @(posedge i_clk)
 		pre_match_win <= { pre_match_win[8:0], i_px };
 
-	genvar	k;
-	generate for(k=0; k<10; k=k+1)
+	// Test all possible synchronizations for a match
+	// {{{
+	generate for(gk=0; gk<10; gk=gk+1)
+	begin : CHECK_SYNC_OPTIONS
+		reg		control_word;
+		reg	[4:0]	control_matches;
+		wire	[9:0]	check_word;
+
+		assign	check_word = pre_match_win[gk +: 10];
+
 		always @(posedge i_clk)
 		begin
-			pre_test[k] <= 1'b0;
-			if((pre_match_win[(k+9):k]== 10'h0ab) // 354
-				    ||(pre_match_win[(k+9):k]==10'h354) //0ab
-				    ||(pre_match_win[(k+9):k]==10'h0aa) //154
-				    ||(pre_match_win[(k+9):k]==10'h355))//2ab
-				pre_test[k] <= 1'b1;
+			// Look for a control word
+			//	(Bit reversed)	(User guide)
+			//	0010101011	1101010100
+			//	1101010100	0101010100
+			//	1101010101	1010101011
+			//
+			control_word <= 1'b0;
+			if((check_word== 10'h0ab) // 354
+				    ||(check_word ==10'h354) //0ab
+				    ||(check_word ==10'h0aa) //154
+				    ||(check_word ==10'h355))//2ab
+				control_word <= 1'b1;
 
-			// 2cc = 10_1100_1100 = 1011_0011_00 -> BREV = 0cd
-			// 133 = 01_0011_0011 = 0100_1100_11 -> BREV = 332
-			nxt_match[k] <= 1'b0;
-			if((pre_match_win[(k+9):k]== 10'h0cd) // 2cc
-				    ||(pre_match_win[(k+9):k]==10'h332))//133
-				nxt_match[k] <= 1'b1;
+			if (!control_word)
+				control_matches <= 0;
+			else if (!control_matches[4])
+				control_matches <= control_matches + 1;
 
+			sync[gk] <= (control_matches >= 12);
 		end
-	endgenerate
+	end endgenerate
+	// }}}
 
+	// w_match_loc
+	// {{{
+	always @(*)
+	begin
+		w_match_loc = 0;
+		for(ik=0; ik<10; ik=ik+1)
+		if (sync[ik])
+			w_match_loc = w_match_loc | ik[3:0];
+	end
+	// }}}
+
+	// valid_match, match_loc
+	// {{{
 	always @(posedge i_clk)
 	begin
+		// valid_match, match_loc
 		valid_match <= (!i_reset);
-		case(pre_test)
-		10'h001: match_loc <= 4'h0;
-		10'h002: match_loc <= 4'h1;
-		10'h004: match_loc <= 4'h2;
-		10'h008: match_loc <= 4'h3;
-		10'h010: match_loc <= 4'h4;
-		10'h020: match_loc <= 4'h5;
-		10'h040: match_loc <= 4'h6;
-		10'h080: match_loc <= 4'h7;
-		10'h100: match_loc <= 4'h8;
-		10'h200: match_loc <= 4'h9;
+		match_loc <= w_match_loc;
+		case(sync)
+		10'h001: begin end // match_loc <= 4'h0;
+		10'h002: begin end // match_loc <= 4'h1;
+		10'h004: begin end // match_loc <= 4'h2;
+		10'h008: begin end // match_loc <= 4'h3;
+		10'h010: begin end // match_loc <= 4'h4;
+		10'h020: begin end // match_loc <= 4'h5;
+		10'h040: begin end // match_loc <= 4'h6;
+		10'h080: begin end // match_loc <= 4'h7;
+		10'h100: begin end // match_loc <= 4'h8;
+		10'h200: begin end // match_loc <= 4'h9;
 		default: valid_match <= 1'b0;
 		endcase
-
-		if (valid_match) // (last_valid)
-		begin
-			case(match_loc)
-			4'h0: nxt_valid <= nxt_match[0];
-			4'h1: nxt_valid <= nxt_match[1];
-			4'h2: nxt_valid <= nxt_match[2];
-			4'h3: nxt_valid <= nxt_match[3];
-			4'h4: nxt_valid <= nxt_match[4];
-			4'h5: nxt_valid <= nxt_match[5];
-			4'h6: nxt_valid <= nxt_match[6];
-			4'h7: nxt_valid <= nxt_match[7];
-			4'h8: nxt_valid <= nxt_match[8];
-			4'h9: nxt_valid <= nxt_match[9];
-			default: nxt_valid <= 1'b0;
-			endcase
-		end else
-			nxt_valid <= 1'b0;
 	end
-
-	// Look for a string of 12 control characters, followed by a guard
-	// character
-	reg	[3:0]	match_count, found_loc;
-	wire	[3:0]	chosen_match_loc;
-	reg	sync_valid, found_valid;
-	reg	[15:0]	lost_sync_counter;
-	//
-	always @(posedge i_clk)
-		if ((i_reset)||(!valid_match))
-			match_count <= 0;
-		else if ((valid_match)&&(match_count < 4'hc))
-			match_count <= match_count + 1'b1;
-	initial	found_valid = 1'b0;
-	always @(posedge i_clk)
-		found_valid <= (!i_reset)&&(match_count == 4'hc)&&(nxt_valid);
-	always @(posedge i_clk)
-		if(nxt_valid)
-			found_loc <= match_loc;
-
-	reg		match_string;
-	reg	[3:0]	match_string_len;
-	initial	match_string_len = 0;
-	always @(posedge i_clk)
-		if ((valid_match)&&(match_loc == chosen_match_loc))
-		begin
-			if (!(&match_string_len[3:0]))
-				match_string_len <= match_string_len + 1'b1;
-		end else
-			match_string_len <= 4'h0;
-	initial	match_string = 1'b0;
-	always @(posedge i_clk)
-		match_string <= (&match_string_len);
+	// }}}
 
 	// Declare no synch when ... we don't see anything for a long time
+	// {{{
 	initial	lost_sync_counter = 16'hffff; // Start with a lost synch
 	always @(posedge i_clk)
-		if (i_reset)
-			lost_sync_counter <= 16'hffff;
-		else if ((found_valid)||(match_string))
-			lost_sync_counter <= 0;
-		else if (!(&lost_sync_counter))
-			lost_sync_counter <= lost_sync_counter + 1'b1;
+	if (i_reset)
+		lost_sync_counter <= 16'hffff;
+	else if (valid_match && match_loc == chosen_match_loc)
+		lost_sync_counter <= 0;
+	else if (!(&lost_sync_counter))
+		lost_sync_counter <= lost_sync_counter + 1'b1;
 
 	initial	sync_valid = 1'b0;
 	always @(posedge i_clk)
-		if (&lost_sync_counter)
-			sync_valid <= 1'b0;
-		else if (found_valid)
-			sync_valid <= (found_loc == chosen_match_loc);
+	if (&lost_sync_counter)
+		sync_valid <= 1'b0;
+	else if (valid_match)
+		sync_valid <= (match_loc == chosen_match_loc);
+	// }}}
 
-	validatecount	#(4) pixloc(i_clk, i_reset, found_valid, found_loc,
-				chosen_match_loc);
+	// Check for and remove any glitches
+	// {{{
+	synccount	#(.NBITS(4), .OPT_BYPASS_TEST(1'b0))
+	pixloc(i_clk, i_reset, valid_match, match_loc, chosen_match_loc);
+	// }}}
 
 	assign	o_sync = { (sync_valid), chosen_match_loc };
 	assign	pre_pix = pre_match_win >> chosen_match_loc;
@@ -168,8 +169,28 @@ module	hdmipixelsync(i_clk, i_reset, i_px, o_sync, o_pix);
 	always @(posedge i_clk)
 		o_pix <= pre_pix[9:0];
 
+	initial	dbg_trigger_count = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		dbg_trigger_count <= 0;
+	else if (dbg_trigger_count >= 2199)
+		dbg_trigger_count <= 0;
+	else
+		dbg_trigger_count <= dbg_trigger_count + 1;
+
+	always @(posedge i_clk)
+		o_debug <= {
+			(dbg_trigger_count == 0), sync_valid,	// 2b
+			chosen_match_loc, match_loc,		// 8b
+			sync[9:0],				// 10b
+			valid_match, (|sync), i_px		// 12b
+		};
+
+	// Make Verilator happy
+	// {{{
 	// verilog lint_off UNUSED
-	wire	[8:0]	unused;
-	assign	unused = { pre_pix[18:10] };
+	wire	unused;
+	assign	unused = &{ 1'b0, pre_pix[18:10] };
 	// verilog lint_on  UNUSED
+	// }}}
 endmodule
