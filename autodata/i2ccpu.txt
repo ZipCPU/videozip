@@ -256,7 +256,7 @@ typedef	struct	@$(DEVID)_S {
 	);
 
 @MAIN.ALT=
-	assign	@$(prefix)_ready = 1'b0;
+	assign	@$(PREFIX)_ready = 1'b0;
 @RTL.MAKE.GROUP=@$(DEVID)
 @RTL.MAKE.SUBD=wbi2c
 @RTL.MAKE.FILES=wbi2cdma.v

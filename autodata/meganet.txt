@@ -316,7 +316,7 @@ typedef struct ENETSTREAM_S {
 @BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((ENETSTREAM *)@$[0x%08x](REGBASE));
 
 @RTL.MAKE.GROUP=ENET
-@RTL.MAKE.SUBD=net
+@RTL.MAKE.SUBD=ethernet
 @RTL.MAKE.FILES= enetstream.v
         addecrc.v addemac.v addepad.v addepreamble.v
         rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepacket.v rxepreambl.v

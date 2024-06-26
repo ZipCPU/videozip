@@ -44,16 +44,20 @@
 //
 `default_nettype	none
 // }}}
-module	bigsmpy(i_clk, i_sync, i_sgn, i_a, i_b, o_r, o_sync);
-	parameter	NCLOCKS = 1;
-	input	wire		i_clk, i_sync, i_sgn;
-	input	wire	[31:0]	i_a, i_b;
-	output	reg	[63:0]	o_r;
-	output	reg		o_sync;
+module	bigsmpy #(
+		parameter	NCLOCKS = 1
+	) (
+		// {{{
+		input	wire		i_clk, i_sync, i_sgn,
+		input	wire	[31:0]	i_a, i_b,
+		output	reg	[63:0]	o_r,
+		output	reg		o_sync
+		// }}}
+	);
 
 	generate
-	if (NCLOCKS == 1)
-	begin
+	if (NCLOCKS <= 1)
+	begin : GEN_SINGLE
 		wire	signed	[31:0]	w_sa, w_sb;
 		wire		[31:0]	w_ua, w_ub;
 
@@ -72,7 +76,7 @@ module	bigsmpy(i_clk, i_sync, i_sgn, i_a, i_b, o_r, o_sync);
 		end
 
 	end else if (NCLOCKS == 2)
-	begin
+	begin : GEN_DUAL
 		reg	r_sync;
 		reg	signed	[31:0]	r_sa, r_sb;
 		wire		[31:0]	w_ua, w_ub;
@@ -98,8 +102,8 @@ module	bigsmpy(i_clk, i_sync, i_sgn, i_a, i_b, o_r, o_sync);
 		end
 
 	
-	end else if (NCLOCKS == 5)
-	begin
+	end else // if (NCLOCKS == 5)
+	begin : GEN_MULTICLOCK
 		//
 		// A pipeline, shift register, to track our
 		// synchronization pulse as it transits our pipeline

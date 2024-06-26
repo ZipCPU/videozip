@@ -63,7 +63,7 @@
 
 	assign	mdio_dbg_trigger = mdio_debug[31];
 @INT.MDIOSCOPE.WIRE=@$(PREFIX)_int
-@INT.MDIOSCOPE.PIC=buspic
+@INT.MDIOSCOPE.PIC=syspic
 @DATA_CLOCK=i_clk
 @SYNCHRONOUS=1
 @INCLUDEFILE=wbscope.txt

@@ -141,7 +141,7 @@ module	cpuops #(
 
 	assign	this_is_a_multiply_op = (i_stb)&&((i_op[3:1]==3'h5)||(i_op[3:0]==4'hc));
 
-	`MPYOP #(
+	mpyop #(
 		// {{{
 		.OPT_MPY(OPT_MPY),
 		.OPT_LOWPOWER(OPT_LOWPOWER)

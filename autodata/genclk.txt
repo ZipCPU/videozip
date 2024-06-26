@@ -40,7 +40,7 @@
 @DEVID=GENCLK
 @NADDR=1
 @SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @TOP.PORTLIST=
 		o_unused_fan_pwm
 @TOP.IODECL=
@@ -124,12 +124,15 @@
 	assign	@$(SLAVE.PREFIX)_idata = { i_@$(PREFIX)_pll_locked, r_@$(PREFIX)_data };
 	assign	o_@$(PREFIX)_ce = r_@$(PREFIX)_data[30];
 
-	genclk	clock_generator(@$(SLAVE.BUS.CLOCK.WIRE),
-			{ 2'b00, r_@$(PREFIX)_data[29:0] },
-			o_@$(PREFIX)_word,
-			w_@$(PREFIX)_stb);
+	genclk
+	u_@$(PREFIX)(
+		@$(SLAVE.BUS.CLOCK.WIRE),
+		{ 2'b00, r_@$(PREFIX)_data[29:0] },
+		o_@$(PREFIX)_word,
+		w_@$(PREFIX)_unused_stb
+	);
 @RTL.MAKE.GROUP=GENCLK
-@RTL.MAKE.SUBD=audio
+@RTL.MAKE.SUBD=
 @RTL.MAKE.FILES=genclk.v xgenclk.v
 @REGS.N=1
 @REGS.0= 0 R_@$(DEVID) @$(DEVID)

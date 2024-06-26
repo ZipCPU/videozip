@@ -36,20 +36,24 @@
 //
 `default_nettype	none
 // }}}
-module	bigadd(i_clk, i_sync, i_a, i_b, o_r, o_sync);
-	parameter	NCLOCKS = 1;
-	input	wire		i_clk, i_sync;
-	input	wire	[63:0]	i_a, i_b;
-	output	wire	[63:0]	o_r;
-	output	wire	o_sync;
+module	bigadd #(
+		parameter	NCLOCKS = 1
+	) (
+		// {{{
+		input	wire		i_clk, i_sync,
+		input	wire	[63:0]	i_a, i_b,
+		output	wire	[63:0]	o_r,
+		output	wire		o_sync
+		// }}}
+	);
 
 	generate
 	if (NCLOCKS == 0)
-	begin
+	begin : GEN_ASSIGNMENT
 		assign	o_sync= i_sync;
 		assign	o_r = i_a + i_b;
 	end else if (NCLOCKS == 1)
-	begin
+	begin : GEN_SINGLE_CLOCK
 		reg		r_sync;
 		reg	[63:0]	r_out;
 		always @(posedge i_clk)
@@ -60,7 +64,7 @@ module	bigadd(i_clk, i_sync, i_a, i_b, o_r, o_sync);
 		assign	o_sync = r_sync;
 		assign	o_r = r_out;
 	end else // if (NCLOCKS == 2)
-	begin
+	begin : GEN_MULTICLOCK
 		reg		r_sync, r_pps;
 		reg	[31:0]	r_hi, r_low;
 

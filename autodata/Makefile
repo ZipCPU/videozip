@@ -47,20 +47,20 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-BASE    := global.txt icape.txt # dlyarbiter not necessary with new AutoFPGA
-AUX     := version.txt buserr.txt pic.txt pwrcount.txt xpander.txt # vidarbiter.txt
-IO      := spio.txt gpio.txt
+BASE    := global.txt icape.txt crossbus.txt # dlyarbiter not necessary with new AutoFPGA
+AUX     := version.txt buserr.txt pwrcount.txt rtccount.txt # pic.txt
+IO      := spio.txt gpio.txt vadj33.txt
 RTC     := rtcgps.txt rtcdate.txt
-DBGBUS  := wbuconsole.txt
-MEMORY  := bkram.txt flash.txt sdram.txt
+DBGBUS  := exconsole.txt wbuuart.txt
+MEMORY  := bkram.txt flash.txt flashcfg.txt sdram.txt
 CPU     := zipmaster.txt
-NETWORK := mdio.txt enet.txt
+NETWORK := mdio.txt meganet.txt
 GPS     := gps.txt
-SDCARD  := sdspi.txt
+SDCARD  := sdio.txt # sdspi.txt
 GFX     := # hdmi.txt # wboledbw.txt
-SCOPES  := cpuscope.txt # sdscope.txt enetscope.txt flashscope.txt mdioscope.txt
+SCOPES  := cpuscope.txt # sdscope.txt flashscope.txt mdioscope.txt
 CLOCKS  := allclocks.txt genclk.txt netclockctr.txt
-OTHER   := xdc.txt clkcounter.txt # wbmouse.txt wbpmic.txt
+OTHER   := xdc.txt clkcounter.txt i2ccpu.txt # wbmouse.txt wbpmic.txt
 LDSCRIPT:= mem_bkram_only.txt mem_flash_bkram.txt
 DATA := $(CLOCKS) $(BASE) $(AUX) $(IO) $(RTC)				\
 	$(DBGBUS) $(MEMORY) $(CPU) $(NETWORK) $(GPS) $(SDCARD) $(GFX)	\

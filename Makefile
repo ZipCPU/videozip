@@ -126,7 +126,6 @@ autodata: datestamp check-autofpga
 	$(call copyif-changed,$(AUTOD)/toplevel.v,rtl/toplevel.v)
 	$(call copyif-changed,$(AUTOD)/main.v,rtl/main.v)
 	$(call copyif-changed,$(AUTOD)/iscachable.v,rtl/iscachable.v)
-	$(call copyif-changed,$(AUTOD)/iscachable.v,rtl/cpu/iscachable.v)
 	$(call copyif-changed,$(AUTOD)/build.xdc,rtl/board.xdc)
 	$(call copyif-changed,$(AUTOD)/regdefs.h,sw/host/regdefs.h)
 	$(call copyif-changed,$(AUTOD)/regdefs.cpp,sw/host/regdefs.cpp)

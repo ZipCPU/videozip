@@ -58,7 +58,7 @@
 #		respond to a bus transaction, ... one that uses its stall
 #		line of a necessity.
 @SLAVE.TYPE=	OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @ACCESS= CONSOLE_ACCESS
 @$BAUDRATE=1000000
 @$UARTSETUP.EXPR=@$CLKFREQHZ/@$.BAUDRATE

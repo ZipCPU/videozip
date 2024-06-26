@@ -43,7 +43,7 @@
 @SLAVE.BUS=wb32
 @ACCESS=@$(DEVID)_ACCESS
 @INT.SPIO.WIRE=@$(PREFIX)_int
-@INT.SPIO.PIC=buspic
+@INT.SPIO.PIC=syspic
 @NLED=8
 @NBTN=5
 @NSW=8
@@ -76,7 +76,7 @@
 	) @$(PREFIX)i(
 		.i_clk(i_clk), .i_reset(i_reset),
 		@$(SLAVE.ANSIPORTLIST),
-		.i_sw(w_sw), .i_btn(i_btn), .o_led(w_led),
+		.i_sw(i_sw), .i_btn(w_btn), .o_led(w_led),
 		.o_int(@$(PREFIX)_int)
 	);
 

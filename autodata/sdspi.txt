@@ -47,12 +47,12 @@
 @NADDR=4
 @ACCESS=SDSPI_ACCESS
 @SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
+@SLAVE.BUS=wb32
 @BUS.NAME=wb
 ## @SCOPE.TRIGGER=sd_debug[31]
 ## @SCOPE.DATA=sd_debug
 @INT.SDCARD.WIRE= @$(PREFIX)_int
-@INT.SDCARD.PIC= buspic syspic
+@INT.SDCARD.PIC= syspic
 @TOP.PORTLIST=
 		// SD Card
 		o_sd_sck, io_sd_cmd, io_sd, i_sd_cd_n

@@ -41,7 +41,6 @@
 ## Define @SYSPIC so that other peripherals needing to be on the ZipSystem's
 ## PIC know the name of the PIC we are using.  Note that this is a global.
 ## }}}
-@SYSPIC= syspic
 @PREFIX=zip
 @SIM.CLOCK=clk
 @ACCESS=INCLUDE_ZIPCPU

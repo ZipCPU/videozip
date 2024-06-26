@@ -178,6 +178,6 @@ typedef struct ENETMDIO_S {
 #else
 		m_core->i_mdio = ((m_core->o_mdwe)&&(!m_core->o_mdio))?0:1;
 #endif // @$(ACCESS)
-@RTL.MAKE.SUBD=net
+@RTL.MAKE.SUBD=ethernet
 @RTL.MAKE.GROUP=ENETMDIO
 @RTL.MAKE.FILES=enetctrl.v

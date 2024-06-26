@@ -105,7 +105,7 @@ const	char *addrname(const unsigned v) {
 @$BUS.NULLSZ=0x400
 @PREFIX=wbwide
 @BUS.NAME=wbwide
-@BUS.WIDTH=512
+@BUS.WIDTH=128
 @BUS.CLOCK=clk
 @BUS.TYPE=wb
 @BUS.RESET=i_reset

@@ -1,18 +1,17 @@
 ################################################################################
 ##
-## Filename:	autodata/xpander.txt
+## Filename:	autodata/vadj33.txt
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	To describe a simple peripheral capable of expanding a bus from
-##		one data width (32) to another (128)
+## Purpose:	Set the IO ports to 3.3Volts
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## Copyright (C) 2022-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -36,25 +35,22 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=xpand
-@$NADDR=(1<<@$(AWID))
-@SLAVE.TYPE=OTHER
-@SLAVE.BUS=wb
-@SLAVE.CLOCK=clk
-@BUS=rambus
-@BUS.CLOCK=clk
-@MASTER.BUS=rambus
-## @MASTER.BUS.CLOCK=clk
-@MASTER.TYPE=SUBBUS
-# XPand bus transactions are 128 bits wide
-# Hence we need 4 fewer bus wires than would be necessary for
-@$AWID=@$(MASTER.BUS.AWID)+2
-@ERROR.WIRE=@$(SLAVE.PREFIX)_err
-@MAIN.INSERT=
-	busexpander #(.AWIN(@$(AWID)), .DWIN(@$(SLAVE.BUS.WIDTH)),
-			.DWOUT(@$(MASTER.BUS.WIDTH)))
-		@$(PREFIX)i@$(SLAVE.BUS.WIDTH)x@$(MASTER.BUS.WIDTH)(
-			@$(SLAVE.BUS.CLOCK.WIRE), i_reset,
-			@$(SLAVE.PORTLIST),
-			//
-			@$(MASTER.PORTLIST));
+@PREFIX=vadj33
+@DEVID=VADJ
+@ACCESS=@$(DEVID)_ACCESS
+@TOP.PORTLIST=
+		// @$(DEVID) ports
+		o_vadj_en, o_vadj
+@TOP.IODECL=
+	// @$(DEVID) wires
+	output	wire		o_vadj_en;
+	output	wire [1:0]	o_vadj;
+@TOP.DEFNS=
+	reg	[4:0]	@$(PREFIX)_vadj_counter;
+@TOP.INSERT=
+	assign	o_vadj = 2'b11;
+	initial	@$(PREFIX)_vadj_counter = 0;
+	always @(posedge i_clk_buffered)
+	if (!@$(PREFIX)_vadj_counter[4])
+		@$(PREFIX)_vadj_counter[4] <= @$(PREFIX)_vadj_counter[4] + 1;
+	assign	o_vadj_en = @$(PREFIX)_vadj_counter[4];
