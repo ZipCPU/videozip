@@ -42,7 +42,7 @@ all:	check-install datestamp autodata rtl sim sw
 #
 #
 AUTOD := autodata
-SIMD  := sim/verilated
+SIMD  := sim
 #
 # Could also depend upon load, if desired, but not necessary
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
@@ -134,8 +134,8 @@ autodata: datestamp check-autofpga
 	$(call copyif-changed,$(AUTOD)/bkram.ld,sw/board/bkram.ld)
 	$(call copyif-changed,$(AUTOD)/board.ld,sw/board/board.ld)
 	$(call copyif-changed,$(AUTOD)/rtl.make.inc,rtl/make.inc)
-	$(call copyif-changed,$(AUTOD)/testb.h,sim/verilated/testb.h)
-	$(call copyif-changed,$(AUTOD)/main_tb.cpp,sim/verilated/main_tb.cpp)
+	$(call copyif-changed,$(AUTOD)/testb.h,sim/testb.h)
+	$(call copyif-changed,$(AUTOD)/main_tb.cpp,sim/main_tb.cpp)
 
 #
 #
@@ -155,7 +155,7 @@ rtl: verilated
 #
 .PHONY: sim
 sim: rtl check-gpp
-	+@$(SUBMAKE) sim/verilated
+	+@$(SUBMAKE) sim
 
 #
 #
@@ -203,11 +203,11 @@ sw-boot: check-zip-gcc sw-zlib
 #
 .PHONY: hello
 hello: sim sw
-	sim/verilated/main_tb sw/board/hello
+	sim/main_tb sw/board/hello
 
 .PHONY: sdtest
 sdtest: sim sw
-	sim/verilated/main_tb sw/board/sdtest
+	sim/main_tb sw/board/sdtest
 
 .PHONY: test
 test: hello
@@ -236,7 +236,7 @@ endef
 .PHONY: clean
 clean:
 	+$(SUBMAKE) $(AUTOD)      clean
-	+$(SUBMAKE) sim/verilated clean
+	+$(SUBMAKE) sim           clean
 	+$(SUBMAKE) rtl           clean
 	+$(SUBMAKE) sw/zlib       clean
 	+$(SUBMAKE) sw/board      clean

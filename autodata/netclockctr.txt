@@ -38,7 +38,7 @@
 @PREFIX=netclockctr
 @DEVID=NETCLOCKCTR
 @ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=ETHERNET_ACCESS GPSTRK_ACCESS
+@DEPENDS=MEGANET_ACCESS
 @TSTCLOCK=i_net_rx_clk
 @REGS.NOTE = // Network RX clock counter (measures clock speed)
 @BDEF.IONAME=_@$(PREFIX)
@@ -49,7 +49,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clk@$(PREFI
 @PREFIX=nettxctr
 @DEVID=NETTXCLK
 @ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=ETHERNET_ACCESS
+@DEPENDS=MEGANET_ACCESS
 @TSTCLOCK=i_clk_125mhz
 @REGS.NOTE = // Network TX clock counter (measures clock speed)
 @BDEF.IONAME=_@$(PREFIX)

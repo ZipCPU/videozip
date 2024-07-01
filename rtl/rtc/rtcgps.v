@@ -59,8 +59,8 @@ module	rtcgps #(
 		input	wire	[31:0]	i_wb_data,
 		input	wire	[3:0]	i_wb_sel,
 		//
-		output	reg		o_wb_ack,
 		output	wire		o_wb_stall,
+		output	reg		o_wb_ack,
 		output	reg	[31:0]	o_wb_data,
 		// Output registers
 		output	wire		o_interrupt,
@@ -149,7 +149,7 @@ module	rtcgps #(
 	//
 
 	generate if (OPT_TIMER)
-	begin : TIMER
+	begin : GEN_TIMER
 		rtctimer #(
 			.LGSUBCK(8)
 		) u_timer(
@@ -182,7 +182,7 @@ module	rtcgps #(
 	//
 
 	generate if (OPT_STOPWATCH)
-	begin : STOPWATCH
+	begin : GEN_STOPWATCH
 		reg	[2:0]	sw_ctrl;
 
 		initial	sw_ctrl = 0;
@@ -218,7 +218,7 @@ module	rtcgps #(
 	//
 
 	generate if (OPT_ALARM)
-	begin : ALARM
+	begin : GEN_ALARM
 
 		rtcalarm
 		u_alarm(
@@ -236,6 +236,10 @@ module	rtcgps #(
 		assign	alarm_data = 0;
 		assign	al_int = 0;
 
+		// Verilator lint_off UNUSED
+		wire	unused_alarm;
+		assign	unused_alarm = al_wr;
+		// Verilator lint_on  UNUSED
 	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -325,12 +329,18 @@ module	rtcgps #(
 	//
 	//
 
-	assign	o_interrupt = tm_int || al_int;
+	assign	o_wb_stall = 1'b0;
 
-	// A once-per day strobe, on the last second of the day so that the
-	// the next clock is the first clock of the day.  This is useful for
-	// connecting this module to a year/month/date date/calendar module.
-	assign	o_ppd = (ck_ppd)&&(ck_pps);
+
+	// o_wb_ack
+	// {{{
+	initial	o_wb_ack = 0;
+	always @(posedge i_clk)
+	if (i_reset)
+		o_wb_ack <= 1'b0;
+	else
+		o_wb_ack <= i_wb_stb && !o_wb_stall;
+	// }}}
 
 	// o_wb_data
 	// {{{
@@ -344,18 +354,15 @@ module	rtcgps #(
 	endcase
 	// }}}
 
-	// o_wb_ack
+	// o_ppd
 	// {{{
-	initial	o_wb_ack = 0;
-	always @(posedge i_clk)
-	if (i_reset)
-		o_wb_ack <= 0;
-	else
-		o_wb_ack <= i_wb_stb;
+	// A once-per day strobe, on the last second of the day so that the
+	// the next clock is the first clock of the day.  This is useful for
+	// connecting this module to a year/month/date date/calendar module.
+	assign	o_ppd = (ck_ppd)&&(ck_pps);
 	// }}}
 
-	assign	o_wb_stall = 0;
-	// }}}
+	assign	o_interrupt = tm_int || al_int;
 
 	assign	o_rtc_pps = ck_pps;
 

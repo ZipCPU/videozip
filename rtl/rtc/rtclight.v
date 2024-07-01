@@ -156,8 +156,13 @@ module	rtclight #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	rtcbare	clock(i_clk, i_reset, ck_pps,
-			ck_wr, wr_data[21:0], wr_valid, clock_data, ck_ppd);
+
+	rtcbare
+	clock(
+		.i_clk(i_clk), .i_reset(i_reset), .i_pps(ck_pps),
+		.i_wr(ck_wr), .i_data(wr_data[21:0]), .i_valid(wr_valid),
+		.o_data(clock_data), .o_ppd(ck_ppd)
+	);
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -166,20 +171,30 @@ module	rtclight #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
+
 	generate if (OPT_TIMER)
-	begin
-		rtctimer #(.LGSUBCK(8))
-			timer(i_clk, i_reset, ck_carry,
-				tm_wr, wr_data[24:0],
-				wr_valid, wr_zero, timer_data, tm_int);
-	end else begin
+	begin : GEN_TIMER
+		rtctimer #(
+			.LGSUBCK(8)
+		) u_timer(
+			.i_clk(i_clk), .i_reset(i_reset),
+				.i_sub_ck(ck_carry),
+			.i_wr(tm_wr), .i_data(wr_data[24:0]),
+				.i_valid(wr_valid), .i_zero(wr_zero),
+			.o_data(timer_data), .o_interrupt(tm_int)
+		);
+
+	end else begin : NO_TIMER
 		assign	tm_int = 0;
 		assign	timer_data = 0;
 
+		// Keep Verilator happy
+		// {{{
 		// Verilator lint_off UNUSED
 		wire	unused_timer;
 		assign	unused_timer = tm_wr;
 		// Verilator lint_on  UNUSED
+		// }}}
 	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -191,7 +206,7 @@ module	rtclight #(
 	//
 
 	generate if (OPT_STOPWATCH)
-	begin
+	begin : GEN_STOPWATCH
 		reg	[2:0]	sw_ctrl;
 
 		initial	sw_ctrl = 0;
@@ -203,11 +218,15 @@ module	rtclight #(
 		else
 			sw_ctrl <= 0;
 
-		rtcstopwatch rtcstop(i_clk, i_reset, ckspeed,
-			sw_ctrl[2], sw_ctrl[1], sw_ctrl[0],
-			stopwatch_data, sw_running);
+		rtcstopwatch
+		u_stopwatch(
+			.i_clk(i_clk), .i_reset(i_reset), .i_ckstep(ckspeed),
+			.i_clear(sw_ctrl[2]), .i_start(sw_ctrl[1]),
+				.i_stop(sw_ctrl[0]),
+			.o_value(stopwatch_data), .o_running(sw_running)
+		);
 
-	end else begin
+	end else begin : NO_STOPWATCH
 
 		assign stopwatch_data = 0;
 		assign sw_running = 0;
@@ -223,12 +242,20 @@ module	rtclight #(
 	//
 
 	generate if (OPT_ALARM)
-	begin
+	begin : GEN_ALARM
 
-		rtcalarm alarm(i_clk, i_reset, clock_data[21:0],
-			al_wr, wr_data[25], wr_data[24], wr_data[21:0],
-				wr_valid, alarm_data, al_int);
-	end else begin
+		rtcalarm
+		u_alarm(
+			.i_clk(i_clk), .i_reset(i_reset),
+				.i_now(clock_data[21:0]),
+			.i_wr(al_wr), .i_clear(wr_data[25]),
+				.i_enable(wr_data[24]),
+				.i_alarm_time(wr_data[21:0]),
+				.i_valid(wr_valid), .o_data(alarm_data),
+				.o_alarm(al_int)
+		);
+
+	end else begin : NO_ALARM
 
 		assign	alarm_data = 0;
 		assign	al_int = 0;
@@ -283,13 +310,20 @@ module	rtclight #(
 
 	assign	o_wb_stall = 1'b0;
 
+
+	// o_wb_ack
+	// {{{
 	initial	o_wb_ack = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 		o_wb_ack <= 1'b0;
 	else
-		o_wb_ack <= i_wb_stb;
+		o_wb_ack <= i_wb_stb && !o_wb_stall;
+	// }}}
 
+	// o_wb_data
+	// {{{
+	initial	o_wb_data = 0;
 	always @(posedge i_clk)
 	case(i_wb_addr[2:0])
 	3'b000: o_wb_data <= { 10'h0, clock_data };
@@ -311,8 +345,7 @@ module	rtclight #(
 
 	assign	o_interrupt = tm_int || al_int;
 
-
-	// Make verilator hapy
+	// Make verilator happy
 	// {{{
 	// verilator lint_off UNUSED
 	wire	unused;

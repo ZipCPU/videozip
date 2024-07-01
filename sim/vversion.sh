@@ -1,18 +1,21 @@
+#!/bin/bash
 ################################################################################
 ##
-## Filename:	autodata/rtccount.txt
+## Filename:	sim/vversion.sh
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	Define a very simple peripheral that counts fractions of a
-##		second since startup.
+## Purpose:	To determine whether or not the verilator prefix for internal
+##		variables is v__DOT__ or the name of the top level followed by
+##	__DOT__.  If it is the later, output -DNEW_VERILATOR, else be silent.
+##
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## Copyright (C) 2017-2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -36,30 +39,27 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=rtccount
-@NADDR=1
-@CLOCK.NAME=clk
-@SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb32
-@$STEP=((1<<32) + @$(CLOCK.FREQUENCY)/2)/@$(CLOCK.FREQUENCY)
-@MAIN.DEFNS=
-	reg	[31:0]	r_@$(PREFIX)_data;
-@MAIN.INSERT=
-	////////////////////////////////////////////////////////////////////////
-	//
-	// RTC Counter
-	// {{{
-	//
-	// Using clock @$(CLOCK.WIRE) with frequency @$(CLOCK.FREQUENCY)
-	//
+if [[ -x ${VERILATOR_ROOT}/bin/verilator ]];
+then
+  export VERILATOR=${VERILATOR_ROOT}/bin/verilator
+fi
+if [[ ! -x ${VERILATOR} ]];
+then
+  export VERILATOR=verilator
+fi
+if [[ ! -x `which ${VERILATOR}` ]];
+then
+  echo "Verilator not found in environment or in path"
+  exit -1
+fi
 
-	assign	@$(SLAVE.PREFIX)_stall = 1'b0;
-	assign	@$(SLAVE.PREFIX)_ack = @$(SLAVE.PREFIX)_stb;
-
-	initial	r_@$(PREFIX)_data = 32'h0;
-	always @(posedge i_clk)
-		r_@$(PREFIX)_data <= r_@$(PREFIX)_data + @$(STEP);
-	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
-	// }}}
-@REGS.N=1
-@REGS.0= 0 R_RTCCOUNT RTCCOUNT
+VVERLINE=`${VERILATOR} -V | grep -i ^Verilator`
+VVER=`echo ${VVERLINE} | cut -d " " -f 2`
+LATER=`echo $VVER \>= 3.9 | bc`
+if [[ $LATER > 0 ]];
+then
+  echo "-DNEW_VERILATOR"
+else
+  echo "-DOLD_VERILATOR"
+fi
+exit 0

@@ -61,6 +61,7 @@
 	input	wire		i_gps_pps;
 @MAIN.DEFNS=
 	// Verilator lint_off UNUSED
+	wire		ck_pps;
 	wire		gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
@@ -79,20 +80,35 @@
 		.o_tracking(gps_tracking), .o_count(gps_now), .o_step(gps_step),
 		.o_err(gps_err), .o_locked(gps_locked), .o_dbg(ck_dbg)
 	);
+
+	assign	@$(PREFIX)_pps = ck_pps;
+
 @MAIN.ALT=
-	wire	[31:0]	pre_step;
+	reg		r_ck_pps;
+	reg	[63:0]	r_gps_now;
+	reg	[31:0]	r_gps_prior;
+	wire	[47:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
 				>>GPSCLOCK_DEFAULT_STEP[31:28]) };
+
+	initial	{ r_ck_pps, r_gps_prior } = 33'h0;
 	always @(posedge i_clk)
-		{ ck_pps, gps_step[31:0] } <= gps_step + pre_step;
-	assign	gck_stall  = 1'b0;
-	assign	gps_now    = 64'h0;
+		{ r_ck_pps, r_gps_prior[31:0] } <= r_gps_prior + pre_step[31:0];
+
+	initial	r_gps_now = 64'h0;
+	always @(posedge i_clk)
+	begin
+		r_gps_now[63:32] <= r_gps_now[63:32]+(r_ck_pps ? 32'h1:32'h0);
+		r_gps_now[31:0]  <= r_gps_prior;
+	end
+	assign	ck_pps     = r_ck_pps;
+	assign	gps_now    = r_gps_now;
 	assign	gps_err    = 64'h0;
-	assign	gps_step   = 64'h0;
+	assign	gps_step   = pre_step;
 	assign	gps_led    = 1'b0;
 	assign	gps_locked = 1'b0;
 
-@INT.PPS.WIRE=ck_pps
+@INT.PPS.WIRE=@$(PREFIX)_pps
 @INT.PPS.PIC=syspic
 @REGS.NOTE= // GPS clock tracker, control loop settings registers
 @REGS.N=4
@@ -115,6 +131,7 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 ##
 @PREFIX=gtb
 @NADDR=8
+@DEPENDS=GPSTRK_ACCESS
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb32
 @CLOCK.NAME=clk
@@ -123,7 +140,7 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 	wire	tb_pps;
 	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
-`ifdef	GPSTRK_ACCESS
+	// Generate a PPS signal independent of the GPS--useful for testing
 	gpsclock_tb #(
 		.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY))
 	) ppstb(
@@ -132,13 +149,9 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 		.i_err(gps_err), .i_count(gps_now), .i_step(gps_step)
 	);
 
-`ifdef	GPSTB
 	assign	gps_pps = tb_pps;
-`else
+@MAIN.ALT
 	assign	gps_pps = i_gps_pps;
-`endif
-
-`endif
 
 @REGS.NOTE= // GPS clock test bench registers, for measuring the clock trackers performance
 @REGS.N=8

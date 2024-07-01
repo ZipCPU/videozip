@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename:	autodata/rtcgps.txt
+## Filename:	autodata/rtclight.txt
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
@@ -37,7 +37,7 @@
 ## }}}
 @PREFIX=rtc
 @DEVID=RTC
-@NADDR=4
+@NADDR=8
 @SLAVE.TYPE=DOUBLE
 @SLAVE.BUS=wb32
 @ACCESS=RTC_ACCESS
@@ -49,21 +49,12 @@
 @MAIN.DEFNS=
 	// Definitions in support of the GPS driven RTC
 	// This clock step is designed to match @$(CLOCK.FREQUENCY) Hz
+	// Verilator lint_off UNUSED
 	localparam	[31:0]	RTC_CLKSTEP = @$[32'h%08x](CLKSTEP);
+	// Verilator lint_on  UNUSED
 	wire	@$(PREFIX)_ppd;
 	wire	@$(PREFIX)_pps;
 @MAIN.INSERT=
-`ifdef	GPSTRK_ACCESS
-	rtcgps	#(
-		.DEFAULT_SPEED(RTC_CLKSTEP)
-	) u_@$(PREFIX)(
-		.i_clk(i_clk), .i_reset(i_reset),
-		@$(SLAVE.ANSIPORTLIST),
-		.o_interrupt(@$(PREFIX)_int), .o_ppd(@$(PREFIX)_ppd),
-		.i_gps_valid(gps_tracking), .i_gps_pps(ck_pps),
-			.i_gps_ckspeed(gps_step[47:16]), .o_rtc_pps(rtc_pps)
-	);
-`else
 	rtclight #(
 		.DEFAULT_SPEED(@$[32'h%x](CLKSTEP))
 	) u_@$(PREFIX)(
@@ -83,16 +74,8 @@
 		.o_pps(rtc_pps),
 		.o_ppd(@$(PREFIX)_ppd)
 	);
-
-	// Verilator lint_off UNUSED
-	wire	unused_@$(PREFIX);
-	assign	unused_@$(PREFIX) = &{ 1'b0, i_gps_pps };
-	// Verilator lint_on  UNUSED
-`endif
 @MAIN.ALT=
-`ifdef	GPSTRK_ACCESS
-	assign	@$(PREFIX)_pps = ck_pps;
-`endif
+	assign	@$(PREFIX)_pps = 1'b0;
 	assign	@$(PREFIX)_ppd = 1'b0;
 @REGS.NOTE= // RTC clock registers
 @REGS.N=4
@@ -110,37 +93,7 @@ typedef	struct	RTCLIGHT_S	{
 @BDEF.OSVAL=static volatile @$BDEF.IOTYPE *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));
 #
 #
-@RTL.MAKE.GROUP=RTCGPS
+@RTL.MAKE.GROUP=RTC
 @RTL.MAKE.SUBD=rtc
-@RTL.MAKE.FILES=rtcgps.v rtcbare.v rtctimer.v rtcstopwatch.v rtcalarm.v rtclight.v
+@RTL.MAKE.FILES=rtcbare.v rtctimer.v rtcstopwatch.v rtcalarm.v rtclight.v
 ##
-##
-@PREFIX=subseconds
-@DEVID=SUBSECONDS
-@NADDR=1
-@SLAVE.BUS=wb32
-@SLAVE.TYPE=SINGLE
-@MAIN.DEFNS=
-`ifndef	GPSTRK_ACCESS
-	reg	[31:0]	r_@$(PREFIX)_data;
-`endif
-@MAIN.INSERT=
-`ifdef	GPSTRK_ACCESS
-	assign	@$(SLAVE.PREFIX)_idata = gps_now[31:0];
-`else
-	always @(posedge i_clk)
-	if (@$(SLAVE.PREFIX)_stb && @$(SLAVE.PREFIX)_we)
-		r_@$(PREFIX)_data <= @$(SLAVE.PREFIX)_data;
-	else
-		r_@$(PREFIX)_data <= r_@$(PREFIX)_data
-			+ { 16'h0, RTC_CLKSTEP[31:16] };
-
-	assign	@$(SLAVE.PREFIX)_idata = r_@$(PREFIX)_data;
-`endif
-@REGS.NOTE= // A register capturing subseconds, locked to GPS if present
-@REGS.N=1
-@REGS.0= 0 R_SUBSECONDS	SUBSECONDS
-@BDEF.IONAME=_@$(PREFIX)
-@BDEF.IOTYPE=unsigned
-@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x%08x](REGBASE));

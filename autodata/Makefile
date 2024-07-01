@@ -50,12 +50,12 @@ all:	data
 BASE    := global.txt icape.txt crossbus.txt # dlyarbiter not necessary with new AutoFPGA
 AUX     := version.txt buserr.txt pwrcount.txt rtccount.txt # pic.txt
 IO      := spio.txt gpio.txt vadj33.txt
-RTC     := rtcgps.txt rtcdate.txt
+RTC     := rtclight.txt rtcdate.txt # rtcgps.txt
 DBGBUS  := exconsole.txt wbuuart.txt
 MEMORY  := bkram.txt flash.txt flashcfg.txt sdram.txt
 CPU     := zipmaster.txt
 NETWORK := mdio.txt meganet.txt protocols.txt
-GPS     := gps.txt
+## GPS     := gps.txt
 SDCARD  := sdio.txt # sdspi.txt
 GFX     := # hdmi.txt # wboledbw.txt
 SCOPES  := cpuscope.txt # sdscope.txt flashscope.txt mdioscope.txt
