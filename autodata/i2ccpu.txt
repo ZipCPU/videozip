@@ -136,7 +136,7 @@
 		.M_AXIS_TVALID(@$(PREFIX)_valid), .M_AXIS_TREADY(@$(PREFIX)_ready),
 			.M_AXIS_TDATA(@$(PREFIX)_data), .M_AXIS_TLAST(@$(PREFIX)_last),
 			.M_AXIS_TID(@$(PREFIX)_id),
-		.i_sync_signal(ck_pps),
+		.i_sync_signal(rtc_pps),
 		//
 		.o_debug(@$(PREFIX)_debug)
 		// }}}

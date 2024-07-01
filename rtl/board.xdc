@@ -327,6 +327,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clksysclkct
 ## No XDC.INSERT tag in GPSPORT_OFFSET
 ## No XDC.INSERT tag in zipscope
 ## No XDC.INSERT tag in gtb
+## No XDC.INSERT tag in netdirs
 ## From sdio
 set_property -dict { PULLTYPE PULLUP } [get_ports io_sdcard_cmd]
 ## No XDC.INSERT tag in gpio

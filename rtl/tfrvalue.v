@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/video/tfrvalue.v
+// Filename:	rtl/tfrvalue.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -38,7 +38,8 @@
 `default_nettype	none
 // }}}
 module tfrvalue #(
-		parameter	W = 32
+		parameter		W = 32,
+		parameter [W-1:0]	DEFAULT = 0
 	) (
 		// {{{
 		input	wire		i_a_clk,
@@ -58,12 +59,14 @@ module tfrvalue #(
 	// Register declarations
 	// {{{
 	localparam	NFF = 2;
-	reg			a_req, a_ack;
+	reg			a_ack;
 	reg	[W-1:0]		a_data;
-	reg	[NFF-2:0]	a_pipe;
+	(* ASYNC_REG *) reg	a_req;
+	(* ASYNC_REG *) reg	[NFF-2:0]	a_pipe;
 
-	reg			b_req, b_last, b_stb;
-	reg	[NFF-2:0]	b_pipe;
+	reg			b_last, b_stb;
+	(* ASYNC_REG *) reg	b_req;
+	(* ASYNC_REG *) reg	[NFF-2:0]	b_pipe;
 	// }}}
 
 	// Launch
@@ -75,6 +78,7 @@ module tfrvalue #(
 	else if (i_a_valid && o_a_ready)
 		a_req  <= !a_req;
 
+	initial	a_data = DEFAULT;
 	always @(posedge i_a_clk)
 	if (i_a_valid && o_a_ready)
 		a_data <= i_a_data;
@@ -97,7 +101,7 @@ module tfrvalue #(
 	// {{{
 	always @(posedge i_a_clk, negedge i_a_reset_n)
 	if (!i_a_reset_n)
-		{ a_ack, a_pipe } <= 2'b0;
+		{ a_ack, a_pipe } <= 0;
 	else
 		{ a_ack, a_pipe } <= { a_pipe, b_last };
 	// }}}
@@ -110,7 +114,7 @@ module tfrvalue #(
 	always @(*)
 		b_stb = (b_last != b_req);
 
-	initial	o_b_data = 0;
+	initial	o_b_data = DEFAULT;
 	always @(posedge i_b_clk)
 	if (b_stb && (!o_b_valid || i_b_ready))
 		o_b_data <= a_data;
@@ -135,11 +139,15 @@ module tfrvalue #(
 `ifdef	FORMAL
 	// Define our registers, and f_past_valid_*
 	// {{{
+	// Verilator lint_off UNDRIVEN
 	(* gclk *) reg gbl_clk;
+	// Verilator lint_on  UNDRIVEN
 			reg		f_past_valid_gbl, f_past_valid_a,
 					f_past_valid_b;
 	localparam	LGCLK = 5;
+	// Verilator lint_off UNDRIVEN
 	(* anyconst *)	reg	[LGCLK-2:0]	f_step_a,  f_step_b;
+	// Verilator lint_on  UNDRIVEN
 			reg	[LGCLK-1:0]	f_count_a, f_count_b;
 
 	initial	f_past_valid_gbl = 0;
@@ -170,10 +178,10 @@ module tfrvalue #(
 
 	always @(*)
 		assume(i_a_clk == f_count_a[LGCLK-1]);
-	
+
 	always @(*)
 		assume(i_b_clk == f_count_b[LGCLK-1]);
-	
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -243,8 +251,9 @@ module tfrvalue #(
 
 	always @(posedge i_a_clk)
 	if (!f_past_valid_a || !i_a_reset_n)
+	begin
 		assume(!i_a_valid);
-	else if ($past(i_a_valid && !o_a_ready))
+	end else if ($past(i_a_valid && !o_a_ready))
 	begin
 		assume(i_a_valid);
 		assume($stable(i_a_data));
@@ -252,8 +261,9 @@ module tfrvalue #(
 
 	always @(posedge i_b_clk)
 	if (!f_past_valid_b || !i_b_reset_n)
+	begin
 		assert(!o_b_valid);
-	else if ($past(o_b_valid && !i_b_ready))
+	end else if ($past(o_b_valid && !i_b_ready))
 	begin
 		assert(o_b_valid);
 		assert($stable(o_b_data));
@@ -282,7 +292,6 @@ module tfrvalue #(
 	6'b111_000: begin end
 	6'b110_000: begin end
 	6'b100_000: begin end
-	6'b000_000: begin end
 	default: assert(0);
 	endcase
 
@@ -299,7 +308,8 @@ module tfrvalue #(
 	//
 
 	reg	[3:0]	cvr_stbcount;
-	initial	cvr_stbcount <= 0;
+
+	initial	cvr_stbcount = 0;
 	always @(posedge i_b_clk, negedge i_b_reset_n)
 	if (!i_b_reset_n)
 		cvr_stbcount <= 0;

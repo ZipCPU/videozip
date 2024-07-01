@@ -42,7 +42,9 @@
 @SLAVE.TYPE=OTHER
 @SLAVE.BUS=wb32
 @MAIN.PARAM=
+	// Verilator lint_off UNUSED
 	localparam	ICAPE_LGDIV=3;
+	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
 	////////////////////////////////////////////////////////////////////////
 	//

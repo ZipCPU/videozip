@@ -38,9 +38,4 @@
 @PREFIX=netdirs
 @RTL.MAKE.GROUP=PROTO
 @RTL.MAKE.SUBD=proto
-@RTL.MAKE.FILES=arp.v ipheader.v pkt2udp.v udpmatch.v
-@PREFIX=nethere
-@RTL.MAKE.GROUP=PROTO2
-@RTL.MAKE.SUBD=proto
-@RTL.MAKE.FILES=icmpecho.v
-
+@RTL.MAKE.FILES=arp.v ipheader.v pkt2udp.v udpmatch.v icmpecho.v

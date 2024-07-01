@@ -118,7 +118,6 @@
                 o_@$(PREFIX)_tx_clk, o_@$(PREFIX)_tx_ctl, o_@$(PREFIX)_txd
 @MAIN.PARAM=
 	parameter	[15:0]	UDP_DBGPORT  = @$(UDPDBGPORT);
-	parameter	[15:0]	UDP_DATAPORT = @$(DATAPORT);
 
 	localparam	[47:0]	DEF_HWMAC  = 48'h@$[%02x](HWMAC.0)_@$[%02x](HWMAC.1)_@$[%02x](HWMAC.2)_@$[%02x](HWMAC.3)_@$[%02x](HWMAC.4)_@$[%02x](HWMAC.5);
 	localparam	[31:0]	DEF_IPADDR = { 8'd@$(IPADDR.0), 8'd@$(IPADDR.1), 8'd@$(IPADDR.2), 8'd@$(IPADDR.3) };
@@ -148,7 +147,6 @@
 	wire		@$(PREFIX)cputx_tvalid, @$(PREFIX)cputx_tready;
 	wire	[31:0]	@$(PREFIX)cputx_tdata;
 
-	wire		net_adc_enable;
 	wire		@$(PREFIX)_dbg_tvalid, @$(PREFIX)_dbg_tready, @$(PREFIX)_dbg_tlast;
 	wire	[31:0]	@$(PREFIX)_dbg_tdata;
 
@@ -156,6 +154,7 @@
 
 	wire		@$(PREFIX)_debug_clk;
 	wire	[31:0]	@$(PREFIX)_debug;
+	wire		ign_rxpkt_@$(PREFIX)_ready;
 
 	// Verilator lint_on  UNUSED
 	// }}}
@@ -181,8 +180,6 @@
 		.o_hwmac(@$(PREFIX)_hwmac), .o_ipaddr(@$(PREFIX)_ip_addr),
 		.o_ping_hwmac(@$(PREFIX)_last_ping_hwmac),
 			.o_ping_ipaddr(@$(PREFIX)_last_ping_ipaddr),
-			.o_net_adc_enable(net_adc_enable),
-			.i_addr_switch({ 2'b0, wb_spio_idata[10:9] }),
 		// Wishbone port
 		// {{{
 		@$(SLAVE.ANSIPORTLIST),

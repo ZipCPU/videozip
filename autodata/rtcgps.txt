@@ -51,22 +51,33 @@
 	// This clock step is designed to match @$(CLOCK.FREQUENCY) Hz
 	localparam	[31:0]	RTC_CLKSTEP = @$[32'h%08x](CLKSTEP);
 	wire	@$(PREFIX)_ppd;
-	reg	r_@$(PREFIX)_ack;
 `ifdef	GPSTRK_ACCESS
 	wire	@$(PREFIX)_pps;
 `endif
 @MAIN.INSERT=
 `ifdef	GPSTRK_ACCESS
-	rtcgps	#(RTC_CLKSTEP) the@$(PREFIX)(i_clk, i_reset,
-		@$(SLAVE.PORTLIST),
-		@$(PREFIX)_int, @$(PREFIX)_ppd,
-		gps_tracking, ck_pps, gps_step[47:16], rtc_pps);
+	rtcgps	#(
+		.DEFAULT_SPEED(RTC_CLKSTEP)
+	) u_@$(PREFIX)(
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_interrupt(@$(PREFIX)_int), .o_ppd(@$(PREFIX)_ppd),
+		.i_gps_valid(gps_tracking), .i_gps_pps(ck_pps),
+			.i_gps_ckspeed(gps_step[47:16]), .o_rtc_pps(rtc_pps)
+	);
 `else
-	rtclight #(@$[32'h%x](CLKSTEP)) the@$(PREFIX)(i_clk, i_reset,
-		wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we, { 1'b0, wb_addr[1:0] },
-			wb_data, wb_sel,
+	rtclight #(
+		.DEFAULT_SPEED(@$[32'h%x](CLKSTEP))
+	) u_@$(PREFIX)(
+		.i_clk(i_clk), .i_reset(i_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		// wb_cyc, (wb_stb)&&(@$(PREFIX)_sel), wb_we,
+		// { 1'b0, wb_addr[1:0] }, wb_data, wb_sel,
 		@$(PREFIX)_stall, @$(PREFIX)_ack, @$(PREFIX)_data,
-		@$(PREFIX)_int, @$(PREFIX)_ppd);
+		.o_interrupt(@$(PREFIX)_int),
+		.o_pps(rtc_pps),
+		.o_ppd(@$(PREFIX)_ppd)
+	);
 `endif
 @MAIN.ALT=
 `ifdef	GPSTRK_ACCESS

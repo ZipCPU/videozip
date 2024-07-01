@@ -56,7 +56,7 @@
 	) clk@$(PREFIX)ctr(
 		.i_sys_clk(i_clk),
 		.i_tst_clk(@$(TSTCLOCK)),
-		.i_sys_pps(ck_pps),
+		.i_sys_pps(rtc_pps),
 		.o_sys_counts(@$(SLAVE.PREFIX)_idata)
 	);
 

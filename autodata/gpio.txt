@@ -41,7 +41,7 @@
 @ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb32
-@NUMOUTPUT=16
+@NUMOUTPUT=8
 @NUMINPUT=2
 @INT.GPIO.WIRE=gpio_int
 @INT.GPIO.PIC=altpic
@@ -116,7 +116,7 @@
 	// and another 16 @$(DEVID) outputs.  The interrupt trips when any of
 	// the inputs changes.  (Sorry, which input isn't (yet) selectable.)
 	//
-	localparam [NGPO-1:0]	INITIAL_@$(DEVID) = 4'b1;
+	localparam [NGPO-1:0]	INITIAL_@$(DEVID) = 8'b1;
 
 	wbgpio	#(
 		.NIN(NGPI), .NOUT(NGPO), .DEFAULT(INITIAL_@$(DEVID))

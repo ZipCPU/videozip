@@ -102,37 +102,41 @@
 `default_nettype	none
 // `define	DEBUG
 // }}}
-module	gpsclock(i_clk, i_rst, i_pps, o_pps, o_led,
-		i_wb_cyc, i_wb_stb, i_wb_we, i_wb_addr, i_wb_data, i_wb_sel,
-			o_wb_stall, o_wb_ack, o_wb_data,
-		o_tracking, o_count, o_step, o_err, o_locked, o_dbg);
-	parameter [31:0] DEFAULT_STEP = 32'h834d_c736;//2^64/81.25 MHz
-	parameter	RW=64, // Needs to be 2ceil(Log_2(i_clk frequency))
+module	gpsclock #(
+		// {{{
+		parameter [31:0] DEFAULT_STEP = 32'h834d_c736,//2^64/81.25 MHz
+		parameter RW=64, // Needs to be 2ceil(Log_2(i_clk frequency))
 			DW=32, // The width of our data bus
 			ONE_SECOND = 0,
 			NPW=RW-DW, // Width of non-parameter data
-			HRW=RW/2; // Half of RW
-	input	wire	i_clk, i_rst;
-	input	wire	i_pps;	// From the GPS device
-	output	reg	o_pps;	// To our local circuitry
-	output	reg	o_led;	// A blinky light showing how well we're doing
-	// Wishbone Configuration interface
-	input	wire			i_wb_cyc, i_wb_stb, i_wb_we;
-	input	wire	[1:0]		i_wb_addr;
-	input	wire	[(DW-1):0]	i_wb_data;
-	input	wire	[(DW/8-1):0]	i_wb_sel;
-	output	wire			o_wb_stall;
-	output	reg			o_wb_ack;
-	output	reg	[(DW-1):0]	o_wb_data;
-	// Status and timing outputs
-	output	reg			o_tracking; // 1=closed loop, 0=open
-	output	reg	[(RW-1):0]	o_count, // Fraction of a second
-					o_step, // 2^RW / clock speed (in Hz)
-					o_err; // Fraction of a second err
-	output	reg			o_locked; // 1 if Locked, 0 o.w.
-	output	wire	[1:0]		o_dbg;
+			HRW=RW/2 // Half of RW
+		// }}}
+	) (
+		// {{{
+		input	wire	i_clk, i_rst,
+		input	wire	i_pps,	// From the GPS device
+		output	reg	o_pps,	// To our local circuitry
+		output	reg	o_led,	// A blinky light showing how well we're doing
+		// Wishbone Configuration interface
+		input	wire			i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[1:0]		i_wb_addr,
+		input	wire	[(DW-1):0]	i_wb_data,
+		input	wire	[(DW/8-1):0]	i_wb_sel,
+		output	wire			o_wb_stall,
+		output	reg			o_wb_ack,
+		output	reg	[(DW-1):0]	o_wb_data,
+		// Status and timing outputs
+		output	reg			o_tracking, // 1=closed loop, 0=open
+		output	reg	[(RW-1):0]	o_count, // Fraction of a second
+						o_step, // 2^RW / clock speed (in Hz)
+						o_err, // Fraction of a second err
+		output	reg			o_locked, // 1 if Locked, 0 o.w.
+		output	wire	[1:0]		o_dbg
+		// }}}
+	);
 
-
+	// Local declarations
+	// {{{
 	// Clock resynchronization variables
 	reg	pps_d, ck_pps, lst_pps;
 	wire	tick;		// And a variable indicating the top of GPS 1PPS
@@ -199,8 +203,7 @@ module	gpsclock(i_clk, i_rst, i_pps, o_pps, o_led,
 	reg	no_pulse;
 	reg	[32:0]	time_since_pps;
 	reg	[2:0]	count_valid_ticks;
-
-
+	// }}}
 
 	//
 	//

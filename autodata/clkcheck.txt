@@ -36,7 +36,7 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=ck_pps
+@PREFIX=rtc_pps
 @MAIN.DEFNS=
 	// Verilator lint_off UNUSED
 	reg		@$(PREFIX);

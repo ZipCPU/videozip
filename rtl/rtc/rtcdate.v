@@ -55,7 +55,9 @@
 `default_nettype	none
 // }}}
 module rtcdate #(
+		// Verilator lint_off WIDTH
 		parameter [29:0]	INITIAL_DATE = 30'h20000101
+		// Verilator lint_on  WIDTH
 	) (
 		// {{{
 		input	wire		i_clk,

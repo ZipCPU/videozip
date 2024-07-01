@@ -156,8 +156,7 @@ module	wbicapetwo #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	generate
-	if (LGDIV <= 1)
+	generate if (LGDIV <= 1)
 	begin : DDRCK
 		// {{{
 		reg		r_slow_clk;

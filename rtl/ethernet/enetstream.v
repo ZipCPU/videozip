@@ -123,8 +123,7 @@ module	enetstream #(
 		parameter	[0:0]	OPT_IPADDR_CHECK = 1'b1,
 		// Select whether the outgoing debug wires are associated
 		// with the receive or the transmit side of interface
-		parameter	[0:0]	RXSCOPE = 1'b1,
-		parameter	[0:0]	OPT_MONITOR = 1'b1
+		parameter	[0:0]	RXSCOPE = 1'b1
 		// }}}
 	) (
 		// {{{
@@ -137,7 +136,6 @@ module	enetstream #(
 		output	wire		o_tx_reset, o_rx_reset,
 		output	wire	[31:0]	o_rx_my_ipaddr,
 		output	wire		o_high_speed,
-		input	wire	[3:0]	i_addr_switch,
 		//
 		// Wishbone: The network control interface
 		// {{{
@@ -163,14 +161,6 @@ module	enetstream #(
 		output	wire	[7:0]	M_AXIN_DATA,
 		output	wire		M_AXIN_LAST,
 		output	wire		M_AXIN_ABORT,
-		// }}}
-		// Monitor of the outgoing packet interface
-		// {{{
-		output	wire		MON_VALID,
-		input	wire		MON_READY,
-		output	wire	[7:0]	MON_DATA,
-		output	wire		MON_LAST,
-		output	wire		MON_ABORT,
 		// }}}
 		// PHY interface
 		// {{{
@@ -236,8 +226,6 @@ module	enetstream #(
 	reg	[2:0]	wr_addr;
 	reg	[31:0]	wr_data;
 	reg	[3:0]	wr_sel;
-
-	reg		ip_switch_control, mac_switch_control;
 
 	// Receive registers and signals
 	// {{{
@@ -321,8 +309,6 @@ module	enetstream #(
 
 	initial	hw_mac    = DEF_HWMAC;
 	initial	my_ipaddr = DEF_IPADDR;
-	initial	ip_switch_control  = 1'b1;
-	initial	mac_switch_control = 1'b1;
 	always @(posedge i_wb_clk)
 	begin
 		////////////////////////////////////////////////////////////////
@@ -372,16 +358,12 @@ module	enetstream #(
 		// }}}
 		// Set the hardware MAC
 		// {{{
-		if (mac_switch_control)
-			hw_mac <= DEF_HWMAC ^ { {(44){1'b0}}, i_addr_switch };
 		if ((wr_ctrl)&&(wr_addr==ADR_HWMACHI))
 		begin
 			if (wr_sel[1])
 				hw_mac[47:40] <= wr_data[15:8];
 			if (wr_sel[0])
 				hw_mac[39:32] <= wr_data[7:0];
-			if (|wr_sel[1:0])
-				mac_switch_control <= 1'b0;
 		end
 		if ((wr_ctrl)&&(wr_addr==ADR_HWMACLO))
 		begin
@@ -393,15 +375,10 @@ module	enetstream #(
 				hw_mac[15: 8] <= wr_data[15: 8];
 			if (wr_sel[0])
 				hw_mac[ 7: 0] <= wr_data[ 7: 0];
-			if (|wr_sel)
-				mac_switch_control <= 1'b0;
 		end
 		// }}}
 		// Set the hardware IP address
 		// {{{
-		if (ip_switch_control)
-			my_ipaddr<= DEF_IPADDR^ { {(26){1'b0}},
-							i_addr_switch, 2'b00 };
 		if ((wr_ctrl)&&(wr_addr==ADR_IPADDR))
 		begin
 			if (wr_sel[3])
@@ -412,8 +389,6 @@ module	enetstream #(
 				my_ipaddr[15: 8] <= wr_data[15: 8];
 			if (wr_sel[0])
 				my_ipaddr[ 7: 0] <= wr_data[ 7: 0];
-			if (|wr_sel)
-				ip_switch_control <= 1'b0;
 		end
 		// }}}
 
@@ -432,7 +407,7 @@ module	enetstream #(
 	assign	w_rx_ctrl = {
 			rx_link_spd, !rx_full_duplex, !rx_link_up,	// 4bits
 			rxclk_check[CKCHECK_BITS], 1'h0,		// 4bits
-			i_addr_switch, ip_switch_control, mac_switch_control,
+			6'h0,
 			1'b0, // (rx_broadcast), // 1-bit
 			3'h0, // rx_crcerr, rx_err, rx_miss,	// 3-bits
 			// 16-bits follow
@@ -493,8 +468,7 @@ module	enetstream #(
 	// {{{
 	assign	w_tx_ctrl = { tx_spd, 5'h0, ((RXSCOPE) ? 1'b0:1'b1),	// 8b
 			txclk_check[CKCHECK_BITS],			// 4b
-				1'b0, ip_switch_control,
-				mac_switch_control,
+				1'b0, 2'b0,
 			!config_hw_ip_check, !o_net_reset_n,!config_hw_mac,
 				!config_hw_crc,				// 4b
 			16'h00 };
@@ -506,10 +480,7 @@ module	enetstream #(
 	casez(i_wb_addr[2:0])
 	ADR_RXCTRL:  o_wb_data <= w_rx_ctrl;
 	ADR_TXCTRL:  o_wb_data <= w_tx_ctrl;
-	ADR_HWMACHI: o_wb_data <= { 2'b00,
-				ip_switch_control, mac_switch_control,
-				i_addr_switch,
-				8'h00, hw_mac[47:32] };
+	ADR_HWMACHI: o_wb_data <= { 8'b00, 8'h00, hw_mac[47:32] };
 	ADR_HWMACLO: o_wb_data <= hw_mac[31:0];
 	ADR_IPADDR:  o_wb_data <= my_ipaddr;
 	ADR_RXMISS:  o_wb_data <= counter_rx_miss;
@@ -746,86 +717,6 @@ module	enetstream #(
 	);
 	// }}}
 
-	generate if (OPT_MONITOR)
-	begin : GEN_MONITOR
-		wire		w_xpre,  w_xmin,  w_xcrc,  w_txip,  w_txmac;
-		wire	[7:0]	w_xpred, w_xmind, w_xcrcd, w_txipd, w_txmacd;
-		wire		w_txminerr, w_xcrcerr;
-
-		// Hardware preamble detection and removal
-		// {{{
-		rxepreambl
-		mon_pre(i_net_tx_clk, n_tx_reset, 1'b1, 1'b1,
-			o_net_tx_ctl, o_net_txd, w_xpre, w_xpred);
-		// }}}
-
-		// w_minerr: Minimum packet length checking
-		// {{{
-		// Insist on a minimum of 64-byte packets
-		rxemin
-		min_min(
-			// {{{
-			.i_clk(i_net_tx_clk),
-			.i_reset(n_tx_reset),
-			.i_en(1'b1),
-			.i_ce(1'b1),
-			.i_v(w_xpre),
-			.o_err(w_txminerr)
-			// }}}
-		);
-
-		assign	w_xmin = w_xpre;
-		assign	w_xmind= w_xpred;
-		// }}}
-
-		// w_xcrcerr: RX CRC checking
-		// {{{
-		rxecrc
-		mon_xcrc(
-			// {{{
-			.i_clk(i_net_tx_clk), .i_reset(n_tx_reset),
-				.i_ce(1'b1), .i_en(1'b1),
-				.i_v(w_xmin), .i_d(w_xmind),
-				.o_v(w_xcrc), .o_d(w_xcrcd),
-				.o_err(w_xcrcerr)
-			// }}}
-		);
-		// }}}
-
-		assign	w_txip  = w_xcrc;
-		assign	w_txipd = w_xcrcd;
-
-		assign	w_txmac  = w_txip;
-		assign	w_txmacd = w_txipd;
-
-		// MON_*
-		// {{{
-		rxepacket
-		mon_tx2pkt (
-			// {{{
-			.i_clk(i_net_tx_clk),
-			.i_reset(n_tx_reset),
-			.i_abort(w_xcrcerr || w_txminerr),
-			.i_v(w_txmac), .i_d(w_txmacd),
-				.i_not_done(w_xpre || w_xmin || w_xcrc),
-			.M_AXIN_VALID(MON_VALID),
-			.M_AXIN_READY(MON_READY),
-			.M_AXIN_DATA( MON_DATA),
-			.M_AXIN_LAST( MON_LAST),
-			.M_AXIN_ABORT(MON_ABORT)
-			// }}}
-		);
-		// }}}
-
-	end else begin : NO_MONITOR
-		assign	MON_VALID = 1'b0;
-		assign	MON_DATA  = 8'h0;
-
-		// Verilator lint_off UNUSED
-		wire	unused_monitor;
-		assign	unused_monitor = &{ 1'b0, MON_READY };
-		// Verilator lint_on  UNUSED
-	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//

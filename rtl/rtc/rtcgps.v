@@ -133,8 +133,12 @@ module	rtcgps #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	rtcbare	clock(i_clk, i_reset, ck_pps,
-			ck_wr, wr_data[21:0], wr_valid, clock_data, ck_ppd);
+	rtcbare
+	clock(
+		.i_clk(i_clk), .i_reset(i_reset), .i_pps(ck_pps),
+		.i_wr(ck_wr), .i_data(wr_data[21:0]), .i_valid(wr_valid),
+		.o_data(clock_data), .o_ppd(ck_ppd)
+	);
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -146,20 +150,27 @@ module	rtcgps #(
 
 	generate if (OPT_TIMER)
 	begin : TIMER
-		rtctimer #(.LGSUBCK(8))
-			timer(i_clk, i_reset, ck_sub_carry,
-				tm_wr, wr_data[24:0],
-				wr_valid, wr_zero, timer_data, tm_int);
+		rtctimer #(
+			.LGSUBCK(8)
+		) u_timer(
+			.i_clk(i_clk), .i_reset(i_reset),
+				.i_sub_ck(ck_sub_carry),
+			.i_wr(tm_wr), .i_data(wr_data[24:0]),
+				.i_valid(wr_valid), .i_zero(wr_zero),
+			.o_data(timer_data), .o_interrupt(tm_int)
+		);
 
 	end else begin : NO_TIMER
 		assign	tm_int = 0;
 		assign	timer_data = 0;
 
+		// Keep Verilator happy
+		// {{{
 		// Verilator lint_off UNUSED
 		wire	unused_timer;
 		assign	unused_timer = tm_wr;
 		// Verilator lint_on  UNUSED
-
+		// }}}
 	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -183,9 +194,13 @@ module	rtcgps #(
 		else
 			sw_ctrl <= 0;
 
-		rtcstopwatch rtcstop(i_clk, i_reset, ckspeed,
-			sw_ctrl[2], sw_ctrl[1], sw_ctrl[0],
-			stopwatch_data, sw_running);
+		rtcstopwatch
+		u_stopwatch(
+			.i_clk(i_clk), .i_reset(i_reset), .i_ckstep(ckspeed),
+			.i_clear(sw_ctrl[2]), .i_start(sw_ctrl[1]),
+				.i_stop(sw_ctrl[0]),
+			.o_value(stopwatch_data), .o_running(sw_running)
+		);
 
 	end else begin : NO_STOPWATCH
 
@@ -205,9 +220,16 @@ module	rtcgps #(
 	generate if (OPT_ALARM)
 	begin : ALARM
 
-		rtcalarm alarm(i_clk, i_reset, clock_data[21:0],
-			al_wr, wr_data[25], wr_data[24], wr_data[21:0],
-				wr_valid, alarm_data, al_int);
+		rtcalarm
+		u_alarm(
+			.i_clk(i_clk), .i_reset(i_reset),
+				.i_now(clock_data[21:0]),
+			.i_wr(al_wr), .i_clear(wr_data[25]),
+				.i_enable(wr_data[24]),
+				.i_alarm_time(wr_data[21:0]),
+				.i_valid(wr_valid), .o_data(alarm_data),
+				.o_alarm(al_int)
+		);
 
 	end else begin : NO_ALARM
 

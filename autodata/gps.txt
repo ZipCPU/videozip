@@ -60,19 +60,25 @@
 	//The GPS Clock
 	input	wire		i_gps_pps;
 @MAIN.DEFNS=
-	wire	gps_pps, gps_led, gps_locked, gps_tracking;
+	// Verilator lint_off UNUSED
+	wire		gps_pps, gps_led, gps_locked, gps_tracking;
 	wire	[63:0]	gps_now, gps_err, gps_step;
 	wire	[1:0]	gps_dbg_tick;
+	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
 	// Verilator lint_off UNUSED
 	wire	[1:0]	ck_dbg;
 	// Verilator lint_on  UNUSED
 
-	gpsclock #(.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP))
-		ppsck(i_clk, 1'b0, gps_pps, ck_pps, gps_led,
-			@$(SLAVE.PORTLIST),
-			gps_tracking, gps_now, gps_step, gps_err, gps_locked,
-			ck_dbg);
+	gpsclock #(
+		.DEFAULT_STEP(GPSCLOCK_DEFAULT_STEP)
+	) ppsck (
+		.i_clk(i_clk), .i_rst(1'b0), .i_pps(gps_pps), .o_pps(ck_pps),
+			.o_led(gps_led),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_tracking(gps_tracking), .o_count(gps_now), .o_step(gps_step),
+		.o_err(gps_err), .o_locked(gps_locked), .o_dbg(ck_dbg)
+	);
 @MAIN.ALT=
 	wire	[31:0]	pre_step;
 	assign	pre_step = { 16'h00, (({GPSCLOCK_DEFAULT_STEP[27:0],20'h00})
@@ -113,13 +119,18 @@ static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$BDEF.IOTYPE *)@$[0x
 @SLAVE.BUS=wb32
 @CLOCK.NAME=clk
 @MAIN.DEFNS=
+	// Verilator lint_off UNUSED
 	wire	tb_pps;
+	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
 `ifdef	GPSTRK_ACCESS
-	gpsclock_tb #(.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY)))
-		ppstb(i_clk, ck_pps, tb_pps,
-			@$(SLAVE.PORTLIST),
-			gps_err, gps_now, gps_step);
+	gpsclock_tb #(
+		.CLOCK_FREQUENCY_HZ(@$(CLOCK.FREQUENCY))
+	) ppstb(
+		.i_clk(i_clk), .i_lcl_pps(ck_pps), .o_pps(tb_pps),
+		@$(SLAVE.ANSIPORTLIST),
+		.i_err(gps_err), .i_count(gps_now), .i_step(gps_step)
+	);
 
 `ifdef	GPSTB
 	assign	gps_pps = tb_pps;
@@ -189,7 +200,10 @@ typedef	struct	GPSTB_S	{
 	input	wire		i_@$(PREFIX)_rx;
 	output	wire		o_@$(PREFIX)_tx;
 @MAIN.DEFNS=
-	wire	w_@$(PREFIX)_cts_n, w_@$(PREFIX)_rts_n;
+	// Verilator lint_off UNUSED
+	wire	w_@$(PREFIX)_rts_n;
+	// Verilator lint_on  UNUSED
+	wire	w_@$(PREFIX)_cts_n;
 	assign	w_@$(PREFIX)_cts_n=1'b1;
 @RTS=w_@$(PREFIX)_rts_n
 @CTS=w_@$(PREFIX)_cts_n
