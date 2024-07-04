@@ -47,7 +47,7 @@ all:	data
 # of parts and pieces of our project that autofpga will copy/paste into our
 # main project files.
 #
-BASE    := global.txt icape.txt crossbus.txt # dlyarbiter not necessary with new AutoFPGA
+BASE    := global.txt icape.txt crossbus.txt wbuarbiter.txt
 AUX     := version.txt buserr.txt pwrcount.txt rtccount.txt # pic.txt
 IO      := spio.txt gpio.txt vadj33.txt
 RTC     := rtclight.txt rtcdate.txt # rtcgps.txt

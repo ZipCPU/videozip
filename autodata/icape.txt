@@ -120,7 +120,7 @@
 @BDEF.IONAME=io_icape[32]
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_ICAPTETWO
-@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](THIS.BASE));
+@BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](REGBASE));
 @RTL.MAKE.GROUP=ICAP
 @RTL.MAKE.SUBD=
 @RTL.MAKE.FILES=wbicapetwo.v

@@ -1,0 +1,77 @@
+################################################################################
+##
+## Filename:	autodata/wbuarbiter.txt
+## {{{
+## Project:	VideoZip, a ZipCPU SoC supporting video functionality
+##
+## Purpose:	Connect the debugging bus to the rest of the system.
+##
+## Creator:	Dan Gisselquist, Ph.D.
+##		Gisselquist Technology, LLC
+##
+################################################################################
+## }}}
+## Copyright (C) 2022-2024, Gisselquist Technology, LLC
+## {{{
+## This program is free software (firmware): you can redistribute it and/or
+## modify it under the terms of the GNU General Public License as published
+## by the Free Software Foundation, either version 3 of the License, or (at
+## your option) any later version.
+##
+## This program is distributed in the hope that it will be useful, but WITHOUT
+## ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or
+## FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+## for more details.
+##
+## You should have received a copy of the GNU General Public License along
+## with this program.  (It's in the $(ROOT)/doc directory.  Run make with no
+## target there if the PDF file isn't present.)  If not, see
+## <http://www.gnu.org/licenses/> for a copy.
+## }}}
+## License:	GPL, v3, as defined and found on www.gnu.org,
+## {{{
+##		http://www.gnu.org/licenses/gpl.html
+##
+################################################################################
+##
+## }}}
+@PREFIX=wbu_arbiter
+@MASTER.BUS=wbwide
+@MASTER.TYPE=ARBITER
+@SLAVE.BUS=wbu
+@SLAVE.TYPE=OTHER
+@ERROR.WIRE=@$(SLAVE.PREFIX)_err
+## @$NADDR=(1<<@$(MASTER.BUS.AWID))
+@IANSI=i_
+@OANSI=o_
+@SLAVE.ANSPREFIX=s
+@MASTER.ANSPREFIX=w
+@MAIN.INSERT=
+	////////////////////////////////////////////////////////////////////////
+	//
+	// WBUBUS "wbu_arbiter" master->slave connection
+	// {{{
+
+	wbupsz #(
+		// {{{
+		// Slave bus address width : @$(SLAVE.BUS.AWID)
+		// Slave address width     : @$(SLAVE.AWID)
+		// Master bus address width: @$(MASTER.BUS.AWID)
+		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)+$clog2(@$(MASTER.BUS.WIDTH)/8)),
+		.SMALL_DW(@$(SLAVE.BUS.WIDTH)),
+		.WIDE_DW(@$(MASTER.BUS.WIDTH)),
+		.OPT_LITTLE_ENDIAN(1'b0)
+		// }}}
+	) u_@$(SLAVE.BUS.NAME)_@$(MASTER.BUS.NAME)_downsz (
+		// {{{
+		.i_clk(@$(MASTER.BUS.CLOCK.WIRE)),
+		.i_reset(@$(MASTER.BUS.CLOCK.RESET)),
+		@$(SLAVE.ANSIPORTLIST),
+		@$(MASTER.ANSIPORTLIST)
+		// }}}
+	);
+
+	// }}}
+@RTL.MAKE.GROUP=UPSZ
+@RTL.MAKE.SUBD=
+@RTL.MAKE.FILES=wbupsz.v

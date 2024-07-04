@@ -48,8 +48,8 @@ class	SDIOSIM {
 			m_data_started, m_cmd_started;
 	uint32_t	m_last_dat, m_last_cmd, m_lastck, m_app_cmd,
 			m_selected, m_RCA, m_width, m_drive;
-	char		m_cmd_buf[8], m_cid[15], m_reply_buf[20],
-			m_dbuf[512+1+32];
+	char		m_cmd_buf[8], m_cid[16], m_reply_buf[20],
+			m_dbuf[512+1+32], m_csd[16];
 	uint32_t	m_cmd_pos, m_reply_posn, m_reply_count, m_R1,
 			m_reply_delay, m_sector, m_data_delay, m_data_posn;
 protected:
@@ -60,8 +60,10 @@ protected:
 	void		accept_command(void);
 	void		load_reply(int cmd, unsigned arg);
 	uint8_t		cmdcrc(int ln, char *buf);
-	uint16_t	blockcrc(uint16_t fill, int bit);
+	unsigned	blockcrc(unsigned fill, unsigned bit);
 	void		CID(void);
+	void		CSD(void);
+	void		SCR(void);
 public:
 	// SDIOSIM(const unsigned lglen);
 	SDIOSIM(const char *fname);

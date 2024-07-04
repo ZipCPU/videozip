@@ -57,7 +57,7 @@ public:
 	BUSW	*m_mem, m_len, m_mask, m_head, m_tail, m_delay_mask, m_delay;
 	int	*m_fifo_ack;
 	BUSW	*m_fifo_data;
-	
+	bool	m_cleared;
 
 	MEMSIM(const unsigned int nwords, const unsigned int delay=27);
 	~MEMSIM(void);

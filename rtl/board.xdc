@@ -326,56 +326,19 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clksysclkct
 ## No XDC.INSERT tag in mem_flash_bkram
 ## No XDC.INSERT tag in zipscope
 ## No XDC.INSERT tag in netdirs
-## From sdio
-set_property -dict { PULLTYPE PULLUP } [get_ports io_sdcard_cmd]
-## No XDC.INSERT tag in gpio
-## No XDC.INSERT tag in flashcfg
-## No XDC.INSERT tag in spio
 ## No XDC.INSERT tag in pwrcount
 ## No XDC.INSERT tag in alt
 ## No XDC.INSERT tag in rtccount
 ## No XDC.INSERT tag in buserr
 ## No XDC.INSERT tag in genclk
+## No XDC.INSERT tag in spio
+## No XDC.INSERT tag in wbu_arbiter
+## No XDC.INSERT tag in zip_alt_uic
 ## No XDC.INSERT tag in zip_alt_mpc
 ## No XDC.INSERT tag in cfg
 ## No XDC.INSERT tag in KEYS
 ## No XDC.INSERT tag in RESET_ADDRESS
 ## No XDC.INSERT tag in iclock
-## No XDC.INSERT tag in zip_alt_upc
-## No XDC.INSERT tag in buildtime
-## No XDC.INSERT tag in mdio
-## No XDC.INSERT tag in REGDEFS
-## No XDC.INSERT tag in zip_alt_mtc
-## No XDC.INSERT tag in DEFAULT
-## No XDC.INSERT tag in flash
-## From genclkfb
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clkgenclkfbctr/avgs*}]       -to [ get_cells -hier -filter {NAME =~*clkgenclkfbctr/q_v*}]   8.0
-## No XDC.INSERT tag in zip_alt_utc
-## No XDC.INSERT tag in SIM
-## No XDC.INSERT tag in uart
-## No XDC.INSERT tag in altpic
-## No XDC.INSERT tag in version
-## From nettxctr
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknettxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknettxctrctr/q_*}]        8
-## From netclockctr
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetclockctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknetclockctrctr/q_*}]        8
-## No XDC.INSERT tag in XDC
-## No XDC.INSERT tag in zip
-## No XDC.INSERT tag in wbwide
-## No XDC.INSERT tag in wb32
-## No XDC.INSERT tag in mem_bkram_only
-## No XDC.INSERT tag in rtcdate
-## No XDC.INSERT tag in wbu
-## No XDC.INSERT tag in TMA
-## No XDC.INSERT tag in bkram
-## No XDC.INSERT tag in crossflash
-## No XDC.INSERT tag in sdram
-## No XDC.INSERT tag in syspic
-## No XDC.INSERT tag in masterclk
-## No XDC.INSERT tag in zip_alt_mic
-## No XDC.INSERT tag in zip_alt_moc
-## No XDC.INSERT tag in vadj33
-## No XDC.INSERT tag in zip_alt_uoc
 ## From net
 create_clock -period 8.0 -name NETRX -waveform { 0.0 4.0 } -add [get_ports {i_net_rx_clk} ];
 
@@ -441,6 +404,45 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/t
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/tfr_*/a_req*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/tfr*/b_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/tfr_*/b_last*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/tfr*/a_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/net_core/n_rx_err*}]       -to [ get_cells -hier -filter {NAME =~ *u_meganet/net_core/rx_err_pipe*}] 8.0
+## No XDC.INSERT tag in zip_alt_uoc
+## No XDC.INSERT tag in zip_alt_upc
+## No XDC.INSERT tag in buildtime
+## No XDC.INSERT tag in mdio
+## No XDC.INSERT tag in REGDEFS
+## No XDC.INSERT tag in zip_alt_mtc
+## No XDC.INSERT tag in DEFAULT
+## No XDC.INSERT tag in flash
+## From genclkfb
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clkgenclkfbctr/avgs*}]       -to [ get_cells -hier -filter {NAME =~*clkgenclkfbctr/q_v*}]   8.0
+## No XDC.INSERT tag in zip_alt_utc
+## No XDC.INSERT tag in SIM
+## No XDC.INSERT tag in uart
+## No XDC.INSERT tag in altpic
+## No XDC.INSERT tag in version
+## From nettxctr
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknettxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknettxctrctr/q_*}]        8
+## From netclockctr
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetclockctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknetclockctrctr/q_*}]        8
+## No XDC.INSERT tag in XDC
+## No XDC.INSERT tag in zip
+## No XDC.INSERT tag in wbwide
+## No XDC.INSERT tag in wb32
+## From sdio
+set_property -dict { PULLTYPE PULLUP } [get_ports io_sdcard_cmd]
+## No XDC.INSERT tag in gpio
+## No XDC.INSERT tag in flashcfg
+## No XDC.INSERT tag in mem_bkram_only
+## No XDC.INSERT tag in rtcdate
+## No XDC.INSERT tag in wbu
+## No XDC.INSERT tag in TMA
+## No XDC.INSERT tag in bkram
+## No XDC.INSERT tag in crossflash
+## No XDC.INSERT tag in sdram
+## No XDC.INSERT tag in syspic
+## No XDC.INSERT tag in masterclk
+## No XDC.INSERT tag in zip_alt_mic
+## No XDC.INSERT tag in zip_alt_moc
+## No XDC.INSERT tag in vadj33
 ## No XDC.INSERT tag in zip_tmb
 ## No XDC.INSERT tag in crossbus
 ## No XDC.INSERT tag in zip_tmc
@@ -448,4 +450,3 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/n
 ## No XDC.INSERT tag in zip_dmac
 ## No XDC.INSERT tag in rtc
 ## No XDC.INSERT tag in zip_jiffies
-## No XDC.INSERT tag in zip_alt_uic

@@ -40,6 +40,7 @@
 // }}}
 
 ENETCTRLSIM::ENETCTRLSIM(void) {
+	// {{{
 	m_consecutive_clocks = 0;
 	m_synched = false;
 	m_lastclk = 0;
@@ -54,8 +55,33 @@ ENETCTRLSIM::ENETCTRLSIM(void) {
 		m_mem[i] = 0;
 	m_outreg = -1;
 }
+// }}}
+
+void	ENETCTRLSIM::write(unsigned addr, unsigned short v) {
+	// {{{
+	switch(addr & 0x01f) {
+	case 2: case 3: break;	// Read-only PHY-ID registers
+	default: 
+		m_mem[addr] = v & 0x0ffff;
+		break;
+	}
+}
+// }}}
+
+unsigned short	ENETCTRLSIM::read(unsigned addr) {
+	// {{{
+	switch (addr & 0x1f) {
+	case 2: return 0x1c;
+		break;
+	case 3: return 0xc915;
+		break;
+	}
+	return m_mem[addr] & 0x0ffff;
+}
+// }}}
 
 int	ENETCTRLSIM::operator()(int in_reset, int clk, int data) {
+	// {{{
 	int	posedge, negedge, output = 1;
 
 	posedge = ((clk)&&(!m_lastclk));
@@ -108,9 +134,11 @@ int	ENETCTRLSIM::operator()(int in_reset, int clk, int data) {
 				printf("ENETCTRL: Unknown PHY, %d, expecting %d\n", phy, PHY_ADDR);
 			if ((cmd == 6)&&(phy==PHY_ADDR)) {
 				int addr = (m_datareg>>2)&0x01f;
-				m_outreg = ((m_mem[addr]&0x0ffff)<<15)|0x080007fff;
+				// m_outreg = ((m_mem[addr]&0x0ffff)<<15)|0x080007fff;
+				m_outreg = read(addr) << 15;
+				m_outreg |= 0x80007fff;
 				printf("ENETCTRL: Sending %04x = MEM[%01x]\n",
-					m_mem[addr]&0x0ffff, addr);
+					(m_outreg >> 15) & 0x0ffff, addr);
 			}
 		} else if ((m_halfword)&&(m_halfword < 16)) {
 			m_halfword++;
@@ -130,7 +158,7 @@ int	ENETCTRLSIM::operator()(int in_reset, int clk, int data) {
 					printf("ERR: ENETCTRL, write command and bit 16 is active!\n");
 				assert((m_datareg & 0x010000)==0);
 				addr = (m_datareg>>18)&0x1f;
-				m_mem[addr] = m_datareg & 0x0ffff;
+				write(addr, m_datareg & 0x0ffff);
 				printf("ENETCTRL: Setting MEM[%01x] = %04x\n",
 					addr, m_datareg&0x0ffff);
 			}
@@ -144,6 +172,7 @@ int	ENETCTRLSIM::operator()(int in_reset, int clk, int data) {
 	m_lastclk = clk;
 	return (data)&(output)&1;
 }
+// }}}
 
 int	ENETCTRLSIM::operator[](int index) const {
 	return m_mem[index & (ENET_MEMWORDS-1)] & 0x0ffff;

@@ -77,6 +77,18 @@ class	FLASHSIM {
 		QSPIF_DUAL_READ_IDLE,
 		QSPIF_DUAL_READ_CMD,
 		QSPIF_DUAL_READ,
+		//
+		QSPIF_SLOW_READ4,
+		QSPIF_FAST_READ4,
+		QSPIF_PP4,
+		QSPIF_QPP4,
+		QSPIF_DUAL_READ_IDLE4,
+		QSPIF_DUAL_READ_CMD4,
+		QSPIF_DUAL_READ4,
+		QSPIF_SECTOR_ERASE4,
+		QSPIF_QUAD_READ_CMD4,
+		QSPIF_QUAD_READ_IDLE4,
+		QSPIF_QUAD_READ4,
 		QSPIF_INVALID
 	} QSPIF_STATE;
 
@@ -91,7 +103,7 @@ class	FLASHSIM {
 	int		m_last_sck;
 	unsigned	m_write_count, m_ireg, m_oreg, m_sreg, m_addr,
 			m_count, m_config, m_mode_byte, m_creg, m_membytes,
-			m_memmask;
+			m_memmask, m_lglen;
 	bool		m_debug, m_idle_throttle;
 	FLASH_MODE	m_mode;
 
@@ -107,7 +119,7 @@ public:
 	void	load(const unsigned addr, const char *fname);
 	void	load(const uint32_t offset, const char *data, const uint32_t len);
 	bool	write_protect(void) { return ((m_sreg & QSPIF_WEL_FLAG)==0); }
-	bool	write_in_progress(void) { return ((m_sreg | QSPIF_WIP_FLAG)!=0); }
+	bool	write_in_progress(void) { return ((m_sreg & QSPIF_WIP_FLAG)!=0); }
 	bool	xip_mode(void) { return (QSPIF_QUAD_READ_IDLE == m_state); }
 	bool	deep_sleep(bool newval);
 	bool	deep_sleep(void) const;

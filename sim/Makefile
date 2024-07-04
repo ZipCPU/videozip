@@ -52,23 +52,24 @@ else
 VERILATOR_ROOT ?= $(shell bash -c 'verilator -V|grep VERILATOR_ROOT | head -1 | sed -e " s/^.*=\s*//"')
 endif
 export	$(VERILATOR)
-VROOT   := $(VERILATOR_ROOT)
-VDEFS   := $(shell ./vversion.sh)
+VROOT	:= $(VERILATOR_ROOT)
+VVERSION:= vversion.sh
+VDEFS    = $(shell bash $(VVERSION))
 VINCD   := $(VROOT)/include
 VINC	:= -I$(VINCD) -I$(VINCD)/vltstd -I$(VOBJDR) -I.
-INCS	:= -I../sw/host -I$(RTLD) $(VINC)
+INCS	:= -I. -I../sw/host -I$(RTLD) $(VINC)
 GFXFLAGS:= `pkg-config gtkmm-3.0 --cflags`
 GFXLIBS := `pkg-config gtkmm-3.0 --cflags --libs`
-CFLAGS	:= -Og -g -Wall $(VDEFS) $(INCS)
+CFLAGS	:= -O3 -std=gnu++14 -faligned-new -Wall $(VDEFS) $(INCS) $(GFXFLAGS)
 #
 # A list of our sources and headers
 #
 SIMSOURCES:= flashsim.cpp zipelf.cpp i2csim.cpp	\
 	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp dbluartsim.cpp	\
-	hdmiinsim.cpp enetctrlsim.cpp
+	sdiosim.cpp netsim.cpp udpsocket.cpp hdmiinsim.cpp enetctrlsim.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
 SIMHEADERS:= $(foreach header,$(subst .cpp,.h,$(SIMSOURCES)),$(wildcard $(header)))
-VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o
+VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o $(OBJDIR)/verilated_threads.o
 
 SOURCES := $(SIMSOURCES) main_tb.cpp automaster_tb.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \

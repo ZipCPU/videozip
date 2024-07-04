@@ -82,9 +82,57 @@ void	SDIOSIM::init(void) {
 // }}}
 
 void	SDIOSIM::CID(void) {
-	for(unsigned k=0; k<15; k++)
-		m_cid[k] = rand();
+	// {{{
+	// for(unsigned k=0; k<15; k++)
+	//	m_cid[k] = rand();
+
+	// Copied from a card I'm using
+	m_cid[ 0] = 0x02;
+	m_cid[ 1] = 0x54;
+	m_cid[ 2] = 0x4d;
+	m_cid[ 3] = 0x53;
+
+	m_cid[ 4] = 0x41;
+	m_cid[ 5] = 0x30;
+	m_cid[ 6] = 0x34;
+	m_cid[ 7] = 0x47;
+
+	m_cid[ 8] = 0x21;
+	m_cid[ 9] = 0x31;
+	m_cid[10] = 0x60;
+	m_cid[11] = 0x59;
+
+	m_cid[12] = 0x12;
+	m_cid[13] = 0x01;
+	m_cid[14] = 0x3c;
+	m_cid[15] = 0x4d;
 }
+// }}}
+
+void	SDIOSIM::CSD(void) {
+	// {{{
+	// Copied from a card I'm using
+	m_csd[ 0] = 0x40;
+	m_csd[ 1] = 0x0e;
+	m_csd[ 2] = 0x00;
+	m_csd[ 3] = 0x32;
+
+	m_csd[ 4] = 0x5b;
+	m_csd[ 5] = 0x59;
+	m_csd[ 6] = 0x00;
+	m_csd[ 7] = 0x00;
+
+	m_csd[ 8] = 0x1d;
+	m_csd[ 9] = 0x17;
+	m_csd[10] = 0x7f;
+	m_csd[11] = 0x80;
+
+	m_csd[12] = 0x0a;
+	m_csd[13] = 0x40;
+	m_csd[14] = 0x00;
+	m_csd[15] = 0x8d;
+}
+// }}}
 
 uint8_t	SDIOSIM::cmdcrc(int ln, char *buf) {
 	// {{{
@@ -102,6 +150,19 @@ uint8_t	SDIOSIM::cmdcrc(int ln, char *buf) {
 
 	fill &= 0x0fe; fill |= 1;
 	return fill;
+}
+// }}}
+
+unsigned	SDIOSIM::blockcrc(unsigned fill, unsigned bit) {
+	// {{{
+	unsigned int	taps = 0x1021;
+
+	if (fill&0x8000)
+		fill = (fill<<1)^taps;
+	else
+		fill <<= 1;
+
+	return fill & 0x0ffff;
 }
 // }}}
 
@@ -228,6 +289,7 @@ void	SDIOSIM::accept_command(void) {
 		// {{{
 		m_app_cmd = 0;
 		if (m_selected) {
+			__attribute__((unused)) size_t	sz;
 			m_drive = 1;
 			load_reply(19,m_R1);
 
@@ -237,7 +299,7 @@ void	SDIOSIM::accept_command(void) {
 			// m_data_count = 512;
 
 			(void)fseek(m_fp, (long)(m_sector * 512l), SEEK_SET);
-			(void)fread(m_dbuf, sizeof(char), 512, m_fp);
+			sz = fread(m_dbuf, sizeof(char), 512, m_fp);
 		} break;
 		// }}}
 	case 24: // WRITE_BLOCK
@@ -510,7 +572,7 @@ unsigned SDIOSIM::datn(unsigned in) {
 					for(unsigned k=0; k<m_data_posn; k+=16){
 						unsigned b;
 
-						b = (m_dbuf[k>>4] >> w) & 1;
+						b = (m_dbuf[k>>3] >> w) & 1;
 						fill = blockcrc(fill, b);
 					} if (fill != 0)
 						crc_fail = true;
@@ -521,7 +583,7 @@ unsigned SDIOSIM::datn(unsigned in) {
 					for(unsigned k=0; k<m_data_posn; k+=16){
 						unsigned b;
 
-						b = (m_dbuf[1+(k>>4)] >> w) & 1;
+						b = (m_dbuf[1+(k>>3)] >> w) & 1;
 						fill = blockcrc(fill, b);
 					} if (fill != 0)
 						crc_fail = true;
@@ -530,7 +592,7 @@ unsigned SDIOSIM::datn(unsigned in) {
 				for(unsigned w=0; w<8 && !crc_fail; w++) {
 					fill = 0;
 					for(unsigned k=0; k<m_data_posn; k+=8) {
-						unsigned v = m_dbuf[k>>3] >> 4;
+						unsigned v = m_dbuf[k>>3] >> w;
 
 						fill = blockcrc(fill,(v&1));
 					} if (fill != 0)
@@ -624,7 +686,7 @@ void	SDIOSIM::apply(unsigned sdclk, unsigned ddr,
 		m_last_cmd = cmd & 1;
 	if (!m_cmd_started && (cstb != 0) && (cstb != (cmd & cstb))) {
 		if (cmd_en)
-			cstb <= 0;
+			cstb = 0;
 		else {
 			if (cmd & 2)
 				cstb &= ~2;
@@ -640,7 +702,7 @@ void	SDIOSIM::apply(unsigned sdclk, unsigned ddr,
 	// {{{
 	if (data_en || !rx_en) {
 		rstb = 0;
-		m_data_started == 0;
+		m_data_started = 0;
 	} else if ((!m_data_started) && (rstb != (rstb & rlsb))) {
 		unsigned	msk = (rstb & ~rlsb) & 0x0f;
 

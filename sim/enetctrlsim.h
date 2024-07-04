@@ -45,6 +45,8 @@ class	ENETCTRLSIM	{
 	int	TICKS_PER_CLOCK, PHY_ADDR;
 	int	m_mem[ENET_MEMWORDS];
 
+	void	write(unsigned addr, unsigned short data);
+	unsigned short	read(unsigned addr);
 public:
 	bool	m_synched;
 	int	m_datareg, m_halfword, m_outreg;

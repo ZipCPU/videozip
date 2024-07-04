@@ -53,6 +53,7 @@
 const int	MEMSIM::NWRDWIDTH = 4;
 
 MEMSIM::MEMSIM(const unsigned int nwords, const unsigned int delay) {
+	// {{{
 	unsigned int	nxt;
 	for(nxt=1; nxt < nwords*NWRDWIDTH; nxt<<=1)
 		;
@@ -69,12 +70,16 @@ MEMSIM::MEMSIM(const unsigned int nwords, const unsigned int delay) {
 	m_delay_mask-=1;
 	m_head = 0; m_tail = (m_head - delay)&m_delay_mask;
 }
+// }}}
 
 MEMSIM::~MEMSIM(void) {
+	// {{{
 	delete[]	m_mem;
 }
+// }}}
 
 void	MEMSIM::load(const char *fname) {
+	// {{{
 	FILE	*fp;
 	unsigned int	nr;
 
@@ -100,11 +105,14 @@ void	MEMSIM::load(const char *fname) {
 	for(; nr<m_len; nr++)
 		m_mem[nr] = 0l;
 }
+// }}}
 
 void	MEMSIM::load(const unsigned int addr, const char *buf, const size_t len) {
+	// {{{
 	memcpy(&m_mem[addr], buf, len);
 	byteswapbuf(len/sizeof(BUSW), &m_mem[addr]);
 }
+// }}}
 
 void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 		const BUSW wb_addr, const uint32_t *wb_data, const short wb_sel,
@@ -116,14 +124,20 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 	bool		DEBUG = false;
 
 	if (!wb_cyc) {
+		// {{{
 		o_ack = 0;
 		o_stall= 0;
 		m_head = 0;
 		m_tail = (m_head - m_delay)&m_delay_mask;
-		for(unsigned k=0; k<m_delay_mask+1; k++)
-			m_fifo_ack[k] = 0;
+		if (!m_cleared) {
+			for(unsigned k=0; k<m_delay_mask+1; k++)
+				m_fifo_ack[k] = 0;
+			m_cleared = true;
+		}
 		return;
-	}
+		// }}}
+	} if (wb_stb)
+		m_cleared = false;
 
 	if ((DEBUG)&&(wb_stb)&&(wb_we)) {
 		printf("MEMSIM::WR[%08x]&%0*x: <- ", addr * NWRDWIDTH,
@@ -135,6 +149,7 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 
 		printf("\n");
 	}
+	// }}}
 
 	m_head++;
 	m_tail = (m_head - m_delay)&m_delay_mask;
@@ -148,6 +163,7 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 		*dp-- = m_fifo_data[m_tail*NWRDWIDTH + k];
 
 	if (wb_cyc && wb_stb) {
+		// {{{
 		m_fifo_ack[m_head] = 1;
 
 		if (wb_we) { for(unsigned k=0; k<NWRDWIDTH; k++) {
@@ -218,12 +234,16 @@ void	MEMSIM::apply(const uchar wb_cyc, const uchar wb_stb, const uchar wb_we,
 					(k < NWRDWIDTH-1) ? ":":"\n");
 		}
 	}
+	// }}}
 
 	if (DEBUG && o_ack) {
+		// {{{
 		printf("MEMBUS -- ACK: ");
 		for(unsigned k=0; k<NWRDWIDTH; k++)
 			printf("%08x%s", o_data[(NWRDWIDTH-1)-k],
 				(k < NWRDWIDTH-1) ? ":":"\n");
 	}
+	// }}}
 	// if ((wb_stb)&&(wb_we)) printf("\n");
 }
+// }}}
