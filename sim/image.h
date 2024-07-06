@@ -1,20 +1,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	sw/host/twoc.h
+// Filename:	sim/image.h
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	Some various two's complement related C++ helper routines.
-//		Specifically, these help extract signed numbers from
-//		packed bitfields, while guaranteeing that the upper bits
-//		are properly sign extended (or not) as desired.
+// Purpose:	A generic image manipulation class with a few features.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2023-2024, Gisselquist Technology, LLC
+// Copyright (C) 2017-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -37,14 +34,42 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
-#ifndef	TWOC_H
-#define	TWOC_H
+// }}}
+#ifndef	IMAGE_H
+#define	IMAGE_H
 
-extern	long	sbits(const long val, const int bits);
-extern	bool	sfits(const long val, const int bits);
-extern	unsigned long	ubits(const long val, const int bits);
-extern	unsigned long	rndbits(const long val, const int bi, const int bo);
+template<class PIXEL> class IMAGE {
+protected:
+	unsigned char	*m_buf;
+	void	allocbuf(int h, int w);
+	void	deallocb(void);
+public:
+	int	m_height, m_width;
+	PIXEL	**m_img;
+	PIXEL	*m_data;
 
+	IMAGE(int h, int w);
+	IMAGE(IMAGE *imgp);
+	~IMAGE() { delete[] m_buf; }
+	long	size(void) const { return m_height*m_width; }
+	IMAGE *crop(int x, int y, int h, int w);
+
+	void	zeroize(void);
+	IMAGE	*copy(void);
+	void	flipy(void);
+	void	flipx(void);
+
+	int	height(void) const { return m_height; }
+	int	cols(void) const { return m_height; }
+	int	width(void) const { return m_width; }
+	int	rows(void) const { return m_width; }
+};
+
+typedef	IMAGE<unsigned char>	UCIMAGE, *PIMAGE;
+typedef	IMAGE<int>		IIMAGE, *PIIMAGE;
+typedef	IMAGE<double>		DIMAGE, *PDIMAGE;
+#ifdef	COMPLEX_H
+typedef	IMAGE<COMPLEX>		CIMAGE, *PCIMAGE;
 #endif
 
+#endif

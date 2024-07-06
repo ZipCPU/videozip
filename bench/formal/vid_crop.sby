@@ -1,0 +1,21 @@
+[tasks]
+prf
+
+[options]
+mode prove
+depth 5
+
+[engines]
+smtbmc
+
+[script]
+read -formal skidbuffer.v
+read -formal vid_crop.v
+read -formal faxivideo.v
+proc -norom
+prep -top vid_crop
+
+[files]
+../../rtl/skidbuffer.v
+../../rtl/video/vid_crop.v
+faxivideo.v

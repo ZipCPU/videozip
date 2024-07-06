@@ -844,7 +844,7 @@ module	sync2stream #(
 		if (!$past(i_reset))
 			assert(!$rose(vlost_lock));
 	end
-	
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//

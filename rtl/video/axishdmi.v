@@ -543,7 +543,7 @@ module	axishdmi #(
 				begin
 					assert(hpos == i_hm_width-1
 						|| vpos == f_ypos
-						|| (f_ypos == 0 && vpos >= f_height));	
+						|| (f_ypos == 0 && vpos >= f_height));
 				end else if (hpos < i_hm_porch)
 				begin
 					if (vpos < f_height-1)

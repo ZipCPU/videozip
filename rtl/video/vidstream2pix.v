@@ -10,13 +10,13 @@
 //	Several color encodings are available:
 //	3'b000:	Black and white.
 //	3'b001: 2-bit gray scale
-//	3'b010: 4-bit gray scale
-//	3'b011: 4-bit colormap, using the first 16-entries of the color mapping
+//	3'b010: 4-bit colormap, using the first 16-entries of the color mapping
 //			table
-//	3'b100: 8-bit colormap
-//	3'b101: 8-bit color, no color map, encoded as 3-bits of red, 3-bits of
+//	3'b011: 8-bit colormap
+//	3'b100: 8-bit color, no color map, encoded as 3-bits of red, 3-bits of
 //			green, and 2-bits of blue
-//	3'b110: 16-bit color, encoded as 5-bits red, 6-bits green and 5-bits blu
+//	3'b101: 16-bit color, encoded as 5-bits red, 6-bits green and 5-bits blu
+//	3'b110: 24-bit color.  Pixels are packed together.
 //	3'b111: 24-bit color.  The upper 8-bits of every 32-bits are ignored
 //			in this encoding.  (They are packed in other encodings)
 //
@@ -100,11 +100,11 @@ module	vidstream2pix #(
 	// {{{
 	localparam	[2:0]		MODE_BW		= 3'b000,
 					MODE_GRAY2	= 3'b001,
-					MODE_GRAY4	= 3'b010,
-					MODE_CMAP4	= 3'b011,
-					MODE_CMAP8	= 3'b100,
-					MODE_CLR8	= 3'b101,
-					MODE_CLR16	= 3'b110,
+					MODE_CMAP4	= 3'b010,
+					MODE_CMAP8	= 3'b011,
+					MODE_CLR8	= 3'b100,
+					MODE_CLR16	= 3'b101,
+					MODE_CLR24	= 3'b110,
 					MODE_DIRECT	= 3'b111;
 	// Steps:
 	//	t_	incoming data
@@ -133,7 +133,7 @@ module	vidstream2pix #(
 	wire				s_step;
 
 	reg		c_hlast, c_valid, c_frame;
-	reg	[23:0]	bw_pix, gray_2, gray_4, cmap_4, cmap_8, clr_8, clr_16,
+	reg	[23:0]	bw_pix, gray_2, cmap_4, cmap_8, clr_8, clr_16, clr_24,
 			direct_clr;
 	wire		c_step;
 
@@ -242,15 +242,17 @@ module	vidstream2pix #(
 
 			if (!skd_hlast) case(i_mode)
 			// Verilator lint_off WIDTH
-			MODE_BW:	scount <= BUS_DATA_WIDTH - 1'b1;
-			MODE_GRAY2:	scount <= BUS_DATA_WIDTH/2 - 1'b1;
-			MODE_GRAY4:	scount <= BUS_DATA_WIDTH/4 - 1'b1;
-			MODE_CMAP4:	scount <= BUS_DATA_WIDTH/4 - 1'b1;
-			MODE_CMAP8:	scount <= BUS_DATA_WIDTH/8 - 1'b1;
-			MODE_CLR8:	scount <= BUS_DATA_WIDTH/8 - 1'b1;
+			MODE_BW:	scount <= BUS_DATA_WIDTH    - 1'b1;
+			MODE_GRAY2:	scount <= BUS_DATA_WIDTH/ 2 - 1'b1;
+			MODE_CMAP4:	scount <= BUS_DATA_WIDTH/ 4 - 1'b1;
+			MODE_CMAP8:	scount <= BUS_DATA_WIDTH/ 8 - 1'b1;
+			MODE_CLR8:	scount <= BUS_DATA_WIDTH/ 8 - 1'b1;
 			MODE_CLR16:	scount <= BUS_DATA_WIDTH/16 - 1'b1;
+			MODE_CLR24:	scount <= BUS_DATA_WIDTH/ 8 - 1'b1;
 			MODE_DIRECT:	scount <= BUS_DATA_WIDTH/32 - 1'b1;
-			endcase else
+			endcase else if (i_mode == MODE_CLR24)
+				scount <= s_remaining - 3;
+			else
 				scount <= s_remaining - 1'b1;
 			// Verilator lint_on  WIDTH
 			if (!skd_valid)
@@ -283,22 +285,22 @@ module	vidstream2pix #(
 			// {{{
 			if (OPT_MSB_FIRST)
 			case(i_mode)
-			MODE_BW:	sreg <= sreg << 1;
-			MODE_GRAY2:	sreg <= sreg << 2;
-			MODE_GRAY4:	sreg <= sreg << 4;
-			MODE_CMAP4:	sreg <= sreg << 4;
-			MODE_CMAP8:	sreg <= sreg << 8;
-			MODE_CLR8:	sreg <= sreg << 8;
+			MODE_BW:	sreg <= sreg <<  1;
+			MODE_GRAY2:	sreg <= sreg <<  2;
+			MODE_CMAP4:	sreg <= sreg <<  4;
+			MODE_CMAP8:	sreg <= sreg <<  8;
+			MODE_CLR8:	sreg <= sreg <<  8;
 			MODE_CLR16:	sreg <= sreg << 16;
-			MODE_DIRECT:	begin end
+			MODE_CLR24:	sreg <= sreg << 24;
+			MODE_DIRECT:	sreg <= sreg << 32;
 			endcase else case(i_mode)
-			MODE_BW:	sreg <= sreg >> 1;
-			MODE_GRAY2:	sreg <= sreg >> 2;
-			MODE_GRAY4:	sreg <= sreg >> 4;
-			MODE_CMAP4:	sreg <= sreg >> 4;
-			MODE_CMAP8:	sreg <= sreg >> 8;
-			MODE_CLR8:	sreg <= sreg >> 8;
+			MODE_BW:	sreg <= sreg >>  1;
+			MODE_GRAY2:	sreg <= sreg >>  2;
+			MODE_CMAP4:	sreg <= sreg >>  4;
+			MODE_CMAP8:	sreg <= sreg >>  8;
+			MODE_CLR8:	sreg <= sreg >>  8;
 			MODE_CLR16:	sreg <= sreg >> 16;
+			MODE_CLR24:	sreg <= sreg >> 24;
 			MODE_DIRECT:	sreg <= sreg >> 32;
 			endcase
 			// }}}
@@ -344,11 +346,11 @@ module	vidstream2pix #(
 		// Verilator lint_off WIDTH
 		MODE_BW:	s_remaining <= s_remaining - BUS_DATA_WIDTH;
 		MODE_GRAY2:	s_remaining <= s_remaining - BUS_DATA_WIDTH/2;
-		MODE_GRAY4:	s_remaining <= s_remaining - BUS_DATA_WIDTH/4;
 		MODE_CMAP4:	s_remaining <= s_remaining - BUS_DATA_WIDTH/4;
 		MODE_CMAP8:	s_remaining <= s_remaining - BUS_DATA_WIDTH/8;
 		MODE_CLR8:	s_remaining <= s_remaining - BUS_DATA_WIDTH/8;
 		MODE_CLR16:	s_remaining <= s_remaining - BUS_DATA_WIDTH/16;
+		MODE_CLR24:	s_remaining <= s_remaining - 3*BUS_DATA_WIDTH/8;
 		MODE_DIRECT:	s_remaining <= s_remaining - BUS_DATA_WIDTH/32;
 		// Verilator lint_on  WIDTH
 		endcase
@@ -405,13 +407,6 @@ module	vidstream2pix #(
 	endcase
 	// }}}
 
-	// gray_4
-	// {{{
-	always @(posedge i_clk)
-	if (s_step)
-		gray_4 <= {(6){sreg[BASE_4 +: 4]}};
-	// }}}
-
 	// cmap_4
 	// {{{
 	always @(posedge i_clk)
@@ -448,6 +443,18 @@ module	vidstream2pix #(
 	end
 	// }}}
 
+	// clr_24
+	// {{{
+	always @(posedge i_clk)
+	if (s_step)
+	begin	// RRRRR.GGGGGG.BBBBB, 5R, 6G, 5B
+		if (OPT_MSB_FIRST)
+			clr_24 <= sreg[BUS_DATA_WIDTH-24 +: 24];
+		else
+			clr_24 <= sreg[23:0];
+	end
+	// }}}
+
 	// direct_clr
 	// {{{
 	always @(posedge i_clk)
@@ -470,11 +477,11 @@ module	vidstream2pix #(
 	case(i_mode)
 	MODE_BW:	pix_data <= bw_pix;
 	MODE_GRAY2:	pix_data <= gray_2;
-	MODE_GRAY4:	pix_data <= gray_4;
 	MODE_CMAP4:	pix_data <= cmap_4;
 	MODE_CMAP8:	pix_data <= cmap_8;
 	MODE_CLR8:	pix_data <= clr_8;
 	MODE_CLR16:	pix_data <= clr_16;
+	MODE_CLR24:	pix_data <= clr_24;
 	MODE_DIRECT:	pix_data <= direct_clr;
 	endcase
 	// }}}
@@ -591,7 +598,6 @@ module	vidstream2pix #(
 	case(i_mode)
 	MODE_BW:     f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH-1)) /  BUS_DATA_WIDTH;
 	MODE_GRAY2:  f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH/2-1)) / (BUS_DATA_WIDTH/2);
-	MODE_GRAY4:  f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH/4-1)) / (BUS_DATA_WIDTH/4);
 	MODE_CMAP4:  f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH/4-1)) / (BUS_DATA_WIDTH/4);
 	MODE_CMAP8:  f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH/8-1)) / (BUS_DATA_WIDTH/8);
 	MODE_CLR8:   f_bus_words_per_line = (i_pixels_per_line + (BUS_DATA_WIDTH/8-1)) / (BUS_DATA_WIDTH/8);
@@ -736,7 +742,6 @@ module	vidstream2pix #(
 	if (!i_reset) case(i_mode)
 	MODE_BW:     assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH) == i_pixels_per_line);
 	MODE_GRAY2:  assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH/2) == i_pixels_per_line);
-	MODE_GRAY4:  assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH/4) == i_pixels_per_line);
 	MODE_CMAP4:  assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH/4) == i_pixels_per_line);
 	MODE_CMAP8:  assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH/8) == i_pixels_per_line);
 	MODE_CLR8:   assert(s_remaining + (f_bus_x * BUS_DATA_WIDTH/8) == i_pixels_per_line);
@@ -784,11 +789,11 @@ module	vidstream2pix #(
 	if (!i_reset) case(i_mode)
 	MODE_BW:	assert(scount < BUS_DATA_WIDTH);
 	MODE_GRAY2:	assert(scount < BUS_DATA_WIDTH/2);
-	MODE_GRAY4:	assert(scount < BUS_DATA_WIDTH/4);
 	MODE_CMAP4:	assert(scount < BUS_DATA_WIDTH/4);
 	MODE_CMAP8:	assert(scount < BUS_DATA_WIDTH/8);
 	MODE_CLR8:	assert(scount < BUS_DATA_WIDTH/8);
 	MODE_CLR16:	assert(scount < BUS_DATA_WIDTH/16);
+	MODE_CLR24:	assert(scount < BUS_DATA_WIDTH/8);
 	MODE_DIRECT:	assert(scount < BUS_DATA_WIDTH/32);
 	endcase
 	// }}}
@@ -845,11 +850,11 @@ module	vidstream2pix #(
 		case(i_mode)
 		MODE_BW:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH));
 		MODE_GRAY2:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/2));
-		MODE_GRAY4:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/4));
 		MODE_CMAP4:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/4));
 		MODE_CMAP8:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/8));
 		MODE_CLR8:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/8));
 		MODE_CLR16:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/16));
+		// MODE_CLR24:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/4));
 		MODE_DIRECT:	assert(f_s_x + scount + (s_valid ? 1:0) == (f_bus_x * BUS_DATA_WIDTH/32));
 		endcase
 		// }}}

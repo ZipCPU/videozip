@@ -1,19 +1,17 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	sim/verilated/port.h
+// Filename:	sim/simwin.h
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
-// Purpose:	Defines the communication parameters necessary for communicating
-//		with either the device or its simulation.
-//
+// Purpose:	
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
 // }}}
-// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// Copyright (C) 2018-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -37,22 +35,54 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // }}}
-#ifndef	PORT_H
-#define	PORT_H
+#ifndef	SIMWIN_H
+#define	SIMWIN_H
 
-// There are two ways to connect: via a serial port, and via a TCP socket
-// connected to a serial port.  This way, we can connect the device on one
-// computer, test it, and when/if it doesn't work we can replace the device
-// with the test-bench.  Across the network, no one will know any better that
-// anything had changed.
-#define	FPGAHOST	"localhost"
-#define	FPGATTY		"/dev/ttyUSB1"
-#define	FPGAPORT	6782
+#include <gtkmm.h>
+#include "image.h"
+#include "videomode.h"
 
-#ifndef	FORCE_UART
-#define	FPGAOPEN(V) V= new FPGA(new NETCOMMS(FPGAHOST, FPGAPORT))
-#else
-#define	FPGAOPEN(V) V= new FPGA(new TTYCOMMS(FPGATTY))
-#endif
+class	SIMWIN	: public Gtk::Window {
+protected:
+	VIDEOMODE	m_vmode;
+
+public:
+	SIMWIN(void) : m_vmode(640,480) {};
+	SIMWIN(const int w, const int h) : m_vmode(w,h) {};
+	SIMWIN(const char *h, const char *v) : m_vmode(h,v) {};
+
+	virtual	bool syncd(void)  const= 0;
+
+	int  width(void)  const {
+		return m_vmode.width();
+	}
+
+	int  height(void) const {
+		return	m_vmode.height();
+	}
+
+	int  raw_width(void)  const {
+		return m_vmode.raw_width();
+	}
+
+	int  raw_height(void) const {
+		return m_vmode.raw_height();
+	}
+	int  hsync(void)  const {
+		return	m_vmode.hsync();
+	}
+	int  vsync(void)  const {
+		return	m_vmode.vsync();
+	}
+	int hporch(void)  const {
+		return	m_vmode.hporch();
+	}
+	int vporch(void)  const {
+		return	m_vmode.vporch();
+	}
+	int clocks_per_frame(void) const {
+		return	m_vmode.pixels_per_frame();
+	}
+};
 
 #endif

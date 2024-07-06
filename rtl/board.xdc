@@ -415,6 +415,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_meganet/n
 ## From genclkfb
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clkgenclkfbctr/avgs*}]       -to [ get_cells -hier -filter {NAME =~*clkgenclkfbctr/q_v*}]   8.0
 ## No XDC.INSERT tag in zip_alt_utc
+## No XDC.INSERT tag in hdmi
 ## No XDC.INSERT tag in SIM
 ## No XDC.INSERT tag in uart
 ## No XDC.INSERT tag in altpic

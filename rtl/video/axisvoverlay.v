@@ -1879,7 +1879,7 @@ module	axisvoverlay #(
 					if (f_pri_hpos < i_hpos)
 					begin
 						assert(f_ovw_recovering || ({ 1'b0, f_pri_vpos } == { 1'b0, f_ovw_vpos } + { 1'b0, i_vpos }));
-					end else 
+					end else
 						assert({ 1'b0, f_pri_vpos } == { 1'b0, f_ovw_vpos } + { 1'b0, i_vpos } - 1);
 				end else if (f_pri_vpos >= i_vpos
 					&& f_pri_vpos < { 1'b0, i_vpos } + { 1'b0, f_ovw_height })

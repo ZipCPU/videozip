@@ -6,6 +6,17 @@
 //
 // Purpose:	
 //
+// Registers:	
+//
+// O/S Operations:	
+//	read()	- Copies either incoming or outgoing video frame data to memory
+//		(if supported)
+//	write()	- (If framebuffer), writes data tot he frame buffer, clipped
+//		to the image size.  (Alternatively, could set the frame buffers
+//		address in memory ...)  If no framebuffer is available, this
+//		should generate an O/S Error
+//	ioctl() - Access to all internal control registers
+//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
@@ -41,7 +52,10 @@ module	vidpipe #(
 		parameter	DW = 512,
 		parameter	AW = 31-$clog2(DW/8),
 		parameter	CLOCKFREQ_HZ = 100_000_000,
-		parameter	LGDIM = 12	// Largest raw screen size = 4095x4095
+		parameter	LGDIM = 12,	// Largest raw screen size = 4095x4095
+		parameter [0:0]	OPT_HDMIIN = 1'b1,
+		parameter [0:0]	OPT_FRAMEBUF = 1'b1,
+		parameter [0:0]	OPT_VIDCAPTURE = 1'b0
 		// }}}
 	) (
 		// {{{
@@ -61,7 +75,7 @@ module	vidpipe #(
 		// }}}
 		// Incoming HDMI Video (if present)
 		// {{{
-		input	wire		i_hdmiclk, i_siclk, i_pixclk,
+		input	wire		i_hdmiclk, i_altclk, i_pixclk,
 		input	wire	[9:0]	i_hdmi_red, i_hdmi_grn, i_hdmi_blu,
 		// }}}
 		// (Wide) Wishbone DMA master
@@ -80,7 +94,9 @@ module	vidpipe #(
 		output	wire	[9:0]	o_hdmi_red, o_hdmi_grn, o_hdmi_blu,
 		// }}}
 		// Clock control
+		// Verilator lint_off SYNCASYNCNET
 		output	wire		o_pix_reset_n,
+		// Verilator lint_on  SYNCASYNCNET
 		input	wire		i_pxpll_locked,
 		output	reg	[1:0]	o_pxclk_sel,
 		output	wire	[14:0]	o_iodelay,
@@ -93,6 +109,7 @@ module	vidpipe #(
 	// {{{
 	localparam	CWID = $clog2(CLOCKFREQ_HZ);
 	localparam	WBLSB = $clog2(DW/8);
+	localparam	CAP_OUTPUT = 1'b1, CAP_INPUT = 1'b0;
 	localparam	[4:0]	ADR_CONTROL   = 5'h00,
 				ADR_HDMIFREQ  = 5'h01,
 				ADR_SIFREQ    = 5'h02,
@@ -109,9 +126,23 @@ module	vidpipe #(
 				ADR_OVLYSIZE  = 5'h0d,
 				ADR_OVLYOFFSET= 5'h0e,
 				ADR_FPS       = 5'h0f,
-				ADR_SYNCWORD  = 5'h10,
-				ADR_TEST1     = 5'h11,
-				ADR_TEST2     = 5'h12;
+			//
+				ADR_CAPTURE   = 5'h10,
+				ADR_CAPBASE   = 5'h11,
+				ADR_CAPWORDS  = 5'h12,
+				ADR_CAPPOSN   = 5'h13,
+				ADR_CAPSIZE   = 5'h14,
+			//
+				ADR_SYNCWORD  = 5'h18;
+//	16. Capture control: pxcap_count, pxcap_en, pixel mode(s)
+//	17. Capture base address
+//	18. Capture line width in memory words, cfg_mem_words
+//	19. (Capture position ... = 0,0)
+//	20. (Capture height, width = out height, width)
+//
+//	21. Sync word (debug only)
+//	22. Test #1 (Unused at present)
+//	23. Test #2 (Unused at present)
 
 	// Verilator lint_off SYNCASYNCNET
 	reg		pix_reset_sys, pix_reset, pix_reset_request;
@@ -132,9 +163,6 @@ module	vidpipe #(
 
 	wire		empty_valid, empty_ready, empty_vlast, empty_hlast;
 	wire	[23:0]	empty_data;
-
-	wire		mem_valid, mem_ready, mem_vlast, mem_hlast;
-	wire [DW-1:0]	mem_data;
 
 	wire		wbpx_valid, wbpx_ready, wbpx_vlast, wbpx_hlast;
 	wire [23:0]	wbpx_data;
@@ -215,6 +243,26 @@ module	vidpipe #(
 	wire		ign_sys2px_valid, sys2px_ready;
 	wire		ign_frame_ready;
 
+	wire		fb_cyc, fb_stb, fb_we, fb_stall, fb_ack, fb_err;
+	wire [AW-1:0]	fb_addr;
+	wire [DW-1:0]	fb_data, fb_idata;
+	wire [DW/8-1:0]	fb_sel;
+
+	wire		cap_cyc, cap_stb, cap_we, cap_stall, cap_ack, cap_err;
+	wire [AW-1:0]	cap_addr;
+	wire [DW-1:0]	cap_data, cap_idata;
+	wire [DW/8-1:0]	cap_sel;
+
+	reg		cfg_capen, cfg_capsrc;
+	reg [LGDIM-1:0]	cfg_capwords, cfg_capcount;
+	reg [AW-1:0]	cfg_capbase;
+	reg	[1:0]	cfg_capmode;
+	wire		wbcap_done, wbcap_err;
+
+	reg			cfg_crop_en;
+	reg	[LGDIM-1:0]	cfg_crop_hpos, cfg_crop_vpos,
+				cfg_crop_width, cfg_crop_height;
+
 	wire	[23:0]	cmap_rdata;
 
 	reg		pre_ack, cmap_ack;
@@ -275,9 +323,15 @@ module	vidpipe #(
 //	14. Overlay position offset
 //	15. Measured incoming frame rate
 //
-//	16. Sync word (debug only)
-//	17. Test #1 (Unused at present)
-//	18. Test #2 (Unused at present)
+//	16. Capture control: pxcap_count, pxcap_en, pixel mode(s)
+//	17. Capture base address
+//	18. Capture line width in memory words, cfg_mem_words
+//	19. (Capture position ... = 0,0)
+//	20. (Capture height, width = out height, width)
+//
+//	24. Sync word (debug only)
+//	25. Test #1 (Unused at present)
+//	26. Test #2 (Unused at present)
 //
 	always @(posedge i_clk or negedge i_pxpll_locked)
 	if (!i_pxpll_locked)
@@ -297,6 +351,15 @@ module	vidpipe #(
 			pix_reset_sys <= 1'b1;
 		else
 			pix_reset_sys <= !pxpll_locked_sys;
+
+		if (wbcap_done || wbcap_err)
+		begin
+			cfg_capen <= 0;
+			cfg_capcount <= 0;
+		end
+
+		if (wbcap_err)
+			cfg_capbase <= 0;
 
 		if (i_wb_stb && i_wb_we && i_wb_addr[9:5]==5'h0)
 		begin
@@ -405,6 +468,43 @@ module	vidpipe #(
 					dbg_sel_sys <= i_wb_data[31:30];
 				end
 				// }}}
+			ADR_CAPTURE: begin
+				if (i_wb_sel[3])
+				begin
+					cfg_capmode <= i_wb_data[30:29];
+					cfg_capsrc  <= i_wb_data[28];
+				end
+				if (&i_wb_sel[$clog2(LGDIM)-1:0])
+				begin
+					cfg_capen <=(i_wb_data[LGDIM-1:0] != 0)
+						&&(cfg_capbase != 0);
+					cfg_capcount <= i_wb_data[LGDIM-1:0];
+				end end
+			ADR_CAPBASE: begin
+				// cfg_capen <= (&i_wb_sel)
+				//		&& (i_wb_data[WBLSB +: AW]!=0);
+				if (&i_wb_sel)
+					cfg_capbase <= i_wb_data[WBLSB +: AW];;
+				end
+			ADR_CAPWORDS: begin
+				if (&i_wb_sel)
+					cfg_capwords <= i_wb_data[WBLSB +: (LGDIM-1)]
+					    + ((|i_wb_data[WBLSB-1:0]) ? 1 : 0);
+				end
+			ADR_CAPPOSN: begin
+				if (&i_wb_sel)
+				begin
+					cfg_crop_vpos <= i_wb_data[16 +: LGDIM];
+					cfg_crop_hpos <= i_wb_data[0 +: LGDIM];
+				end end
+			ADR_CAPSIZE: begin
+				if (&i_wb_sel)
+				begin
+					cfg_crop_en <= (i_wb_data[16 +: LGDIM] > 2)
+						&&(i_wb_data[0 +: LGDIM] > 0);
+					cfg_crop_height <= i_wb_data[16 +: LGDIM];
+					cfg_crop_width <= i_wb_data[0 +: LGDIM];
+				end end
 			default: begin end
 			endcase
 		end
@@ -416,9 +516,28 @@ module	vidpipe #(
 			cfg_ovly_enable_sys <= 1'b0;
 			cfg_framebase <= {(AW){1'b0}};
 
+			cfg_capen   <= 1'b0;
+			cfg_capmode <= 2'b11;
+			cfg_capsrc  <= CAP_INPUT;
+			cfg_capbase <= {(AW){1'b0}};
+
 			pix_reset_request <= 1'b1;
 			pix_reset_sys <= 1'b1;
 			iodelay_request_sys <= 15'h0;
+		end
+
+		if (!OPT_VIDCAPTURE)
+		begin
+			cfg_capen    <= 1'b0;
+			cfg_capcount <= {(LGDIM){1'b0}};
+			cfg_capbase  <= 0;
+			cfg_capwords  <= 0;
+
+			cfg_crop_vpos <= 0;
+			cfg_crop_hpos <= 0;
+			cfg_crop_en <= 0;
+			cfg_crop_height <= 0;
+			cfg_crop_width <= 0;
 		end
 	end
 
@@ -534,17 +653,39 @@ module	vidpipe #(
 				pre_wb_data[31:30] <= dbg_sel_sys;
 			end
 			// }}}
+		ADR_CAPTURE: begin
+			pre_wb_data[31] <= 1'b1;
+			pre_wb_data[30:29] <= cfg_capmode;
+			pre_wb_data[28] <= cfg_capsrc;
+			pre_wb_data[27] <= cfg_capen;
+			pre_wb_data[26] <= wbcap_done;
+			pre_wb_data[27] <= wbcap_err;
+			if (cfg_capen && !wbcap_done)
+				pre_wb_data[LGDIM-1:0] <= cfg_capcount;
+			end
+		ADR_CAPBASE: begin
+				pre_wb_data[WBLSB +: AW] <= cfg_capbase;
+			end
+		ADR_CAPWORDS: begin
+				pre_wb_data[WBLSB +: LGDIM] <= cfg_capwords;
+			end
+		ADR_CAPPOSN: begin
+				pre_wb_data[ 0 +: LGDIM] <= cfg_crop_hpos;
+				pre_wb_data[16 +: LGDIM] <= cfg_crop_vpos;
+			end
+		ADR_CAPSIZE: begin
+				if (cfg_crop_en)
+				begin
+				pre_wb_data[ 0 +: LGDIM] <= cfg_crop_width;
+				pre_wb_data[16 +: LGDIM] <= cfg_crop_height;
+				end else begin
+				pre_wb_data[ 0 +: LGDIM] <= hm_width_sys;
+				pre_wb_data[16 +: LGDIM] <= vm_height_sys;
+				end
+			end
 		ADR_SYNCWORD: begin
 				pre_wb_data <= sync_word;
 			end
-		ADR_TEST1: begin
-			// {{{
-			end
-			// }}}
-		ADR_TEST2: begin
-			// {{{
-			end
-			// }}}
 		default: begin end
 		endcase
 	end
@@ -592,57 +733,86 @@ module	vidpipe #(
 	// Convert from HDMI to an AXI (video) stream
 	// {{{
 
-	// hdmi2vga: Convert first to VGA
-	hdmi2vga
-	u_hdmi2vga (
+	generate if (OPT_HDMIIN)
+	begin : GEN_HDMIIN_TO_AXIVID
 		// {{{
-		.i_clk(i_pixclk), .i_reset(pix_reset),
-		.i_hdmi_red(i_hdmi_red), .i_hdmi_grn(i_hdmi_grn),
-			.i_hdmi_blu(i_hdmi_blu),
-		//
-		.o_pix_valid(vga_valid),
-		.o_vsync(vga_vsync), .o_hsync(vga_hsync),
-		.o_vga_red(vga_red), .o_vga_green(vga_grn),.o_vga_blue(vga_blu),
-		.o_sync_word(sync_word),
-		.o_debug(vga_debug)
-		// }}}
-	);
+		// hdmi2vga: Convert first to VGA
+		hdmi2vga
+		u_hdmi2vga (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.i_hdmi_red(i_hdmi_red), .i_hdmi_grn(i_hdmi_grn),
+				.i_hdmi_blu(i_hdmi_blu),
+			//
+			.o_pix_valid(vga_valid),
+			.o_vsync(vga_vsync), .o_hsync(vga_hsync),
+			.o_vga_red(vga_red), .o_vga_green(vga_grn),
+				.o_vga_blue(vga_blu),
+			.o_sync_word(sync_word),
+			.o_debug(vga_debug)
+			// }}}
+		);
 
-	// sync2stream: VGA to AXI (video) stream
-	sync2stream #(
-		.OPT_TUSER_IS_SOF(1'b0), .LGDIM(LGDIM)
-	) u_sync2stream (
-		// {{{
-		.i_clk(i_pixclk), .i_reset(pix_reset),
-		// The VGA input
-		// {{{
-		.i_pix_valid(vga_valid),
-		.i_hsync(vga_hsync),
-		.i_vsync(vga_vsync),
-		.i_pixel({ vga_red, vga_grn, vga_blu }),
-		// }}}
-		// The AXI Video stream output
-		// {{{
-		.M_AXIS_TVALID(rx_valid), .M_AXIS_TREADY(rx_ready),
-		.M_AXIS_TDATA(rx_data), .M_AXIS_TLAST(rx_vlast),
-		.M_AXIS_TUSER(rx_hlast),
-		// }}}
-		// Video parameters
-		// {{{
-		.o_width(hin_width),   .o_hfront(hin_front),
-		.o_hsync(hin_synch),   .o_raw_width(hin_raw),
-		.o_height(vin_height), .o_vfront(vin_front),
-		.o_vsync(vin_synch),   .o_raw_height(vin_raw),
-		//
-		.o_vsync_pol(vin_syncpol),.o_hsync_pol(hin_syncpol),
-		.o_locked(in_locked)
-		// }}}
-		// }}}
-	);
+		// sync2stream: VGA to AXI (video) stream
+		sync2stream #(
+			.OPT_TUSER_IS_SOF(1'b0), .LGDIM(LGDIM)
+		) u_sync2stream (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			// The VGA input
+			// {{{
+			.i_pix_valid(vga_valid),
+			.i_hsync(vga_hsync),
+			.i_vsync(vga_vsync),
+			.i_pixel({ vga_red, vga_grn, vga_blu }),
+			// }}}
+			// The AXI Video stream output
+			// {{{
+			.M_AXIS_TVALID(rx_valid), .M_AXIS_TREADY(rx_ready),
+			.M_AXIS_TDATA(rx_data), .M_AXIS_TLAST(rx_vlast),
+			.M_AXIS_TUSER(rx_hlast),
+			// }}}
+			// Video parameters
+			// {{{
+			.o_width(hin_width),   .o_hfront(hin_front),
+			.o_hsync(hin_synch),   .o_raw_width(hin_raw),
+			.o_height(vin_height), .o_vfront(vin_front),
+			.o_vsync(vin_synch),   .o_raw_height(vin_raw),
+			//
+			.o_vsync_pol(vin_syncpol),.o_hsync_pol(hin_syncpol),
+			.o_locked(in_locked)
+			// }}}
+			// }}}
+		);
 
-	assign	src_debug = { (rx_hlast && rx_vlast), (rx_hlast && rx_vlast), 2'b0,
+		assign	src_debug = { (rx_hlast && rx_vlast),
+			(rx_hlast && rx_vlast), 2'b0,
 			rx_valid, rx_ready, rx_hlast, rx_vlast,
 			rx_data };
+		// }}}
+	end else begin : NO_GEN_AXIVID
+		// {{{
+		assign	rx_valid = 1'b0;
+		assign	rx_data  = 24'h0;
+		assign	rx_hlast = 0;
+		assign	rx_vlast = 0;
+
+		assign	hin_width  = 0;
+		assign	hin_front  = 0;
+		assign	hin_synch  = 0;
+		assign	hin_raw    = 0;
+
+		assign	vin_height = 0;
+		assign	vin_front  = 0;
+		assign	vin_synch  = 0;
+		assign	vin_raw    = 0;
+		//
+		assign	vin_syncpol = 1'b0;
+		assign	hin_syncpol = 1'b0;
+
+		assign	in_locked  = 1'b0;
+		// }}}
+	end endgenerate
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -724,17 +894,17 @@ module	vidpipe #(
 		// }}}
 	);
 
-	assign	hm_width  = (cfg_src_sel) ? hin_width  : hout_width;
-	assign	hm_front  = (cfg_src_sel) ? hin_front  : hout_front;
-	assign	hm_synch  = (cfg_src_sel) ? hin_synch  : hout_synch;
-	assign	hm_raw    = (cfg_src_sel) ? hin_raw    : hout_raw;
-	assign	hm_syncpol= (cfg_src_sel) ? hin_syncpol: hout_syncpol;
+	assign	hm_width  = (cfg_src_sel && OPT_HDMIIN) ? hin_width  : hout_width;
+	assign	hm_front  = (cfg_src_sel && OPT_HDMIIN) ? hin_front  : hout_front;
+	assign	hm_synch  = (cfg_src_sel && OPT_HDMIIN) ? hin_synch  : hout_synch;
+	assign	hm_raw    = (cfg_src_sel && OPT_HDMIIN) ? hin_raw    : hout_raw;
+	assign	hm_syncpol= (cfg_src_sel && OPT_HDMIIN) ? hin_syncpol: hout_syncpol;
 
-	assign	vm_height = (cfg_src_sel) ? vin_height : vout_height;
-	assign	vm_front  = (cfg_src_sel) ? vin_front  : vout_front;
-	assign	vm_synch  = (cfg_src_sel) ? vin_synch  : vout_synch;
-	assign	vm_raw    = (cfg_src_sel) ? vin_raw    : vout_raw;
-	assign	vm_syncpol= (cfg_src_sel) ? vin_syncpol: vout_syncpol;
+	assign	vm_height = (cfg_src_sel && OPT_HDMIIN) ? vin_height : vout_height;
+	assign	vm_front  = (cfg_src_sel && OPT_HDMIIN) ? vin_front  : vout_front;
+	assign	vm_synch  = (cfg_src_sel && OPT_HDMIIN) ? vin_synch  : vout_synch;
+	assign	vm_raw    = (cfg_src_sel && OPT_HDMIIN) ? vin_raw    : vout_raw;
+	assign	vm_syncpol= (cfg_src_sel && OPT_HDMIIN) ? vin_syncpol: vout_syncpol;
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -784,7 +954,7 @@ module	vidpipe #(
 	clkcounter #(
 		.CLOCKFREQ_HZ(0)
 	) u_siclk_counter (
-		.i_sys_clk(i_clk), .i_tst_clk(i_siclk),
+		.i_sys_clk(i_clk), .i_tst_clk(i_altclk),
 		.i_sys_pps(sys_pps),
 		.o_sys_counts(sick_counts)
 	);
@@ -861,179 +1031,572 @@ module	vidpipe #(
 	// Mux empty frame with the RX signal
 	// {{{
 
-	vid_mux #(
-		.NIN(2), .LGDIM(LGDIM), .DEF_SELECT(0),
-		.OPT_TUSER_IS_SOF(0)
-	) u_src_mux (
+	generate if (OPT_HDMIIN && OPT_FRAMEBUF)
+	begin : GEN_SELECT_INPUT
+		vid_mux #(
+			.NIN(2), .LGDIM(LGDIM), .DEF_SELECT(0),
+			.OPT_TUSER_IS_SOF(0)
+		) u_src_mux (
+			// {{{
+			.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(pix_reset_n),
+			//
+			.S_VID_VALID({ rx_valid, empty_valid }),
+			.S_VID_READY({ rx_ready, empty_ready }),
+			.S_VID_DATA({  rx_data,  empty_data  }),
+			.S_VID_LAST({  rx_vlast, empty_vlast }),	// VLAST
+			.S_VID_USER({  rx_hlast, empty_hlast }),	// HLAST
+			//
+			.M_VID_VALID(pipe_valid), .M_VID_READY(pipe_ready),
+			.M_VID_DATA(pipe_data),
+				.M_VID_LAST(pipe_vlast), .M_VID_USER(pipe_hlast),
+			//
+			.i_select(cfg_src_sel)
+			// }}}
+		);
+	end else if (OPT_HDMIIN)
+	begin : GEN_ONLY_INPUT
 		// {{{
-		.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(pix_reset_n),
-		//
-		.S_VID_VALID({ rx_valid, empty_valid }),
-		.S_VID_READY({ rx_ready, empty_ready }),
-		.S_VID_DATA({  rx_data,  empty_data  }),
-		.S_VID_LAST({  rx_vlast, empty_vlast }),	// VLAST
-		.S_VID_USER({  rx_hlast, empty_hlast }),	// HLAST
-		//
-		.M_VID_VALID(pipe_valid), .M_VID_READY(pipe_ready),
-		.M_VID_DATA(pipe_data),
-			.M_VID_LAST(pipe_vlast), .M_VID_USER(pipe_hlast),
-		//
-		.i_select(cfg_src_sel)
+		assign	pipe_valid = rx_valid;
+		assign	rx_ready= pipe_ready;
+		assign	pipe_data  = rx_data;
+		assign	pipe_hlast = rx_hlast;
+		assign	pipe_vlast = rx_vlast;
 		// }}}
-	);
+	end else begin : GEN_NO_SELECT
+		// {{{
+		assign	pipe_valid = empty_valid;
+		assign	empty_ready= pipe_ready;
+		assign	pipe_data  = empty_data;
+		assign	pipe_hlast = empty_hlast;
+		assign	pipe_vlast = empty_vlast;
+
+		assign	rx_ready= 1'b1;
+		// }}}
+	end endgenerate
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// wbdma: the WishBone Frame buffer
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
+	// The framebuffer-based pipeline
+	generate if (OPT_FRAMEBUF)
+	begin : GEN_FRAMEBUF
+		// Frame buffer pipeline declarations
+		// {{{
+		wire		mem_valid, mem_ready, mem_vlast, mem_hlast;
+		wire [DW-1:0]	mem_data;
+		// }}}
+		////////////////////////////////////////////////////////////////
+		//
+		// wbdma: the WishBone Frame buffer
+		// {{{
+		////////////////////////////////////////////////////////////////
+		//
 
+		vid_wbframebuf #(
+			// {{{
+			.AW(AW), .DW(DW), .LGFRAME(LGDIM), .PW(DW),
+			.OPT_TUSER_IS_SOF(1'b0),
+			.OPT_ASYNC_CLOCKS(1'b1)
+			// }}}
+		) u_framebuf (
+			// {{{
+			.i_clk(i_clk), .i_pixclk(i_pixclk), .i_reset(pix_reset_sys),
+			.i_cfg_en(cfg_ovly_enable_sys),
+			.i_height(cfg_mem_height), .i_mem_words(cfg_mem_words),
+			.i_baseaddr(cfg_framebase),
+			// Wishbone (DMA) bus master
+			// {{{
+			.o_wb_cyc(fb_cyc), .o_wb_stb(fb_stb),.o_wb_we(fb_we),
+			.o_wb_addr(fb_addr),
+				.o_wb_data(fb_data), .o_wb_sel(fb_sel),
+			.i_wb_stall(fb_stall), .i_wb_ack(fb_ack),
+				.i_wb_data(fb_idata), .i_wb_err(fb_err),
+			// }}}
+			// Outgoing video stream
+			// {{{
+			.M_VID_TVALID(mem_valid),
+			.M_VID_TREADY(mem_ready),
+			.M_VID_TDATA( mem_data),
+			.M_VID_TLAST( mem_vlast),
+			.M_VID_TUSER( mem_hlast)
+			// }}}
+			// }}}
+		);
+		// }}}
+		////////////////////////////////////////////////////////////////
+		//
+		// wbpix_: VidStream2Pix (for frame buffer input)
+		// {{{
 
-	vid_wbframebuf #(
-		// {{{
-		.AW(AW), .DW(DW), .LGFRAME(LGDIM), .PW(DW),
-		.OPT_TUSER_IS_SOF(1'b0),
-		.OPT_ASYNC_CLOCKS(1'b1)
-		// }}}
-	) u_framebuf (
-		// {{{
-		.i_clk(i_clk), .i_pixclk(i_pixclk), .i_reset(pix_reset_sys),
-		.i_cfg_en(cfg_ovly_enable_sys),
-		.i_height(cfg_mem_height), .i_mem_words(cfg_mem_words),
-		.i_baseaddr(cfg_framebase),
-		// Wishbone (DMA) bus master
-		// {{{
-		.o_wb_cyc(o_dma_cyc), .o_wb_stb(o_dma_stb),
-			.o_wb_we(o_dma_we),
-		.o_wb_addr(o_dma_addr),
-			.o_wb_data(o_dma_data), .o_wb_sel(o_dma_sel),
-		.i_wb_stall(i_dma_stall), .i_wb_ack(i_dma_ack),
-			.i_wb_data(i_dma_data), .i_wb_err(i_dma_err),
-		// }}}
-		// Outgoing video stream
-		// {{{
-		.M_VID_TVALID(mem_valid),
-		.M_VID_TREADY(mem_ready),
-		.M_VID_TDATA( mem_data),
-		.M_VID_TLAST( mem_vlast),
-		.M_VID_TUSER( mem_hlast)
-		// }}}
-		// }}}
-	);
+		vidstream2pix #(
+			// {{{
+			.BUS_DATA_WIDTH(DW),
+			.HMODE_WIDTH(LGDIM),
+			.OPT_MSB_FIRST(1'b1),
+			.OPT_TUSER_IS_SOF(1'b0)
+			// }}}
+		) u_mem2pix (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			// Incoming video data, w/ bus-sized pixels
+			// {{{
+			.S_AXIS_TVALID(mem_valid),
+			.S_AXIS_TREADY(mem_ready),
+			.S_AXIS_TDATA(mem_data),
+			.S_AXIS_TLAST(mem_vlast),
+			.S_AXIS_TUSER(mem_hlast),
+			// }}}
+			// Outgoing video pixel data
+			// {{{
+			.M_AXIS_TVALID(wbpx_valid),
+			.M_AXIS_TREADY(wbpx_ready),
+			.M_AXIS_TDATA(wbpx_data),
+			.M_AXIS_TLAST(wbpx_vlast),
+			.M_AXIS_TUSER(wbpx_hlast),
+			// }}}
+			.i_mode(cfg_cmap_mode),
+			.i_pixels_per_line(cfg_mem_width),
+			// Colormap control
+			// {{{
+			.i_cmap_clk(i_clk),
+			.i_cmap_rd(i_wb_stb && !i_wb_we && i_wb_addr[9]),
+			.i_cmap_raddr(i_wb_addr[7:0]),
+			.o_cmap_rdata(cmap_rdata[23:0]),
+			.i_cmap_we(i_wb_stb && i_wb_we && i_wb_addr[9]),
+			.i_cmap_waddr(i_wb_addr[7:0]),
+			.i_cmap_wdata(i_wb_data[23:0]),
+			.i_cmap_wstrb(i_wb_sel[2:0])
+			// }}}
+			// }}}
+		);
 
-	// }}}
-	////////////////////////////////////////////////////////////////////////
-	//
-	// wbpix_: VidStream2Pix (for frame buffer input)
-	// {{{
+		// }}}
+		////////////////////////////////////////////////////////////////
+		//
+		// Transparency
+		// {{{
 
-	vidstream2pix #(
-		// {{{
-		.BUS_DATA_WIDTH(DW),
-		.HMODE_WIDTH(LGDIM),
-		.OPT_MSB_FIRST(1'b1),
-		.OPT_TUSER_IS_SOF(1'b0)
-		// }}}
-	) u_mem2pix (
-		// {{{
-		.i_clk(i_pixclk), .i_reset(pix_reset),
-		// Incoming video data, w/ bus-sized pixels
-		// {{{
-		.S_AXIS_TVALID(mem_valid),
-		.S_AXIS_TREADY(mem_ready),
-		.S_AXIS_TDATA(mem_data),
-		.S_AXIS_TLAST(mem_vlast),
-		.S_AXIS_TUSER(mem_hlast),
-		// }}}
-		// Outgoing video pixel data
-		// {{{
-		.M_AXIS_TVALID(wbpx_valid),
-		.M_AXIS_TREADY(wbpx_ready),
-		.M_AXIS_TDATA(wbpx_data),
-		.M_AXIS_TLAST(wbpx_vlast),
-		.M_AXIS_TUSER(wbpx_hlast),
-		// }}}
-		.i_mode(cfg_cmap_mode), .i_pixels_per_line(cfg_mem_width),
-		// Colormap control
-		// {{{
-		.i_cmap_clk(i_clk),
-		.i_cmap_rd(i_wb_stb && !i_wb_we && i_wb_addr[9]),
-		.i_cmap_raddr(i_wb_addr[7:0]),
-		.o_cmap_rdata(cmap_rdata[23:0]),
-		.i_cmap_we(i_wb_stb && i_wb_we && i_wb_addr[9]),
-		.i_cmap_waddr(i_wb_addr[7:0]),
-		.i_cmap_wdata(i_wb_data[23:0]),
-		.i_cmap_wstrb(i_wb_sel[2:0])
-		// }}}
-		// }}}
-	);
+		// If the color == TRANSPARENT, alpha should be set to all
+		// 1'b1s, cfg_alpha otherwise.
 
-	// }}}
-	////////////////////////////////////////////////////////////////////////
-	//
-	// Transparency
-	// {{{
-
-	// If the color == TRANSPARENT, alpha should be set to all 1'b1s,
-	// cfg_alpha otherwise.
-
-	skidbuffer #(
-		.OPT_LOWPOWER(1'b0), .OPT_OUTREG(1'b1),
-		.DW(28)
-	) alpha_skid (
-		.i_clk(i_pixclk), .i_reset(pix_reset),
-		.i_valid(wbpx_valid), .o_ready(wbpx_ready),
-			.i_data({ wbpx_vlast, wbpx_hlast,
-				(wbpx_data == TRANSPARENT)? 2'b11 : cfg_alpha,
-				wbpx_data }),
-		.o_valid(alph_valid), .i_ready(alph_ready),
+		skidbuffer #(
+			.OPT_LOWPOWER(1'b0), .OPT_OUTREG(1'b1),
+			.DW(28)
+		) alpha_skid (
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.i_valid(wbpx_valid), .o_ready(wbpx_ready),
+				.i_data({ wbpx_vlast, wbpx_hlast,
+					(wbpx_data == TRANSPARENT)? 2'b11
+							: cfg_alpha,
+					wbpx_data }),
+			.o_valid(alph_valid), .i_ready(alph_ready),
 			.o_data({ alph_vlast, alph_hlast, alph_pixel })
-	);
+		);
 
+		// }}}
+		////////////////////////////////////////////////////////////////
+		//
+		// out_*: Overlay WB Frame buffer onto the (empty or RX) stream
+		// {{{
+
+		axisvoverlay #(
+			// {{{
+			.LGFRAME(LGDIM), .ALPHA_BITS(2),
+			.OPT_TUSER_IS_SOF(1'b0),
+			.OPT_LINE_BREAK(1'b1)
+			// .TRANSPARENT(0) // Alpha == 0 is fully transparent
+			// }}}
+		) u_overlay (
+			// {{{
+			.ACLK(i_pixclk), .ARESETN(pix_reset_n),
+			.i_enable(cfg_ovly_enable),
+			.i_hpos(cfg_ovly_hpos), .i_vpos(cfg_ovly_vpos),
+			.o_err(ovly_err),
+			.S_PRI_TVALID(pipe_valid), .S_PRI_TREADY(pipe_ready),
+				.S_PRI_TDATA(pipe_data),
+				.S_PRI_TLAST(pipe_vlast),
+				.S_PRI_TUSER(pipe_hlast),
+			//
+			.S_OVW_TVALID(alph_valid), .S_OVW_TREADY(alph_ready),
+				.S_OVW_TDATA(alph_pixel),
+				.S_OVW_TLAST(alph_vlast),
+				.S_OVW_TUSER(alph_hlast),
+			//
+			.M_VID_TVALID(out_valid), .M_VID_TREADY(out_ready),
+			.M_VID_TDATA(out_data),
+				.M_VID_TLAST(out_vlast), .M_VID_TUSER(out_hlast)
+			// }}}
+		);
+
+		assign	alph_debug = { alph_vlast && alph_hlast,
+				(alph_hlast && alph_vlast),
+					alph_pixel[25:24],
+				alph_valid, alph_ready, alph_hlast, alph_vlast,
+				alph_pixel[23:0] };
+
+		assign	pip_debug = { pipe_vlast && pipe_hlast,
+				(pipe_hlast && pipe_vlast), 2'b0,
+				pipe_valid, pipe_ready, pipe_hlast, pipe_vlast,
+				pipe_data };
+		// }}}
+	end else begin : NO_FRAMEBUF
+		// {{{
+		assign	fb_cyc = 1'b0;
+		assign	fb_stb = 1'b0;
+		assign	fb_we  = 1'b1;
+		assign	fb_addr = 0;
+		assign	fb_data = 0;
+		assign	fb_sel  = 0;
+
+		assign	out_valid = pipe_valid;
+		assign	pipe_ready = out_ready;
+		assign	out_data   = pipe_data;
+		assign	out_hlast  = pipe_hlast;
+		assign	out_vlast  = pipe_vlast;
+		// }}}
+	end endgenerate
+	////////////////////////////////////////////////////////////////////////
+	//
+	// wbcapture: Video capture
+	// {{{
+
+	// Config:
+	//	cfg_capen
+	//	vm_height_sys
+	//	cfg_capwords
+	//	cfg_capbase
+	// Feedback
+	//	wbcap_err
+	//	wbcap_done
+
+	generate if (OPT_VIDCAPTURE)
+	begin : GEN_VIDCAPTURE
+		// Local declarations
+		// {{{
+		reg			pxcap_sync;
+		reg	[15:0]		frame_count;
+		reg			pxcap_valid, pxcap_hlast, pxcap_vlast;
+		reg	[24-1:0]	pxcap_data;
+		wire			pxcap_src, pxcap_en;
+		wire	[LGDIM-1:0]	pxcap_count;
+		wire	[1:0]		pxcap_mode;
+
+		wire			crop_valid, crop_vlast, crop_hlast,
+					crop_ready;
+		wire	[24-1:0]	crop_data;
+
+		wire			pxm_valid, pxm_vlast, pxm_hlast,
+					pxm_ready;
+		wire	[DW-1:0]	pxm_data;
+
+		wire			pxcrop_en;
+		wire	[LGDIM-1:0]	pxcrop_hpos, pxcrop_vpos,
+					pxcrop_width, pxcrop_height;
+
+		// Verilator lint_off UNUSED
+		wire		ign_pxcap_ready, ign_captfr_valid;
+		// Verilator lint_on  UNUSED
+		// }}}
+
+		tfrvalue #(
+			.W(4 + 5*LGDIM)
+		) u_config (
+			// {{{
+			.i_a_clk(i_clk), .i_a_reset_n(!pix_reset_sys),
+			.i_a_valid(1'b1), .o_a_ready(sys2px_ready),
+			.i_a_data({
+				cfg_crop_en,
+				cfg_crop_hpos, cfg_crop_vpos,
+				cfg_crop_width, cfg_crop_height,
+				//
+				cfg_capmode, cfg_capsrc, cfg_capen, cfg_capcount
+				}),
+			//
+			.i_b_clk(i_pixclk), .i_b_reset_n(pix_reset_n),
+			.o_b_valid(ign_captfr_valid), .i_b_ready(1'b1),
+				.o_b_data({
+					pxcrop_en,
+					pxcrop_hpos, pxcrop_vpos,
+					pxcrop_width, pxcrop_height,
+			//
+					pxcap_mode,
+					pxcap_src, pxcap_en, pxcap_count })
+			// }}}
+		);
+
+		// pxcap_sync
+		// {{{
+		always @(posedge i_pixclk)
+		if (pix_reset)
+			pxcap_sync <= 1'b1;
+		else if (pxcap_src == CAP_OUTPUT)
+		begin
+			if (out_valid && out_hlast && out_vlast)
+				pxcap_sync <= 1'b1;
+			else if (out_valid && !pxcap_en)
+				pxcap_sync <= 1'b0;
+		end else // if (pxcap_src == CAP_INPUT)
+		begin
+			if (pipe_valid && pipe_hlast && pipe_vlast)
+				pxcap_sync <= 1'b1;
+			else if (pipe_valid && !pxcap_en)
+				pxcap_sync <= 1'b0;
+		end
+		// }}}
+
+		// pxcap_valid
+		// {{{
+		always @(posedge i_pixclk)
+		if (pix_reset)
+			pxcap_valid <= 1'b0;
+		else if (!pxcap_en || !pxcap_sync
+					|| (frame_count >= pxcap_count))
+			pxcap_valid <= 1'b0;
+		else if (pxcap_src == CAP_OUTPUT)
+			pxcap_valid <= out_valid;
+		else // if (pxcap_src == CAP_INPUT)
+			pxcap_valid <= pipe_valid;
+		// }}}
+
+		// pxcap_* count
+		// {{{
+		always @(posedge i_pixclk)
+		if (pix_reset)
+			frame_count <= 0;
+		else if (!pxcap_en)
+			frame_count <= 0;
+		else if (pxcap_src == CAP_OUTPUT)
+		begin
+			if (frame_count < pxcap_count && out_valid && out_vlast && out_hlast)
+				frame_count <= frame_count + 1;
+		end else // if (pxcap_src == CAP_INPUT)
+		begin
+			if (frame_count < pxcap_count && pipe_valid && pipe_vlast && pipe_hlast)
+				frame_count <= frame_count + 1;
+		end
+		// }}}
+
+		// pxcap_* stream
+		// {{{
+		always @(posedge i_pixclk)
+		if (pxcap_src == CAP_OUTPUT)
+		begin
+			pxcap_data  <= out_data;
+			pxcap_hlast <= out_hlast;
+			pxcap_vlast <= out_vlast && (frame_count + 1 >= pxcap_count);
+		end else if (pxcap_src == CAP_INPUT)
+		begin
+			pxcap_data  <= pipe_data;
+			pxcap_hlast <= pipe_hlast;
+			pxcap_vlast <= pipe_vlast && (frame_count + 1 >= pxcap_count);
+		end
+		// }}}
+
+		vid_crop #(
+			.LGDIM(LGDIM), .PW(24)
+		) u_crop (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			//
+			.i_cfg_en(pxcrop_en),
+			.i_cfg_hpos(pxcrop_hpos),
+			.i_cfg_vpos(pxcrop_vpos),
+			.i_cfg_width(pxcrop_width),
+			.i_cfg_height(pxcrop_height),
+			//
+			.S_VALID(pxcap_valid),
+			.S_READY(ign_pxcap_ready),
+			.S_DATA(pxcap_data),
+			.S_HLAST(pxcap_hlast),
+			.S_VLAST(pxcap_vlast),
+			//
+			.M_VALID(crop_valid),
+			.M_READY(crop_ready),
+			.M_DATA(crop_data),
+			.M_HLAST(crop_hlast),
+			.M_VLAST(crop_vlast)
+			// }}}
+		);
+	
+		pix2stream #(
+			.BUS_DATA_WIDTH(DW)
+		) u_pix2memword (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.S_AXIS_TVALID(crop_valid),
+			.S_AXIS_TREADY(crop_ready),
+			.S_AXIS_TDATA(crop_data),
+			.S_AXIS_TLAST(crop_hlast),
+			.S_AXIS_TUSER(crop_vlast),
+			//
+			.M_AXIS_TVALID(pxm_valid),
+			.M_AXIS_TREADY(pxm_ready),
+			.M_AXIS_TDATA(pxm_data),
+			.M_AXIS_TLAST(pxm_hlast),
+			.M_AXIS_TUSER(pxm_vlast),
+			//
+			.i_mode(pxcap_mode)
+			// }}}
+		);
+	
+		vid_wbcamera #(
+			.DW(DW), .AW(AW), .PW(24), .LGFIFO(5),
+			.LGFRAME(LGDIM), .OPT_ASYNC_CLOCKS(1'b1),
+			.OPT_ONESHOT(1'b1)
+		) u_wbcapture (
+			// {{{
+			.i_clk(i_clk), .i_reset(i_reset),
+			.i_pixclk(i_pixclk),
+			// Configuration
+			.i_pix_en(pxcap_en), .i_wb_en(cfg_capen),
+			.o_done(wbcap_done), .o_err(wbcap_err),
+			.i_height(vm_height_sys),
+			.i_mem_words(cfg_capwords),
+			.i_baseaddr(cfg_capbase),
+			// Wishbone DMA interface
+			.o_wb_cyc(cap_cyc),     .o_wb_stb(cap_stb),
+			.o_wb_we(cap_we),       .o_wb_addr(cap_addr),
+			.o_wb_data(cap_data),   .o_wb_sel(cap_sel),
+			.i_wb_stall(cap_stall), .i_wb_ack(cap_ack),
+			.i_wb_data(cap_idata),  .i_wb_err(cap_err),
+			// Video input
+			.S_VID_VALID(pxm_valid),
+			.S_VID_READY(pxm_ready),
+			.S_VID_DATA( pxm_data),
+			.S_VID_HLAST(pxm_hlast),
+			.S_VID_VLAST(pxm_vlast)
+			// }}}
+		);
+
+	end else begin : NO_VIDCAPTURE
+		assign	cap_cyc = 1'b0;
+		assign	cap_stb = 1'b0;
+		assign	cap_we = 1'b0;
+		assign	cap_addr = {(AW){1'b0}};
+		assign	cap_data = {(DW){1'b0}};
+		assign	cap_sel  = {(DW/8){1'b0}};
+
+		assign	wbcap_err  = 1'b0;
+		assign	wbcap_done = 1'b0;
+
+		// Keep Verilator happy
+		// {{{
+		// Verilator lint_off UNUSED
+		// wire	unused_cap;
+		// assign	unused_cap = &{ 1'b0, cfg_capsrc, cfg_capen, wbcap_count };
+		// Verilator lint_on  UNUSED
+		// }}}
+	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// out_*: Overlay WB Frame buffer onto the (empty or RX) stream
+	// DMA Arbiter
 	// {{{
 
+	generate if (OPT_FRAMEBUF && OPT_VIDCAPTURE)
+	begin : GEN_ARBITER
+		wbmarbiter #(
+			.DW(DW), .AW(AW), .NIN(2), .LGFIFO(5)
+		) u_dma_arbiter (
+			.i_clk(i_clk), .i_reset(i_reset),
+			//
+			.s_cyc({   cap_cyc,   fb_cyc   }),
+			.s_stb({   cap_stb,   fb_stb   }),
+			.s_we({    cap_we,    fb_we    }),
+			.s_addr({  cap_addr,  fb_addr  }),
+			.s_data({  cap_data,  fb_data  }),
+			.s_sel({   cap_sel,   fb_sel   }),
+			.s_stall({ cap_stall, fb_stall }),
+			.s_ack({   cap_ack,   fb_ack   }),
+			.s_idata({ cap_idata, fb_idata }),
+			.s_err({   cap_err,   fb_err   }),
+			//
+			.m_cyc(   o_dma_cyc   ),
+			.m_stb(   o_dma_stb   ),
+			.m_we(    o_dma_we    ),
+			.m_addr(  o_dma_addr  ),
+			.m_data(  o_dma_data  ),
+			.m_sel(   o_dma_sel   ),
+			.m_stall( i_dma_stall ),
+			.m_ack(   i_dma_ack   ),
+			.m_idata( i_dma_data  ),
+			.m_err(   i_dma_err   )
+		);
 
-	axisvoverlay #(
+	end else if (OPT_FRAMEBUF)
+	begin : ALWAYS_FRAMEBUF
+		assign	o_dma_cyc  = fb_cyc;
+		assign	o_dma_stb  = fb_stb;
+		assign	o_dma_we   = fb_we;
+		assign	o_dma_addr = fb_addr;
+		assign	o_dma_data = fb_data;
+		assign	o_dma_sel  = fb_sel;
+
+		assign	fb_stall  = i_dma_stall;
+		assign	fb_ack    = i_dma_ack;
+		assign	fb_idata  = i_dma_data;
+		assign	fb_err    = i_dma_err;
+
+		assign	cap_stall = i_dma_stall;
+		assign	cap_ack   = i_dma_ack;
+		assign	cap_idata = i_dma_data;
+		assign	cap_err   = i_dma_err;
+
+		// Keep Verilator happy
 		// {{{
-		.LGFRAME(LGDIM), .ALPHA_BITS(2),
-		.OPT_TUSER_IS_SOF(1'b0),
-		.OPT_LINE_BREAK(1'b1)
-		// .TRANSPARENT(0)	// Alpha == 0 is fully transparent
+		// Verilator lint_off UNUSED
+		wire	unused_dma;
+		assign	unused_dma = &{ 1'b0, cap_cyc, cap_stb,cap_we, cap_addr,
+					cap_data, cap_sel, cap_stall, cap_ack,
+					cap_idata, cap_err };
+		// Verilator lint_on  UNUSED
 		// }}}
-	) u_overlay (
+	end else if (OPT_VIDCAPTURE)
+	begin : ALWAYS_CAPTURE
+		assign	o_dma_cyc  = cap_cyc;
+		assign	o_dma_stb  = cap_stb;
+		assign	o_dma_we   = cap_we;
+		assign	o_dma_addr = cap_addr;
+		assign	o_dma_data = cap_data;
+		assign	o_dma_sel  = cap_sel;
+
+		assign	fb_stall   = i_dma_stall;
+		assign	fb_ack     = i_dma_ack;
+		assign	fb_idata   = i_dma_data;
+		assign	fb_err     = i_dma_err;
+
+		assign	cap_stall  = i_dma_stall;
+		assign	cap_ack    = i_dma_ack;
+		assign	cap_idata  = i_dma_data;
+		assign	cap_err    = i_dma_err;
+
+
+		// Keep Verilator happy
 		// {{{
-		.ACLK(i_pixclk), .ARESETN(pix_reset_n),
-		.i_enable(cfg_ovly_enable),
-		.i_hpos(cfg_ovly_hpos), .i_vpos(cfg_ovly_vpos),
-		.o_err(ovly_err),
-		.S_PRI_TVALID(pipe_valid), .S_PRI_TREADY(pipe_ready),
-			.S_PRI_TDATA(pipe_data),
-			.S_PRI_TLAST(pipe_vlast), .S_PRI_TUSER(pipe_hlast),
-		//
-		.S_OVW_TVALID(alph_valid), .S_OVW_TREADY(alph_ready),
-			.S_OVW_TDATA(alph_pixel),
-			.S_OVW_TLAST(alph_vlast), .S_OVW_TUSER(alph_hlast),
-		//
-		.M_VID_TVALID(out_valid), .M_VID_TREADY(out_ready),
-		.M_VID_TDATA(out_data),
-			.M_VID_TLAST(out_vlast), .M_VID_TUSER(out_hlast)
+		// Verilator lint_off UNUSED
+		wire	unused_dma;
+		assign	unused_dma = &{ 1'b0, fb_cyc, fb_stb, fb_we, fb_addr,
+					fb_data, fb_sel, fb_stall, fb_ack,
+					fb_idata, fb_err };
+		// Verilator lint_on  UNUSED
 		// }}}
-	);
+	end else begin : NO_DMA
+		assign	o_dma_cyc  = 1'b0;
+		assign	o_dma_stb  = 1'b0;
+		assign	o_dma_we   = 1'b0;
+		assign	o_dma_addr = {(AW){1'b0}};
+		assign	o_dma_data = {(DW){1'b0}};
+		assign	o_dma_sel  = {(DW/8){1'b0}};
 
-	assign	alph_debug = { alph_vlast && alph_hlast, (alph_hlast && alph_vlast),
-				alph_pixel[25:24],
-			alph_valid, alph_ready, alph_hlast, alph_vlast,
-			alph_pixel[23:0] };
-
-	assign	pip_debug = { pipe_vlast && pipe_hlast, (pipe_hlast && pipe_vlast), 2'b0,
-			pipe_valid, pipe_ready, pipe_hlast, pipe_vlast,
-			pipe_data };
+		// Keep Verilator happy
+		// {{{
+		// Verilator lint_off UNUSED
+		wire	unused_dma;
+		assign	unused_dma = &{ 1'b0, i_dma_stall, i_dma_ack,
+					i_dma_data, i_dma_err };
+		// Verilator lint_on  UNUSED
+		// }}}
+	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
