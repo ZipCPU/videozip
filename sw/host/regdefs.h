@@ -48,11 +48,11 @@
 // @REGDEFS.H.INCLUDE for masters
 // @REGDEFS.H.INCLUDE for peripherals
 #ifndef	FPGAPORT
-#define	FPGAPORT	8543
-#define	UARTDBGPORT	8543
-#define	UARTPORT	8544
-#define	UDP_DBGPORT	8545
-#define	UDP_DATAPORT	8546
+#define	FPGAPORT	6782
+#define	UARTDBGPORT	6782
+#define	UARTPORT	6783
+#define	UDP_DBGPORT	6784
+#define	UDP_DATAPORT	6785
 #endif
 // And finally any master REGDEFS.H.INCLUDE tags
 // End of definitions from REGDEFS.H.INCLUDE

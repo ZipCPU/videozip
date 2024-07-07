@@ -138,7 +138,7 @@ public:
 		// From net
 		// Network init
 		// {{{
-		m_net = new NETSIM(); // DBGPORT: 8545, DATAPORT: 8546;
+		m_net = new NETSIM(); // DBGPORT: 6784, DATAPORT: 6785;
 		m_net->external_mac[0] = 0xde;
 		m_net->external_mac[1] = 0xad;
 		m_net->external_mac[2] = 0xbe;
@@ -171,7 +171,9 @@ public:
 #endif // FLASH_ACCESS
 		// From hdmi
 #ifdef	VIDPIPE_ACCESS
-		m_hdmitx = new HDMIWIN(800, 600);
+		m_hdmitx = NULL;
+		if (gbl_use_gui)
+			m_hdmitx = new HDMIWIN(800, 600);
 #endif	// VIDPIPE_ACCESS
 		// From zip
 		m_cpu_bombed = 0;
@@ -357,7 +359,9 @@ public:
 		// SIM.TICK from hdmi
 #ifdef	VIDPIPE_ACCESS
 		// Simulate an external HDMI monitor
-		(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn, m_core->o_hdmi_red);
+		if (gbl_use_gui)
+			(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn,
+					m_core->o_hdmi_red);
 #endif	// VIDPIPE_ACCESS
 	}
 

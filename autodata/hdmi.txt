@@ -293,7 +293,9 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 #endif	// @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
-		m_hdmitx = new HDMIWIN(800, 600);
+		m_hdmitx = NULL;
+		if (gbl_use_gui)
+			m_hdmitx = new HDMIWIN(800, 600);
 #endif	// @$(ACCESS)
 @SIM.METHODS=
 	void	connect_idler(void) {
@@ -309,5 +311,7 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 @SIM.TICK=
 #ifdef	@$(ACCESS)
 		// Simulate an external HDMI monitor
-		(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn, m_core->o_hdmi_red);
+		if (gbl_use_gui)
+			(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn,
+					m_core->o_hdmi_red);
 #endif	// @$(ACCESS)

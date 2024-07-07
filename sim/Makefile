@@ -75,7 +75,7 @@ SOURCES := $(SIMSOURCES) main_tb.cpp automaster_tb.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \
 	port.h testb.h
 #
-PROGRAMS := main_tb
+PROGRAMS := main_tb sdcard.img
 # Now the return to the "all" target, and fill in some details
 all:	$(PROGRAMS)
 

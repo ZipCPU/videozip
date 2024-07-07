@@ -13,7 +13,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -37,8 +37,8 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include "zipcpu.h"
+// }}}
 
 // Implement a save_context function.  This really boils into a long series of
 // instructions within the compiler.  For this reason, it makes more sense

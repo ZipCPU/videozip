@@ -64,6 +64,7 @@
 `define	I2CDMA_ACCESS
 `define	SYSCLK
 `define	PWRCOUNT_ACCESS
+`define	RTCCOUNT_ACCESS
 `define	ARBITRARY_CLOCK_GENERATOR_ACCESS
 `define	SPIO_ACCESS
 `define	CFG_ACCESS
@@ -235,7 +236,7 @@ module	main(i_clk, i_reset,
 	// Verilator lint_off UNUSED
 	localparam	ICAPE_LGDIV=3;
 	// Verilator lint_on  UNUSED
-	parameter	[15:0]	UDP_DBGPORT  = 8545;
+	parameter	[15:0]	UDP_DBGPORT  = 6784;
 
 	localparam	[47:0]	DEF_HWMAC  = 48'h82_33_48_02_e1_c8;
 	localparam	[31:0]	DEF_IPADDR = { 8'd192, 8'd168, 8'd15, 8'd29 };
@@ -2012,6 +2013,8 @@ module	main(i_clk, i_reset,
 	// }}}
 `endif	// PWRCOUNT_ACCESS
 
+`ifdef	RTCCOUNT_ACCESS
+	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
 	// RTC Counter
@@ -2028,6 +2031,12 @@ module	main(i_clk, i_reset,
 		r_rtccount_data <= r_rtccount_data + 43;
 	assign	wb32_rtccount_idata = r_rtccount_data;
 	// }}}
+	// }}}
+`else	// RTCCOUNT_ACCESS
+	// {{{
+	// }}}
+`endif	// RTCCOUNT_ACCESS
+
 	always @(posedge i_clk)
 	if (wbwide_zip_err)
 	begin

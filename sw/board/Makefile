@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest i2cdbg memtest hdmistart hdmistest simple_ping helloworld contest
+PROGRAMS := cputest memtest simple_ping helloworld contest # hdmistart hdmistest
 all:	$(PROGRAMS)
 #
 #
@@ -51,18 +51,18 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c memtest.c i2cdbg.c hdmistart.c hdmistest.c txfns.c helloworld.c readhist.c readframe.c simple_ping.c arp.c zipcpu.c ipcksum.c
+SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c # hdmistart.c hdmistest.c readhist.c readframe.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 INCS    := -I../zlib -I../../rtl -I.
-# LDSCRIPT:= -Tboard.ld
-LDSCRIPT:= -T bkram.ld
+LDSCRIPT:= -Tboard.ld
+LBKRAM	:= -T bkram.ld -L../zlib
 ZIPLIB	:= libvidzip.a
 INSTALLD:=/home/dan/work/rnd/zipcpu/sw/install
 NLIBD	:=$(INSTALLD)/cross-tools/zip/lib
 LIB	:= $(NLIBD)/libg.a $(NLIBD)/libc.a
 ZLIBD	:=../zlib
-LFLAGS  := $(LDSCRIPT) $(LIB) $(ZLIBD)/$(ZIPLIB)
-# LIBS    := -lc -lvidzip
+LFLAGS  := $(LDSCRIPT) -L../zlib -L../fatfs $(ZLIBD)/$(ZIPLIB)
+LIBS    := -lc -lvidzip -lgcc
 CFLAGS  := -O3 $(INCS)
 #
 # For source analysis, the following macros are defined:
@@ -89,58 +89,45 @@ $(OBJDIR)/%.txt: $(OBJDIR)/%.o
 # linker script to build something that doesn't go into flash but directly into
 # RAM instead.
 #
-$(OBJDIR)/cputest.o: cputest.c
+$(OBJDIR)/cputest.o: cputest.c board.h
+	$(mk-objdir)
 	$(CC) $(CFLAGS) -c -Wa,-nocis -fno-builtin $< -o $@
-$(OBJDIR)/memtest.o: memtest.c
-	$(CC) $(CFLAGS) -c -fno-inline -fno-builtin $< -o $@
-$(OBJDIR)/cputestcis.o: cputest.c
+$(OBJDIR)/cputestcis.o: cputest.c board.h
+	$(mk-objdir)
 	$(CC) $(CFLAGS) -c -Wa,-cis -fno-builtin $< -o $@
 $(OBJDIR)/cputest.s: cputest.c
+	$(mk-objdir)
 	$(CC) $(CFLAGS) -S -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputest.o bkram.ld
-	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputest.map $(OBJDIR)/cputest.o -o $@
-cputestcis: $(OBJDIR)/cputestcis.o bkram.ld
-	$(CC) $(CFLAGS) -T bkram.ld -fno-builtin -Wl,-Map=$(OBJDIR)/cputestcis.map $(OBJDIR)/cputestcis.o -o $@
+cputest: $(OBJDIR)/cputestcis.o board.ld
+	# $(CC) $(CFLAGS) $(LFLAGS) $< $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LBKRAM) $< $(LIBS) -o $@
+## }}}
 
 CONTESTSRC := contest.c txfns.c
 CONTESTOBJ := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(CONTESTSRC))) # $(DIVOBJ)
+$(OBJDIR)/%.o: %.c
+	$(mk-objdir)
+	$(CC) $(CFLAGS) -I../host -c $< -o $@
 contest: $(CONTESTOBJ) bkram.ld
-	$(CC) -T bkram.ld $(CFLAGS) $(CONTESTOBJ) -o $@
+	$(CC) $(LBKRAM) $(CFLAGS) $(CONTESTOBJ) $(LIBS) -o $@
 
-memtest: $(OBJDIR)/memtest.o bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o -o $@
-
-I2CDBGOBJS := $(addprefix $(OBJDIR)/,i2cdbg.o txfns.o)
-$(OBJDIR)/i2cdbg.o: i2cdbg.c
-	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-i2cdbg: $(I2CDBGOBJS) bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/i2cdbg.map $(I2CDBGOBJS) -o $@
-	echo $(I2CDBGOBJS)
+memtest: $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o bkram.ld
+	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o $(LIBS) -o $@
 
 HDMISTARTOBJS:= $(addprefix $(OBJDIR)/,hdmistart.o txfns.o)
 $(OBJDIR)/hdmistart.o: hdmistart.c
+	$(mk-objdir)
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
 hdmistart: $(HDMISTARTOBJS) bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
+	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
 
 HDMISTESTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
 $(OBJDIR)/hdmistest.o: hdmistest.c
+	$(mk-objdir)
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
 hdmistest: $(HDMISTESTOBJS) bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
-
-READHISTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
-$(OBJDIR)/readhist.o: readhist.c
-	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-readhist: $(READHISTOBJS) bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/readhist.map $(READHISTOBJS) -o $@
-
-READFRAMEOBJS:= $(addprefix $(OBJDIR)/,readframe.o txfns.o)
-$(OBJDIR)/readframe.o: readframe.c
-	$(CC) -c $(CFLAGS) -Wa,-cis -fno-builtin $< -o $@
-readframe: $(READFRAMEOBJS) bkram.ld
-	$(CC) $(CFLAGS) -Tbkram.ld -Wl,-Map=$(OBJDIR)/readframe.map $(READFRAMEOBJS) -o $@
+	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
 
 helloworld: $(OBJDIR)/helloworld.o
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@

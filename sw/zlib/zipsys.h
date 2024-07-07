@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	ZIPSYS_H
 #define	ZIPSYS_H
 
@@ -44,21 +44,33 @@ typedef	struct	{
 } ZIPTASKCTRS;
 
 typedef	struct	{
-	int	d_ctrl, d_len;
-	int	*d_rd, *d_wr;
+	unsigned	d_ctrl;
+	char		*d_rd, *d_wr;
+	unsigned	d_len;
 } ZIPDMA;
 
-#define	DMA_TRIGGER	0x00008000
-#define	DMACABORT	0xffed0000
-#define	DMACLEAR	0xafed0000
-#define	DMACCOPY	0x0fed0000
+#define	DMA_TRIGGER	0x20000000
+#define	DMACABORT	0x41425254
+#define	DMACLEAR	0x40000000
 #define	DMACERR		0x40000000
-#define	DMA_CONSTSRC	0x20000000
-#define	DMA_CONSTDST	0x10000000
-#define	DMAONEATATIME	0x0fed0001
+#define	DMAREQUEST	0x40000000
+//
+#define	DMA_CONSTSRC	0x00040000
+#define	DMA_SRCBYTE	0x00030000
+#define	DMA_SRCSHORT	0x00020000
+#define	DMA_SRCWORD	0x00010000
+#define	DMA_SRCWIDE	0x00000000
+//
+#define	DMA_CONSTDST	0x00400000
+#define	DMA_DSTBYTE	0x00300000
+#define	DMA_DSTSHORT	0x00200000
+#define	DMA_DSTWORD	0x00100000
+#define	DMA_DSTWIDE	0x00000000
+#define	DMACCOPY	(DMAREQUEST|DMACLEAR|DMA_SRCWIDE|DMA_DSTWIDE)
+#define	DMAONEATATIME	(DMAREQUEST|DMACLEAR|DMA_SRCBYTE|DMA_DSTBYTE|1)
 #define	DMA_BUSY	0x80000000
 #define	DMA_ERR		0x40000000
-#define	DMA_ONINT(INT)	(DMA_TRIGGER|(((INT)&15)<<10))
+#define	DMA_ONINT(INT)	(DMA_TRIGGER|(((INT)&31)<<24))
 #define	DMA_ONJIFFIES	DMA_ONINT(1)
 #define	DMA_ONTMC	DMA_ONINT(2)
 #define	DMA_ONTMB	DMA_ONINT(3)
@@ -69,16 +81,8 @@ typedef	struct	{
 typedef	struct	{
 	int	z_pic, z_wdt, z_wbus, z_apic, z_tma, z_tmb, z_tmc,
 		z_jiffies;
-#ifdef	_HAVE_ZIPSYS_PERFORMANCE_COUNTERS
 	ZIPTASKCTRS	z_m, z_u;
-#else
-	unsigned	z_nocounters[8];
-#endif
-#ifdef	_HAVE_ZIPSYS_DMA
 	ZIPDMA		z_dma;
-#else
-	unsigned	z_nodma[4];
-#endif
 } ZIPSYS;
 
 #define	ZIPSYS_ADDR	0xff000000

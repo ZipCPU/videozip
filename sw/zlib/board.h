@@ -46,8 +46,8 @@
 #include <design.h>
 
 #ifndef	UDP_DBGPORT
-#define	UDP_DBGPORT	8545
-#define	UDP_DATAPORT	8546
+#define	UDP_DBGPORT	6784
+#define	UDP_DATAPORT	6785
 #endif
 
 
@@ -358,6 +358,10 @@ static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)0x08000800);
 #ifdef	PWRCOUNT_ACCESS
 static volatile unsigned *const _pwrcount = ((unsigned *)0x0800185c);
 #endif	// PWRCOUNT_ACCESS
+#ifdef	RTCCOUNT_ACCESS
+#define	_BOARD_HAS_RTCCOUNT
+static volatile unsigned *const _rtccount = ((unsigned *)0x08001860);
+#endif	// RTCCOUNT_ACCESS
 #define	_BOARD_HAS_BUSERR
 static volatile unsigned *const _buserr = ((unsigned *)0x08001844);
 #ifdef	SPIO_ACCESS
@@ -370,7 +374,7 @@ static volatile unsigned *const _icape = ((unsigned *)0x08001000);
 #endif	// CFG_ACCESS
 #ifdef	MEGANET_ACCESS
 #define	_BOARD_HAS_MEGANET
-static volatile ENETSTREAM *const io_net = ((ENETSTREAM *)0x08001400);
+static volatile ENETSTREAM *const _net = ((ENETSTREAM *)0x08001400);
 #endif	// MEGANET_ACCESS
 #define	_BOARD_HAS_BLDTIME
 static volatile unsigned *const _buildtime = ((unsigned *)0x08001840);

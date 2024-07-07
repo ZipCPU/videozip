@@ -13,7 +13,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -37,14 +37,17 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdint.h>
 
 
-
+// Bit reversal
+// {{{
 #ifdef	__ZIPCPU__
 #include "zipcpu.h"
 #else
+// This is a compatibility function, in case we are ever running ZipCPU
+// programs on a non-ZipCPU platform
 uint32_t zip_bitrev(const uint32_t a) {
 	uint32_t	r, b = a;
 	r = 0;
@@ -54,7 +57,10 @@ uint32_t zip_bitrev(const uint32_t a) {
 	} return r;
 }
 #endif
+// }}}
 
+// cltz: Count leading zeros
+// {{{
 extern	int	cltz(unsigned long);
 
 #ifdef	__ZIPCPU__
@@ -120,7 +126,10 @@ cltz(unsigned long v) {
 	return cnt;
 }
 #endif
+// }}}
 
+// __udivdi3
+// {{{
 unsigned long
 __udivdi3(unsigned long a, unsigned long b) {
 	unsigned long	r;
@@ -168,8 +177,10 @@ __udivdi3(unsigned long a, unsigned long b) {
 		} return r;
 	}
 }
+// }}}
 
-//
+// __divdi3
+// {{{
 // A possible assembly version of __divdi3
 //
 //	SUB	8,SP
@@ -225,3 +236,4 @@ long __divdi3(long a, long b) {
 		r = -r;
 	return r;
 }
+// }}}

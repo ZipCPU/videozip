@@ -37,6 +37,8 @@
 ##
 ## }}}
 @PREFIX=rtccount
+@DEVID=RTCCOUNT
+@ACCESS=@$(DEVID)_ACCESS
 @NADDR=1
 @CLOCK.NAME=clk
 @SLAVE.TYPE=SINGLE
@@ -63,3 +65,7 @@
 	// }}}
 @REGS.N=1
 @REGS.0= 0 R_RTCCOUNT RTCCOUNT
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=unsigned
+@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
+@BDEF.OSVAL= static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((unsigned *)@$[0x%08x](REGBASE));

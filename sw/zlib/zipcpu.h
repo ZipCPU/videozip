@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	ZIPCPU_H
 #define	ZIPCPU_H
 
@@ -57,21 +57,24 @@
 #define	CC_FAULT	(CC_ILL|CC_BUSERR|CC_DIVERR|CC_FPUERR)
 #define	CC_EXCEPTION	(CC_BREAK|CC_FAULT|CC_MMUERR)
 
-#define	CLEAR_CACHE	asm("OR 16384,CC")
+#define	CLEAR_ICACHE	asm("OR 16384,CC")
+#define	CLEAR_DCACHE	asm("OR 32768,CC")
+#define	CLEAR_CACHE	asm("OR 49152,CC")
 
 // extern void	zip_break(void);
 #define	zip_break()		asm("BREAK\n")
 // #define	BREAK(ID)	asm("BREAK " ##ID "\n")
-#define	GETUREG(A,ID)	asm("MOV " ID ",%0" : "=r"(A))
+#define	GETUREG(A,ID)	asm volatile ("MOV " ID ",%0" : "=r"(A))
 #define	SETUREG(A,ID)	asm("MOV %0," ID : : "r"(A))
 #define	NSTR(A)		asm("NSTR \"" A "\\n\"")
 #define	NVAL(V)		do { unsigned tmp = (unsigned)(V); asm volatile("NDUMP %0":"=r"(tmp):"0"(tmp)); } while(0)
+#define	NEXIT(V)	do { unsigned tmp = (unsigned)(V); asm volatile("NEXIT %0":"=r"(tmp)); } while(0)
 extern void	zip_rtu(void);
 extern void	zip_halt(void);
 extern void	zip_idle(void);
 extern void	zip_syscall(void);
-extern void	zip_restore_context(int *);
-extern void	zip_save_context(int *);
+extern void	zip_restore_context(void *);
+extern void	zip_save_context(void *);
 extern int	zip_bitrev(int v);
 extern unsigned	zip_cc(void);
 extern unsigned	zip_ucc(void);

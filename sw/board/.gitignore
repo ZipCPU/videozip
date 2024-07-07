@@ -1,10 +1,7 @@
+contest
 cputest
 hdmistart
 helloworld
-i2cdbg
-readframe
-readhist
-framedata.32t
 hdmistest
 memtest
 simple_ping

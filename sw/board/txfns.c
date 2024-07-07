@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -38,7 +38,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdint.h>
 #include "board.h"
 #include "txfns.h"
@@ -55,7 +55,8 @@ void	txstr(const char *str);
  * to send the next character.
  *
  */
-#define	UARTTX_READY	(_uart->u_fifo & 0x010000)
+// #define	UARTTX_READY	(_uart->u_fifo & 0x010000)
+#define	UARTTX_READY	((_uart->u_tx & 0x0100) == 0)
 void	txchr(char val) {
 	unsigned v = (unsigned char)val;
 	static	int last_was_cr = 0;

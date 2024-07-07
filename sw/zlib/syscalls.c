@@ -6,12 +6,11 @@
 //
 // Purpose:	
 //
-//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <sys/errno.h>
 #include <stdint.h>
 #include <sys/unistd.h>
@@ -48,42 +47,88 @@
 #include "bootloader.h"
 #include "zipcpu.h"
 
-#ifdef	_BOARD_HAS_BUSCONSOLE
-#define	_ZIP_HAS_WBUART
-#define	_ZIP_HAS_UARTTX
-#define	_ZIP_HAS_UARTRX
 #define	UARTRX	_uart->u_rx
 #define	UARTTX	_uart->u_tx
-#endif
 
-void
-_outbyte(char v) {
-#ifdef	_ZIP_HAS_WBUART
+// #define	TXBUSY	((_uart->u_fifo & 0x010000)==0)
+#define	TXBUSY	((UARTTX & 0x0100)!=0)
+// #define	TXBUSY	0
+
+void _outbyte(char v) {
+	// {{{
 	if (v == '\n') {
 		// Depend upon the WBUART, not the PIC
-		while((_uart->u_fifo & 0x010000)==0)
+		while(TXBUSY)
 			;
 		UARTTX = (unsigned)'\r';
 	}
 
 	// Depend upon the WBUART, not the PIC
-	while((_uart->u_fifo & 0x010000)==0)
+	while(TXBUSY)
 		;
 	uint8_t c = v;
 	UARTTX = (unsigned)c;
+}
+// }}}
+
+void
+_outbytes(int nbytes, const char *buf) {
+#ifdef	FIFO_ENABLED
+	// {{{
+	const	uint8_t	*ptr = buf;
+	int	fifosz;
+
+	// Get the size of the FIFO
+	fifosz = _uart->u_fifo >> 28;
+	fifosz = 1<<fifosz;
+
+	for(int i=0; i<nbytes;) {
+		int	available, ufifo;
+		unsigned v;
+
+		// Check how many positions of the FIFO are available
+		while(((ufifo = _uart->u_fifo) & 0x010000)==0)
+			;
+		available = ufifo >> 18;
+		available &= (fifosz-1);
+
+		// Don't check availability again: for each available
+		// position, simply output the desired character while
+		// doing LF -> CR/LF translation
+		for(int k=0; (k<available) && (i < nbytes); k++, i++) {
+			v = *ptr++;
+
+			if (v == '\n') {
+				if (available >= 2) {
+					UARTTX = '\r';
+					UARTTX = '\n';
+				} else {
+					// Special case: What if there's not
+					// enough room in the FIFO for both
+					// carriage return *and* line feed?
+					UARTTX = '\r';
+
+					// In that case we need to poll until
+					// we have room for both.
+					while((_uart->u_fifo & 0x010000)==0)
+						;
+					UARTTX = '\n';
+				}
+			} else
+				UARTTX = v;
+		}
+	}
+	// }}}
 #else
-#ifdef	_ZIP_HAS_UARTTX
-	// Depend upon the WBUART, not the PIC
-	while(UARTTX & 0x100)
-		;
-	uint8_t c = v;
-	UARTTX = (unsigned)c;
-#endif
+	const	uint8_t	*ptr = buf;
+
+	for(int i=0; i<nbytes; i++)
+		_outbyte(*ptr++);
 #endif
 }
 
-int
-_inbyte(void) {
+int _inbyte(void) {
+	// {{{
 #ifdef	UARTRX
 	const	int	echo = 1, cr_into_nl = 1;
 	static	int	last_was_cr = 0;
@@ -116,13 +161,15 @@ _inbyte(void) {
 	return -1;
 #endif
 }
+// }}}
 
-int
-_close_r(struct _reent *reent, int file) {
+int _close_r(struct _reent *reent, int file) {
+	// {{{
 	reent->_errno = EBADF;
 
 	return -1;	/* Always fails */
 }
+// }}}
 
 char	*__env[1] = { 0 };
 char	**environ = __env;
@@ -130,20 +177,21 @@ char	**environ = __env;
 int
 _execve_r(struct _reent *reent, const char *name, char * const *argv, char * const *env)
 {
+	// {{{
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_fork_r(struct _reent *reent)
-{
+int _fork_r(struct _reent *reent) {
+	// {{{
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_fstat_r(struct _reent *reent, int file, struct stat *st)
-{
+int _fstat_r(struct _reent *reent, int file, struct stat *st) {
+	// {{{
 	if ((STDOUT_FILENO == file)||(STDERR_FILENO == file)
 		||(STDIN_FILENO == file)) {
 		st->st_mode = S_IFCHR;
@@ -157,12 +205,13 @@ _fstat_r(struct _reent *reent, int file, struct stat *st)
 		return -1;
 	}
 }
+// }}}
 
-int
-_getpid_r(struct _reent *reent)
-{
+int _getpid_r(struct _reent *reent) {
+	// {{{
 	return 1;
 }
+// }}}
 
 int
 _gettimeofday_r(struct _reent *reent, struct timeval *ptimeval, void *ptimezone)
@@ -236,34 +285,34 @@ _gettimeofday_r(struct _reent *reent, struct timeval *ptimeval, void *ptimezone)
 	return -1;
 #endif
 }
+// }}}
 
-int
-_isatty_r(struct _reent *reent, int file)
-{
+int _isatty_r(struct _reent *reent, int file) {
+	// {{{
 	if ((STDIN_FILENO == file)
 			||(STDOUT_FILENO == file)
 			||(STDERR_FILENO==file))
 		return 1;
 	return 0;
 }
+// }}}
 
-int
-_kill_r(struct _reent *reent, int pid, int sig)
-{
+int _kill_r(struct _reent *reent, int pid, int sig) {
+	// {{{
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_link_r(struct _reent *reent, const char *existing, const char *new)
-{
+int _link_r(struct _reent *reent, const char *existing, const char *new) {
+	// {{{
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-_off_t
-_lseek_r(struct _reent *reent, int file, _off_t ptr, int dir)
-{
+_off_t _lseek_r(struct _reent *reent, int file, _off_t ptr, int dir) {
+	// {{{
 #ifdef	_ZIP_HAS_SDCARD_NOTYET
 	if (SDCARD_FILENO == file) {
 		switch(dir) {
@@ -278,10 +327,10 @@ _lseek_r(struct _reent *reent, int file, _off_t ptr, int dir)
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_open_r(struct _reent *reent, const char *file, int flags, int mode)
-{
+int _open_r(struct _reent *reent, const char *file, int flags, int mode) {
+	// {{{
 #ifdef	_ZIP_HAS_SDCARD_NOTYET
 	if (strcmp(file, "/dev/sdcard")==0) {
 		return SDCARD_FILENO;
@@ -293,10 +342,10 @@ _open_r(struct _reent *reent, const char *file, int flags, int mode)
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_read_r(struct _reent *reent, int file, void *ptr, size_t len)
-{
+int _read_r(struct _reent *reent, int file, void *ptr, size_t len) {
+	// {{{
 #ifdef	UARTRX
 	if (STDIN_FILENO == file)
 	{
@@ -326,39 +375,47 @@ _read_r(struct _reent *reent, int file, void *ptr, size_t len)
 	errno = ENOSYS;
 	return -1;
 }
+// }}}
 
 int
-_readlink_r(struct _reent *reent, const char *path, char *buf, size_t bufsize)
-{
+_readlink_r(struct _reent *reent, const char *path, char *buf, size_t bufsize) {
+	// {{{
 	reent->_errno = ENOSYS;
 	return -1;
 }
+// }}}
 
-int
-_stat_r(struct _reent *reent, const char *path, struct stat *buf) {
+int _stat_r(struct _reent *reent, const char *path, struct stat *buf) {
+	// {{{
 	reent->_errno = EIO;
 	return -1;
 }
+// }}}
 
 int
-_unlink_r(struct _reent *reent, const char *path)
-{
+_unlink_r(struct _reent *reent, const char *path) {
+// {{{
 	reent->_errno = EIO;
 	return -1;
 }
+// }}}
 
-int
-_times(struct tms *buf) {
+int _times(struct tms *buf) {
+	// {{{
 	errno = EACCES;
 	return -1;
 }
+// }}}
 
-int
-_write_r(struct _reent * reent, int fd, const void *buf, size_t nbytes) {
+int _write_r(struct _reent * reent, int fd, const void *buf, size_t nbytes) {
+	// {{{
 	if ((STDOUT_FILENO == fd)||(STDERR_FILENO == fd)) {
+		/*
 		const	char *cbuf = buf;
 		for(int i=0; i<nbytes; i++)
 			_outbyte(cbuf[i]);
+		*/
+		_outbytes(nbytes, buf);
 		return nbytes;
 	}
 #ifdef	_ZIP_HAS_SDCARD_NOTYET
@@ -370,28 +427,31 @@ _write_r(struct _reent * reent, int fd, const void *buf, size_t nbytes) {
 	reent->_errno = EBADF;
 	return -1;
 }
+// }}}
 
-int
-_wait(int *status) {
+int _wait(int *status) {
+	// {{{
 	errno = ECHILD;
 	return -1;
 }
+// }}}
 
 int	*heap = _top_of_heap;
 
-void *
-_sbrk_r(struct _reent *reent, int sz) {
+void * _sbrk_r(struct _reent *reent, int sz) {
+	// {{{
 	int	*prev = heap;
 
 	heap += sz;
 	return	prev;
 }
+// }}}
 
 __attribute__((__noreturn__))
 void	_exit(int rcode) {
 	extern void	_hw_shutdown(int rcode) _ATTRIBUTE((__noreturn__));
+	// {{{
 
-#ifdef	_BOARD_HAS_BUSCONSOLE
 	// Problem: Once u_tx & 0x100 goes low, there may still be a character
 	// or two in the bus console's pipeline.  These may prevent a newline
 	// from completing before we issue the exit command.
@@ -402,23 +462,9 @@ void	_exit(int rcode) {
 	// received
 	_outbyte(' ');
 	_outbyte(' ');
-#endif
 
 	// Wait for any serial ports to flush their buffers
-#if	defined(_BOARD_HAS_WBUART)
-	while(_uart->u_tx & 0x0100)
+	while(TXBUSY)
 		;
-#elif	defined(_BOARD_HAS_BUSCONSOLE)
-	while(_uart->u_tx & 0x0100)
-		;
-#elif	defined(_ZIP_HAS_UARTTX)
-	// Depend upon the WBUART, not the PIC
-	while(UARTTX & 0x100)
-		;
-	uint8_t c = v;
-	UARTTX = (unsigned)c;
-#else
-// #error	"No console"
-#endif
 	_hw_shutdown(rcode);
 }

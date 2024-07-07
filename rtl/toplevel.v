@@ -107,7 +107,7 @@ i_sdcard_cd_n,
 	// Verilator lint_off UNUSED
 	localparam	ICAPE_LGDIV=3;
 	// Verilator lint_on  UNUSED
-	parameter	[15:0]	UDP_DBGPORT  = 8545;
+	parameter	[15:0]	UDP_DBGPORT  = 6784;
 
 	localparam	[47:0]	DEF_HWMAC  = 48'h82_33_48_02_e1_c8;
 	localparam	[31:0]	DEF_IPADDR = { 8'd192, 8'd168, 8'd15, 8'd29 };

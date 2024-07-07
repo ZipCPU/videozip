@@ -56,6 +56,8 @@
 #include "port.h"
 // }}}
 
+bool	gbl_use_gui = false, gbl_force_trace = false;
+
 #include "main_tb.cpp"
 
 void	usage(void) {
@@ -101,8 +103,6 @@ void	cpu_sim_write(MAINTB *tb, unsigned addr, unsigned data) {
 	tb->m_core->cpu_sim_cyc   = 0;
 }
 // }}}
-
-bool	gbl_use_gui = false, gbl_force_trace = false;
 
 int	main(int argc, char **argv) {
 	// Variable declaration and initialization
