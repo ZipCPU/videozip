@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,13 +43,14 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
-#include "ttybus.h"
 #include "regdefs.h"
+#include "port.h"
+#include "exbus.h"
 #include "design.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
 void	usage(void) {
 	printf("USAGE: readmdio\n");
@@ -68,8 +68,11 @@ int main(int argc, char **argv) {
 "built into your design.  Please add it in and try again.\n");
 #else
 	bool	all_flag = false;
+	unsigned	v;
+	constexpr unsigned	PHYID = 1;
+	unsigned	off = PHYID * (32*4); // 32 regs, 4 bytes each
 
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	if (argc == 2)
 		all_flag = true;
@@ -79,8 +82,7 @@ int main(int argc, char **argv) {
 		exit(-1);
 	}
 
-	unsigned	v;
-	v = m_fpga->readio(R_MDIO_BMCR);
+	v = m_fpga->readio(off + R_MDIO_BMCR);
 	if (all_flag || ((v & 0x01000) == 0) || ((v & 0x0100) == 0)
 				|| ((v&0xcc80)!=0)) {
 	printf("    BMCR    %04x\tBasic Mode Control Register\n", v);
@@ -111,7 +113,7 @@ int main(int argc, char **argv) {
 	}
 
 	////////////////////////////////////////
-	v = m_fpga->readio(R_MDIO_BMSR);
+	v = m_fpga->readio(off + R_MDIO_BMSR);
 	printf("R/O BMSR    %04x\tBasic Mode Status Register\n", v);
 	if (all_flag && (v & 0x08000))
 		printf("                \t100Base-T4 capable\n");
@@ -149,14 +151,14 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_PHYIDR1);
+	v = m_fpga->readio(off + R_MDIO_PHYIDR1);
 	printf("R/O PHYID1  %04x\tPHY Identifier Reg #1\n", v);
 	//printf("            %4x\tOUI MSB\n", v);
 	}
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_PHYIDR2);
+	v = m_fpga->readio(off + R_MDIO_PHYIDR2);
 	printf("R/O PHYID2  %04x\tPHY Identifier Reg #2\n", v);
 	printf("            %4x\tOUI LSBs\n", (v>>10)&0x3f);
 	printf("            %4x\tVendor model number\n",   (v>>4)&0x3f);
@@ -165,7 +167,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_ANAR);
+	v = m_fpga->readio(off + R_MDIO_ANAR);
 	printf("    ANAR    %04x\tAuto-negotiation advertisement register\n", v);
 	if (v & 0x8000)
 		printf("                \tNext pages exchange desired\n");
@@ -190,7 +192,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_ANLPAR);
+	v = m_fpga->readio(off + R_MDIO_ANLPAR);
 	printf("    ANLPAR  %04x\tAuto-negotiation link partner ability\n", v);
 	printf("            %4x\tTechnology ability field\n", (v>>5)&0x0ff);
 	printf("            %4x\tSelector field\n", v&0x01f);
@@ -198,7 +200,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_ANER);
+	v = m_fpga->readio(off + R_MDIO_ANER);
 	printf("    ANER    %04x\tAuto-negotiation expansion register\n", v);
 	if (v&0x0010)
 		printf("                \tParallel detection fault detected\n");
@@ -214,7 +216,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_ANNPTR);
+	v = m_fpga->readio(off + R_MDIO_ANNPTR);
 	printf("    ANNPTR  %04x\tAuto-negotiation Next page TX\n", v);
 	if (v&0x8000)
 		printf("                \tNext page indication: more pages remain to be sent\n");
@@ -230,7 +232,7 @@ int main(int argc, char **argv) {
 	////////////////////////////////////////
 	// ANNPRR register -- not decoded here
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_ANNPRR);
+	v = m_fpga->readio(off + R_MDIO_ANNPRR);
 	printf("    ANNPRR  %04x\tAuto-negotiation next page receive register\n", v);
 	if (v&0x8000)
 		printf("                \tNext page\n");
@@ -247,7 +249,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_GBCR);
+	v = m_fpga->readio(off + R_MDIO_GBCR);
 	printf("      GBCR  %04x\t1000Base-T Control Register\n", v);
 	if ((v&0xe000)==0x2000)
 		printf("                \tTest mode 1 - Transmit Jitter test\n");
@@ -277,7 +279,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_GBSR);
+	v = m_fpga->readio(off + R_MDIO_GBSR);
 	printf("R/O   GBSR   %04x\t1000Base-T Status Register\n", v);
 	if (v & 0x8000)
 		printf("                \tMASTER/SLAVE configuration fault detected\n");
@@ -301,7 +303,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_MACR);
+	v = m_fpga->readio(off + R_MDIO_MACR);
 	printf("W/O   MACR  %04x\tMMD Access Control Register\n", v);
 	if ((v&0xc000)==0x0)
 		printf("                \tAddress\n");
@@ -316,19 +318,19 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_MAADR);
+	v = m_fpga->readio(off + R_MDIO_MAADR);
 	printf("     MAADR  %04x\tMMD Access Address Data Register\n", v);
 	}
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_GBESR);
+	v = m_fpga->readio(off + R_MDIO_GBESR);
 	printf("R/O  GBESR  %04x\t1000Base-T Extended Status Register\n", v);
 	}
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_PHYCR);
+	v = m_fpga->readio(off + R_MDIO_PHYCR);
 	printf("     PHYCR  %04x\tPHY specific control register\n", v);
 	if (v&0x8000)
 		printf("                \tRX clock output disabled\n");
@@ -347,7 +349,7 @@ int main(int argc, char **argv) {
 	}
 
 	////////////////////////////////////////
-	v = m_fpga->readio(R_MDIO_PHYSR);
+	v = m_fpga->readio(off + R_MDIO_PHYSR);
 	printf("R/O  PHYSR  %04x\tPHY specific status register\n", v);
 	if ((v&0xc000)==0)
 		printf("                \t  10Mbps link speed\n");
@@ -380,7 +382,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_INER);
+	v = m_fpga->readio(off + R_MDIO_INER);
 	printf("      INER  %04x\tInterrupt Enable Register\n", v);
 	if (v&0x8000)
 		printf("                \tAuto-negotiation error int enabled\n");
@@ -400,7 +402,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_INSR);
+	v = m_fpga->readio(off + R_MDIO_INSR);
 	printf("RC    INSR  %04x\tInterrupt Status Register\n", v);
 	if (v & 0x8000)
 		printf("                \tAuto-Negotiation Error\n");
@@ -421,13 +423,13 @@ int main(int argc, char **argv) {
 	}
 
 	////////////////////////////////////////
-	v = m_fpga->readio(R_MDIO_RXERC);
+	v = m_fpga->readio(off + R_MDIO_RXERC);
 	if (all_flag || (v != 0)) {
 	printf("R/O RXERC   %04x\tReceive Error Counter\n", v);
 	}
 
 	////////////////////////////////////////
-	v = m_fpga->readio(R_MDIO_LDPSR);
+	v = m_fpga->readio(off + R_MDIO_LDPSR);
 	if (all_flag || (v & 0x0001)) {
 	printf("R/O LPDSR   %04x\tLink Down Power Saving Register\n", v);
 	if (v & 0x0001)
@@ -436,13 +438,13 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_EPAGSR);
+	v = m_fpga->readio(off + R_MDIO_EPAGSR);
 	printf("   EPAGSR   %04x\tExtension Page Select Register\n", v);
 	}
 
 	////////////////////////////////////////
 	if (all_flag) {
-	v = m_fpga->readio(R_MDIO_PAGSEL);
+	v = m_fpga->readio(off + R_MDIO_PAGSEL);
 	printf("   PAGSEL   %04x\tPage Select Register\n", v);
 	}
 

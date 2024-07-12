@@ -12,7 +12,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,7 +36,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -45,14 +44,16 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "port.h"
+#include "devbus.h"
+// #include "exbus.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
-void	printclk(FPGA *fpga, unsigned addr, const char *name) {
+void	printclk(DEVBUS *fpga, unsigned addr, const char *name) {
 	unsigned	nc;
 	nc = m_fpga->readio(addr);
 	printf("%12s: 0x%08x %10d %8.2f MHz\n", name, nc, nc, (double)(nc/1.e6));
@@ -64,7 +65,7 @@ void	usage(void) {
 
 int main(int argc, char **argv) {
 #if	defined(R_SYSCLK) || defined(R_HDMI_CLK) || defined(R_HDMI_OUTCLK) ||defined(R_NETCLOCKCTR)
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	if (argc != 1) {
 		usage();

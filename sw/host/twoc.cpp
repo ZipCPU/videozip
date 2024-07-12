@@ -6,8 +6,8 @@
 //
 // Purpose:	Some various two's complement related C++ helper routines.
 //		Specifically, these help extract signed numbers from
-//		packed bitfields, while guaranteeing that the upper bits
-//		are properly sign extended (or not) as desired.
+//	packed bitfields, while guaranteeing that the upper bits are properly
+//	sign extended (or not) as desired.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -37,9 +37,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include "twoc.h"
 
+// sbits
+// {{{
 long	sbits(const long val, const int bits) {
 	long	r;
 
@@ -48,14 +50,22 @@ long	sbits(const long val, const int bits) {
 		r |= (-1l << bits);
 	return r;
 }
+// }}}
 
+// sfits
+// {{{
 bool	sfits(const long val, const int bits) {
 	return (sbits(val, bits) == bits);
 }
+// }}}
 
+// ubits
+// {{{
 unsigned long	ubits(const long val, const int bits) {
 	unsigned long r = val & ((1l<<bits)-1);
 	return r;
 }
+// }}}
+
 
 

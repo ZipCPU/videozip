@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,11 +43,11 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
-
-#include "port.h"
+// }}}
 #include "regdefs.h"
+#include "port.h"
 #include "scopecls.h"
-#include "ttybus.h"
+#include "exbus.h"
 
 #if	defined(R_ZIPSCOPE) && defined(R_ZIPSCOPED)
 #define	WBSCOPE		R_ZIPSCOPE
@@ -61,7 +60,7 @@
 
 #include "zopcodes.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
 const char *regstr[] = {
 	"R0","R1","R2","R3","R4","R5","R6","R7","R8","R9","RA","RB","RC",
@@ -70,7 +69,7 @@ const char *regstr[] = {
 
 class	ZIPSCOPE : public SCOPE {
 public:
-	ZIPSCOPE(FPGA *fpga, unsigned addr, bool vecread)
+	ZIPSCOPE(DEVBUS *fpga, unsigned addr, bool vecread)
 		: SCOPE(fpga, addr, false, vecread) {};
 	~ZIPSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
@@ -163,7 +162,7 @@ int main(int argc, char **argv) {
 #else
 	// Open and connect to our FPGA.  This macro needs to be defined in the
 	// include files above.
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	ZIPSCOPE *scope = new ZIPSCOPE(m_fpga, WBSCOPE, true);
 	if (!scope->ready()) {

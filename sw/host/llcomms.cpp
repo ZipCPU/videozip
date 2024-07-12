@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -38,7 +38,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -69,7 +69,7 @@ LLCOMMSI::LLCOMMSI(void) {
 void	LLCOMMSI::write(char *buf, int len) {
 	int	nw;
 	nw = ::write(m_fdw, buf, len);
-	if (nw <= 0) {
+	if (nw < 0) {
 		throw "Write-Failure";
 	} else if (nw != len) {
 		fprintf(stderr, "LLCOMMSI::ERR: %d byte write request, only %d written\n", len, nw);
@@ -82,7 +82,7 @@ void	LLCOMMSI::write(char *buf, int len) {
 int	LLCOMMSI::read(char *buf, int len) {
 	int	nr;
 	nr = ::read(m_fdr, buf, len);
-	if (nr <= 0) {
+	if (nr < 0) {
 		throw "Read-Failure";
 	}
 	m_total_nread += nr;
@@ -176,5 +176,3 @@ void	NETCOMMS::close(void) {
 	}
 	::close(m_fdw);
 }
-
-

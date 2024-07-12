@@ -1,20 +1,20 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	sw/host/wbregs.cpp
+// Filename:	sw/host/exregs.cpp
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	To give a user access, via a command line program, to read
 //		and write wishbone registers one at a time.  Thus this program
-//	implements readio() and writeio() but nothing more.
-//
+//	accesses the readio() and writeio() methods from devbus, but nothing
+//	more.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// }}}
+// Copyright (C) 2023-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -37,7 +37,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,17 +47,22 @@
 #include <signal.h>
 #include <assert.h>
 
-#include "port.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "port.h"
+#include "devbus.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
+const	char	*gbl_fpgahost = FPGAHOST;
+int		gbl_fpgaport = FPGAPORT;
+bool		gbl_uart = true;
+
 void	closeup(int v) {
 	m_fpga->kill();
 	exit(0);
 }
 
 bool	isvalue(const char *v) {
+	// {{{
 	const char *ptr = v;
 
 	while(isspace(*ptr))
@@ -75,8 +80,10 @@ bool	isvalue(const char *v) {
 
 	return (isdigit(*ptr));
 }
+// }}}
 
 unsigned getmap_address(const char *map_fname, const char *name) {
+	// {{{
 	FILE	*fmp = fopen(map_fname, "r");
 	char	line[512];
 
@@ -102,12 +109,14 @@ unsigned getmap_address(const char *map_fname, const char *name) {
 		if (0 == strcasecmp(nstr, name))
 			return strtoul(astr, NULL, 0);
 	}
-	
+
 	fclose(fmp);
 	return 0;
 }
+// }}}
 
 char	*getmap_name(const char *map_fname, const unsigned val) {
+	// {{{
 	if (!map_fname)
 		return NULL;
 	FILE	*fmp = fopen(map_fname, "r");
@@ -134,13 +143,15 @@ char	*getmap_name(const char *map_fname, const unsigned val) {
 		if (strtoul(astr, NULL, 0) == val)
 			return strdup(nstr);
 	}
-	
+
 	fclose(fmp);
 	return NULL;
 }
+// }}}
 
 void	usage(void) {
-	printf("USAGE: wbregs [-d] address [value]\n"
+	// {{{
+	printf("USAGE: exregs [-d] address [value]\n"
 "\n"
 "\tWBREGS stands for Wishbone registers.  It is designed to allow a\n"
 "\tuser to peek and poke at registers within a given FPGA design, so\n"
@@ -151,6 +162,24 @@ void	usage(void) {
 "\t-d\tIf given, specifies the value returned should be in decimal,\n"
 "\t\trather than hexadecimal.\n"
 "\n"
+"\t-m [mapfile]\tA \"map file\" may be created by the ZipCPU linker.\n"
+"\t\tSuch a file can then be used to access named global values\n"
+"\t\twithin the register space.  To use the capability, the name of\n"
+"\t\tthe map file must be provided here on the command line.\n"
+"\t-n [host]\tAttempt to connect, via IP, to host named [host].\n"
+"\t\tThe default host is \'%s\'\n"
+"\n"
+"\t-p [port]\tAttempt to connect, via IP, to port number [port].\n"
+"\t\tThe default port is \'%d\'\n", gbl_fpgahost, gbl_fpgaport);
+	printf("\n"
+"\t-u\tUse UART protocols over TCP/IP");
+	if (gbl_uart)
+		printf(", this is the default");
+	printf("\n"
+"\t-U\tUse network UDP/IP packet protocols");
+	if (!gbl_uart)
+		printf(", this is the default");
+	printf("\n"
 "\tAddress is either a 32-bit value with the syntax of strtoul, or a\n"
 "\tregister name.  Register names can be found in regdefs.cpp\n"
 "\n"
@@ -158,51 +187,99 @@ void	usage(void) {
 "\taddress, otherwise the result from reading the address will be \n"
 "\twritten to the screen.\n");
 }
+// }}}
 
 int main(int argc, char **argv) {
-	int	skp=0;
 	bool	use_decimal = false;
-	char	*map_file = NULL;
+	char	*map_file = NULL, *kimos_env = NULL;
+	int	opt;
 
-	skp=1;
-	for(int argn=0; argn<argc-skp; argn++) {
-		if (argv[argn+skp][0] == '-') {
-			if (argv[argn+skp][1] == 'd') {
-				use_decimal = true;
-			} else if (argv[argn+skp][1] == 'm') {
-				if (argn+skp+1 >= argc) {
-					fprintf(stderr, "ERR: No Map file given\n");
-					exit(EXIT_SUCCESS);
-				}
-				map_file = argv[argn+skp+1];
-				skp++; argn--;
-			} else {
-				usage();
-				exit(EXIT_SUCCESS);
-			}
-			skp++; argn--;
-		} else
-			argv[argn] = argv[argn+skp];
-	} argc -= skp;
+	// Check first for our environment value -- use it to set defaults
+	// {{{
+	if (NULL != (kimos_env = getenv("KIMOSDEV")) && kimos_env[0]) {
+		char	*portstr, *host = NULL;
 
-	FPGAOPEN(m_fpga);
+		kimos_env = strdup(kimos_env);
+		if (0 == strncasecmp(kimos_env, "UART://", 7)) {
+			host = kimos_env+7;
+			gbl_uart = true;
+		} else if (0 == strncasecmp(kimos_env, "EXBUS://", 8)) {
+			host = kimos_env+8;
+			gbl_uart = true;
+		} else if (0 == strncasecmp(kimos_env, "SIM://", 6)) {
+			host = kimos_env+6;
+			gbl_uart = true;
+		} else if (0 == strncasecmp(kimos_env, "NEXBUS://", 9)) {
+			host = kimos_env+6;
+			gbl_uart = false;
+		} else if (0 == strncasecmp(kimos_env, "NET://", 6)) {
+			host = kimos_env+6;
+			gbl_uart = false;
+		} else if (0 == strncasecmp(kimos_env, "UDP://", 6)) {
+			host = kimos_env+6;
+			gbl_uart = false;
+		} else {
+			fprintf(stderr, "ERR: Unrecognized environment string\n");
+			exit(EXIT_FAILURE);
+		}
+
+		gbl_fpgaport = gbl_uart ? UARTDBGPORT : UDP_DBGPORT;
+		portstr = strchr(host, ':');
+		if (portstr) {
+			*portstr++ = '\0';
+			if (*portstr && isdigit(*portstr))
+				gbl_fpgaport = atoi(portstr);
+		} if (host)
+			gbl_fpgahost = host;
+// fprintf(stderr, "Connecting to %s://%s:%d\n", gbl_uart ? "UART":"NET", gbl_fpgahost, gbl_fpgaport);
+	}
+	// }}}
+
+	// Process all arguments, save the address and optional value
+	// {{{
+	while(-1 != (opt=getopt(argc, argv, "dn:p:m:uU"))) {
+		switch(opt) {
+		case 'd': use_decimal = true; break;
+		case 'h': usage(); exit(EXIT_SUCCESS); break;
+		case 'n': gbl_fpgahost = strdup(optarg); break;
+		case 'm': map_file = strdup(optarg); break;
+		case 'p': gbl_fpgaport = strtoul(optarg, NULL, 0); break;
+		case 'u': gbl_uart = true; break;
+		case 'U': gbl_uart = false; break;
+		default: usage();
+			exit(EXIT_FAILURE);
+			break;
+		}
+	}
+	// }}}
+
+	{
+		char	comstr[256];
+		sprintf(comstr, "%s://%s:%d", (gbl_uart) ? "UART":"NET",
+				gbl_fpgahost, gbl_fpgaport);
+// fprintf(stderr, "Connecting to %s\n", comstr);
+		m_fpga = connect_devbus(comstr);
+	}
 
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	if ((argc < 1)||(argc > 2)) {
-		// usage();
-		printf("USAGE: wbregs address [value]\n");
-		exit(-1);
+	if ((argc-optind < 1)||(argc-optind > 2)) {
+		// {{{
+		usage();
+		exit(EXIT_FAILURE);
 	}
+	// }}}
 
-	if ((map_file)&&(access(map_file, R_OK)!=0)) {
+	if ((map_file)&&(0 != access(map_file, R_OK))) {
+		// {{{
 		fprintf(stderr, "ERR: Cannot open/read map file, %s\n", map_file);
 		perror("O/S Err:");
 		exit(EXIT_FAILURE);
 	}
+	// }}}
 
-	const char *nm = NULL, *named_address = argv[0];
+	const char *nm = NULL, *named_address = argv[optind];
 	unsigned address, value;
 
 	if (isvalue(named_address)) {
@@ -226,8 +303,9 @@ int main(int argc, char **argv) {
 	if (NULL == nm)
 		nm = "";
 
-	if (argc < 2) {
-		FPGA::BUSW	v;
+	if (argc -optind < 2) { // Read from the device
+		// {{{
+		DEVBUS::BUSW	v;
 		try {
 			unsigned char a, b, c, d;
 			v = m_fpga->readio(address);
@@ -238,7 +316,7 @@ int main(int argc, char **argv) {
 			if (use_decimal)
 				printf("%d\n", v);
 			else
-			printf("%08x (%8s) : [%c%c%c%c] %08x\n", address, nm, 
+			printf("%08x (%8s) : [%c%c%c%c] %08x\n", address, nm,
 				isgraph(a)?a:'.', isgraph(b)?b:'.',
 				isgraph(c)?c:'.', isgraph(d)?d:'.', v);
 		} catch(BUSERR b) {
@@ -247,9 +325,11 @@ int main(int argc, char **argv) {
 			printf("Caught bug: %s\n", er);
 			exit(EXIT_FAILURE);
 		}
-	} else {
+		// }}}
+	} else { // Write to the device
+		// {{{
 		try {
-			value = strtoul(argv[1], NULL, 0);
+			value = strtoul(argv[optind+1], NULL, 0);
 			m_fpga->writeio(address, value);
 			printf("%08x (%8s)-> %08x\n", address, nm, value);
 		} catch(BUSERR b) {
@@ -259,6 +339,7 @@ int main(int argc, char **argv) {
 			printf("Caught bug on write: %s\n", er);
 			exit(EXIT_FAILURE);
 		}
+		// }}}
 	}
 
 	if (m_fpga->poll())

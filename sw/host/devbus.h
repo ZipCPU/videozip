@@ -21,7 +21,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -45,7 +45,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	DEVBUS_H
 #define	DEVBUS_H
 
@@ -144,5 +144,7 @@ public:
 
 	virtual	~DEVBUS(void) { };
 };
+
+extern	DEVBUS *connect_devbus(const char *);
 
 #endif

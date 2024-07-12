@@ -13,7 +13,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -37,9 +37,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -52,8 +53,8 @@
 
 #include "port.h"
 #include "llcomms.h"
-#include "ttybus.h"
-#include <design.h>
+#include "devbus.h"
+#include "design.h"
 #include "regdefs.h"
 
 #ifdef	FLASH_ACCESS
@@ -62,7 +63,7 @@
 #include "zipelf.h"
 #include "byteswap.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
 void	usage(void) {
 	printf("USAGE: zipload [-hr] <zip-program-file>\n");
@@ -71,6 +72,52 @@ void	usage(void) {
 "\t-r\tStart the ZipCPU running from the address in the program file\n");
 }
 
+void	skip_bitfile_header(FILE *fp) {
+	// {{{
+	const unsigned	SEARCHLN = 204, MATCHLN = 52;
+	const unsigned char matchstr[MATCHLN] = {
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		//
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		//
+		0x00, 0x00, 0x00, 0xbb,
+		0x11, 0x22, 0x00, 0x44,
+		0xff, 0xff, 0xff, 0xff,
+		0xff, 0xff, 0xff, 0xff,
+		//
+		0xaa, 0x99, 0x55, 0x66 };
+	unsigned char	buf[SEARCHLN];
+	size_t		sz;
+
+	rewind(fp);
+	sz = fread(buf, sizeof(char), SEARCHLN, fp);
+	for(int start=0; start+MATCHLN<sz; start++) {
+		int	mloc;
+
+		// Search backwards, since the starting bytes just aren't that
+		// interesting.
+		for(mloc = MATCHLN-1; mloc >= 0; mloc--)
+			if (buf[start+mloc] != matchstr[mloc])
+				break;
+		if (mloc < 0) {
+			fseek(fp, start, SEEK_SET);
+			return;
+		}
+	}
+
+	fprintf(stderr, "Could not find bin-file header within bit file\n");
+	fclose(fp);
+	exit(EXIT_FAILURE);
+}
+// }}}
+
+
 int main(int argc, char **argv) {
 #ifndef	R_ZIPCTRL
 	fprintf(stderr, "This design doesn\'t seem to contain a ZipCPU\n");
@@ -78,7 +125,7 @@ int main(int argc, char **argv) {
 #else
 	int		skp=0;
 	bool		start_when_finished = false, verbose = false;
-	unsigned	entry = 0;
+	unsigned	entry = 0; // gpio;
 #ifdef	FLASH_ACCESS
 	FLASHDRVR	*flash = NULL;
 #endif
@@ -138,6 +185,23 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if (verbose) {
+		if (bitfile)
+			printf("BitFile   : %s\n", bitfile);
+		else
+			printf("BitFile   : No bit-file given\n");
+
+		if (altbitfile)
+			printf("AltBitFile: %s\n", altbitfile);
+		else
+			printf("AltBitFile: No alternate bit-file given\n");
+
+		if (execfile)
+			printf("Executable: %s\n", execfile);
+		else
+			printf("Executable: No ZipCPU executable (ELF) file given\n");
+	}
+
 	if ((execfile == NULL)&&(bitfile == NULL)) {
 		printf("No executable or bit file(s) given!\n\n");
 		usage();
@@ -162,22 +226,83 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	const char *codef = (argc>0)?argv[0]:NULL;
+	m_fpga = connect_devbus("");
 #ifdef	FLASH_ACCESS
+	flash = new FLASHDRVR(m_fpga);
 	char	*fbuf = new char[FLASHLEN];
+	unsigned	bitend = 0;
 
 	// Set the flash buffer to all ones
 	memset(fbuf, -1, FLASHLEN);
+
+	if (bitfile) {
+		// {{{
+		FILE	*fp;
+		uint64_t	sz = 0;
+
+		if (verbose)
+			fprintf(stderr, "Loading bitfile to memory ...\n");
+		fp = fopen(bitfile, "rb");
+		if (NULL == fp) {
+			fprintf(stderr, "ERROR: Cannot open bitfile, %s\n", bitfile);
+			exit(EXIT_FAILURE);
+		}  if (strcmp(&bitfile[strlen(bitfile)-4], ".bit")==0) {
+			skip_bitfile_header(fp);
+		} sz = fread(fbuf, 1, FLASHLEN, fp);
+		fclose(fp);
+
+		try {
+			if (verbose) {
+				fprintf(stderr, "Loaded %d bytes\n", (unsigned)sz);
+				fprintf(stderr, "Writing bitfile to flash ...\n");
+			}
+			flash->write(FLASHBASE, (unsigned)sz, fbuf, true);
+			bitend = sz;
+		} catch(BUSERR b) {
+			fprintf(stderr, "BUS-ERR @0x%08x\n", b.addr);
+			exit(EXIT_FAILURE);
+		}
+	}
+	// }}}
+
+	if (altbitfile) {
+		// {{{
+		FILE	*fp;
+		const unsigned	OFFSET=SECTOROF((RESET_ADDRESS-FLASHBASE)/2);
+		uint64_t	sz = 0;
+
+		assert(OFFSET >= bitend);
+
+		fp = fopen(altbitfile, "rb");
+		if (NULL == fp) {
+			fprintf(stderr, "ERROR: Cannot open altbitfile, %s\n", altbitfile);
+			exit(EXIT_FAILURE);
+		}  if (strcmp(&bitfile[strlen(altbitfile)-4], ".bit")==0) {
+			skip_bitfile_header(fp);
+		} sz = fread(&fbuf[OFFSET], 1, FLASHLEN-OFFSET, fp);
+		fclose(fp);
+
+		try {
+			flash->write(FLASHBASE+OFFSET, sz, &fbuf[OFFSET], true);
+		} catch(BUSERR b) {
+			fprintf(stderr, "BUS-ERR @0x%08x\n", b.addr);
+			exit(EXIT_FAILURE);
+		}
+	}
+	// }}}
+#else
+	if (bitfile || altbitfile) {
+		fprintf(stderr, "WARNING: Cannot load bitfiles w/o flash");
+	}
 #endif
 
 	if (verbose)
 		fprintf(stderr, "ZipLoad: Verbose mode on\n");
-	FPGAOPEN(m_fpga);
 
 	// Make certain we can talk to the FPGA
 	try {
 		unsigned v  = m_fpga->readio(R_VERSION);
-		if (v < 0x20170000) {
+		if (v < 0x20230000) {
 			fprintf(stderr, "Could not communicate with board (invalid version)\n");
 			exit(EXIT_FAILURE);
 		}
@@ -195,13 +320,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-#ifdef	FLASH_ACCESS
-	flash = new FLASHDRVR(m_fpga);
-#else
-	flash = NULL;
-#endif
-
-	if (codef) try {
+	if (execfile) try {
 		ELFSECTION	**secpp = NULL, *secp;
 #ifdef	FLASH_ACCESS
 		unsigned	startaddr = RESET_ADDRESS;
@@ -210,15 +329,15 @@ int main(int argc, char **argv) {
 #endif
 
 
-		if(iself(codef)) {
+		if(iself(execfile)) {
 			// zip-readelf will help with both of these ...
-			elfread(codef, entry, secpp);
+			elfread(execfile, entry, secpp);
 		} else {
-			fprintf(stderr, "ERR: %s is not in ELF format\n", codef);
+			fprintf(stderr, "ERR: %s is not in ELF format\n", execfile);
 			exit(EXIT_FAILURE);
 		}
 
-		printf("Loading: %s\n", codef);
+		printf("Loading: %s\n", execfile);
 		// assert(secpp[1]->m_len = 0);
 		for(int i=0; secpp[i]->m_len; i++) {
 			bool	valid = false;
@@ -243,8 +362,8 @@ int main(int argc, char **argv) {
 #ifdef	SDRAM_ACCESS
 			// Or SDRAM
 			if ((secp->m_start >= SDRAMBASE)
-				&&(secp->m_start+secp->m_len
-						<= SDRAMBASE+SDRAMLEN))
+				&&((unsigned)secp->m_start+(unsigned)secp->m_len
+						<= (unsigned)SDRAMBASE+(unsigned)SDRAMLEN))
 				valid = true;
 #endif
 			if (!valid) {
@@ -259,8 +378,8 @@ int main(int argc, char **argv) {
 
 #ifdef	SDRAM_ACCESS
 			if ((secp->m_start >= SDRAMBASE)
-				&&(secp->m_start+secp->m_len
-						<= SDRAMBASE+SDRAMLEN)) {
+				&&((unsigned)secp->m_start+(unsigned)secp->m_len
+						<= (unsigned)SDRAMBASE+(unsigned)SDRAMLEN)) {
 				if (verbose)
 					printf("Writing to SDRAM: %08x-%08x\n",
 						secp->m_start,
@@ -322,16 +441,18 @@ int main(int argc, char **argv) {
 #endif
 		}
 
-		if (m_fpga) m_fpga->readio(R_VERSION); // Check for bus errors
 #ifdef	FLASH_ACCESS
-		if ((flash)&&(codelen>0)&&(uses_flash)
-			&& (!flash->write(startaddr, codelen, &fbuf[startaddr-FLASHBASE], true))) {
-			fprintf(stderr, "ERR: Could not write program to flash\n");
-			exit(EXIT_FAILURE);
-		} else if ((!flash)&&(codelen > 0)) {
-			fprintf(stderr, "ERR: Cannot write to flash: Driver didn\'t load\n");
-			// fprintf(stderr, "flash->write(%08x, %d, ... );\n", startaddr,
-			//	codelen);
+		if (!uses_flash || codelen == 0) {
+			// Nothing to do here
+		} else if (!flash) {
+			fprintf(stderr, "ERR: Cannot write to flash: No driver\n");
+		} else {
+			if (verbose)
+				fprintf(stderr, "Writing ZipCPU image to flash\n");
+			if (!flash->write(startaddr, codelen, &fbuf[startaddr-FLASHBASE], true)) {
+				fprintf(stderr, "ERR: Could not write program to flash\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 #endif
 
@@ -339,27 +460,25 @@ int main(int argc, char **argv) {
 
 		// Now ... how shall we start this CPU?
 		printf("Clearing the CPUs registers\n");
-		for(int i=0; i<32; i++) {
-			m_fpga->writeio(R_ZIPCTRL, CPU_HALT|i);
-			m_fpga->writeio(R_ZIPDATA, 0);
+		{
+			unsigned r[32];
+			m_fpga->writeio(R_ZIPCTRL, CPU_HALT);
+			for(int i=0; i<32; i++)
+				r[i] = 0;
+			m_fpga->writei(R_ZIPREGS, 32, r);
 		}
 
 		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_CLRCACHE);
 		printf("Setting PC to %08x\n", entry);
-		m_fpga->writeio(R_ZIPCTRL, CPU_HALT|CPU_sPC);
-		m_fpga->writeio(R_ZIPDATA, entry);
-
-#ifdef	_BOARD_HAS_ZIPSCOPE
-			m_fpga->writeio(R_ZIPSCOPE, 0);
-#endif
+		m_fpga->writeio(R_ZIPPC, entry);
 
 		if (start_when_finished) {
 			printf("Starting the CPU\n");
-			m_fpga->writeio(R_ZIPCTRL, CPU_GO|CPU_sPC);
+			m_fpga->writeio(R_ZIPCTRL, CPU_GO);
 		} else {
 			printf("The CPU should be fully loaded, you may now\n");
 			printf("start it (from reset/reboot) with:\n");
-			printf("> wbregs cpu 0x0f\n");
+			printf("> wbregs cpu 0\n");
 			printf("\n");
 		}
 	} catch(BUSERR a) {

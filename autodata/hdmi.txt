@@ -286,16 +286,21 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 @CLOCK.FREQUENCY=40000000
 @SIM.CLOCK=pixclk
 @SIM.INCLUDE=
+#include "hdmisource.h"
 #include "hdmisim.h"
 @SIM.DEFNS=
 #ifdef @$(ACCESS)
-	HDMIWIN *m_hdmitx;
+	HDMISOURCE	*m_hdmirx;
+	HDMIWIN		*m_hdmitx;
 #endif	// @$(ACCESS)
 @SIM.INIT=
 #ifdef	@$(ACCESS)
+		m_hdmirx = NULL;
 		m_hdmitx = NULL;
-		if (gbl_use_gui)
+		if (gbl_use_gui) {
+			m_hdmirx = new HDMISOURCE(800, 600);
 			m_hdmitx = new HDMIWIN(800, 600);
+		}
 #endif	// @$(ACCESS)
 @SIM.METHODS=
 	void	connect_idler(void) {
@@ -310,8 +315,18 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 	}
 @SIM.TICK=
 #ifdef	@$(ACCESS)
-		// Simulate an external HDMI monitor
-		if (gbl_use_gui)
+		// Simulate both an external HDMI source and monitor
+		if (gbl_use_gui) {
+			int	r, g, b;
+
+			// HDMI input received by the design
+			(*m_hdmirx)(r, g, b);
+			m_core->i_hdmi_blu = b;
+			m_core->i_hdmi_grn = g;
+			m_core->i_hdmi_red = r;
+
+			// HDMI output, transmitted from the design
 			(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn,
 					m_core->o_hdmi_red);
+		}
 #endif	// @$(ACCESS)

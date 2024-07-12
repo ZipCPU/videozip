@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,20 +43,21 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "port.h"
+#include "exbus.h"
 #include "byteswap.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 void	closeup(int v) {
 	m_fpga->kill();
 	exit(0);
 }
 
 #define	DUMPMEM		FLASHMEM
-#define	FLASHLEN	FLASHMEM
+// #define	FLASHLEN	FLASHMEM
 #define	DUMPWORDS	(FLASHLEN>>2)
 
 int main(int argc, char **argv) {
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 	const int	BUFLN = FLASHLEN;
 	char	*buf = new char[FLASHLEN];
 
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 	fprintf(stderr, "Before starting, nread = %ld\n", 
 		m_fpga->m_total_nread);
 

@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2018-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -48,17 +48,18 @@
 #include <signal.h>
 #include <assert.h>
 
-#include "port.h"
+#include "design.h"
 #include "regdefs.h"
+#include "devbus.h"
 #include "scopecls.h"
-#include "ttybus.h"
+// }}}
 
 #define	WBSCOPE		R_FLASHSCOPE
 #define	WBSCOPEDATA	R_FLASHSCOPED
 
 #define	SCOPEBIT(VAL,B)	((val >> B)&1)
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 void	closeup(int v) {
 	m_fpga->kill();
 	exit(0);
@@ -71,7 +72,7 @@ class	QFLEXPRESSCOPE : public SCOPE {
 	//
 	// int	m_oword[2], m_iword[2], m_p;
 public:
-	QFLEXPRESSCOPE(FPGA *fpga, unsigned addr, bool vecread)
+	QFLEXPRESSCOPE(DEVBUS *fpga, unsigned addr, bool vecread = true)
 		: SCOPE(fpga, addr, true, vecread) {};
 	~QFLEXPRESSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
@@ -158,13 +159,13 @@ int main(int argc, char **argv) {
 "used by AutoFPGA found in the auto-data/ directory, and then include it\n"
 "within the Makefile of the same directory.\n");
 #else
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	QFLEXPRESSCOPE *scope = new QFLEXPRESSCOPE(m_fpga, WBSCOPE, true);
-	scope->set_clkfreq_hz(CLKFREQHZ);
+	QFLEXPRESSCOPE *scope = new QFLEXPRESSCOPE(m_fpga, WBSCOPE);
+	scope->set_clkfreq_hz(100000000);
 	if (!scope->ready()) {
 		printf("Scope is not yet ready:\n");
 		scope->decode_control();

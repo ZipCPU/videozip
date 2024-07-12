@@ -12,7 +12,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,7 +36,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -48,10 +48,10 @@
 
 #include "port.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "exbus.h"
 #include "flashdrvr.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 void	closeup(int v) {
 	m_fpga->kill();
 	exit(0);

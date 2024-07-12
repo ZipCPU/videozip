@@ -48,11 +48,13 @@
 @SGP=@$(BUS.PREFIX)
 @WBP=@$(SLAVE.BUS.PREFIX)
 @MASTER.ANSPREFIX=pf_
+@IOSDA=io_sda
+@IOSCL=io_scl
 @IDW=2
 @TOP.PORTLIST=
-			io_sda, io_scl
+			@$(IOSCL), @$(IOSDA)
 @TOP.IODECL=
-	inout	wire	io_sda, io_scl;
+	inout	wire	@$(IOSCL), @$(IOSDA);
 @TOP.DEFNS=
 	// I2CCPU definitions
 	// {{{
@@ -77,7 +79,7 @@
 		.I(1'b0),
 		.T(o_@$(PREFIX)_scl),
 		.O(i_@$(PREFIX)_scl),
-		.IO(io_scl)
+		.IO(@$(IOSCL))
 		// }}}
 	);
 
@@ -86,7 +88,7 @@
 		.I(1'b0),
 		.T(o_@$(PREFIX)_sda),
 		.O(i_@$(PREFIX)_sda),
-		.IO(io_sda)
+		.IO(@$(IOSDA))
 		// }}}
 	);
 	// }}}
@@ -107,11 +109,11 @@
 	// I2C Controller
 	// {{{
 	// Verilator lint_off UNUSED
-	localparam	I2C_ID_WIDTH=(@$(IDW) == 0) ? 1 : @$(IDW);
+	localparam	@$(DEVID)_WIDTH=(@$(IDW) == 0) ? 1 : @$(IDW);
 
 	wire		@$(PREFIX)_valid, @$(PREFIX)_ready, @$(PREFIX)_last;
 	wire	[7:0]	@$(PREFIX)_data;
-	wire	[I2C_ID_WIDTH-1:0]	@$(PREFIX)_id;
+	wire	[@$(DEVID)_WIDTH-1:0]	@$(PREFIX)_id;
 
 	wire	[31:0]	@$(PREFIX)_debug;
 	// Verilator lint_on  UNUSED
@@ -223,71 +225,5 @@ typedef	struct	@$(DEVID)_S {
 ##
 @SIM.CLOCK=clk
 @SIM.TICK=
-		m_core->i_i2c_scl = m_core->o_i2c_scl;
-		m_core->i_i2c_sda = m_core->o_i2c_sda;
-##
-################################################################################
-################################################################################
-################################################################################
-##
-@PREFIX=i2cdma
-@DEVID=I2CDMA
-@ACCESS=@$(DEVID)_ACCESS
-@NADDR=4
-@SLAVE.BUS=wb32
-@SLAVE.TYPE=DOUBLE
-@MASTER.BUS=wbwide
-@MASTER.TYPE=DMA
-@MASTER.ANSPREFIX=dma_
-@MAIN.DEFNS=
-	wire	@$(PREFIX)_ready;
-@MAIN.INSERT=
-	wbi2cdma #(
-		.AW(@$(MASTER.BUS.AWID)), .DW(@$(MASTER.BUS.WIDTH)), .SW(8),
-		.OPT_LITTLE_ENDIAN(1'b0)
-	) u_@$(PREFIX) (
-		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
-		.i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
-		//
-		@$(SLAVE.ANSIPORTLIST),
-		.S_VALID(i2c_valid && i2c_id == 2), .S_READY(@$(PREFIX)_ready),
-			.S_DATA(i2c_data), .S_LAST(i2c_last),
-		@$(MASTER.ANSIPORTLIST)
-	);
-
-@MAIN.ALT=
-	assign	@$(PREFIX)_ready = 1'b0;
-@RTL.MAKE.GROUP=@$(DEVID)
-@RTL.MAKE.SUBD=wbi2c
-@RTL.MAKE.FILES=wbi2cdma.v
-@REGS.N=4
-@REGS.0=0 R_@$(DEVID)      @$(DEVID)
-@REGS.1=1 R_@$(DEVID)_ADDR @$(DEVID)ADDR
-@REGS.2=2 R_@$(DEVID)_BASE @$(DEVID)BASE
-@REGS.3=3 R_@$(DEVID)_LEN  @$(DEVID)LEN
-##
-## board.h
-##
-@BDEF.DEFN=
-#ifndef	@$(DEVID)_H
-#define	@$(DEVID)_H
-	////////////////////////////////////////////////////////////////////////
-	//
-	// I2C DMA data structures
-	// {{{
-	////////////////////////////////////////////////////////////////////////
-	//
-	//
-
-
-typedef struct  @$(DEVID)_S        {
-	unsigned	id_control, id_current, id_base, id_memlen;
-} @$(DEVID);
-
-#endif	// @$(DEVID)_H
-	// }}}
-@BDEF.IONAME=_@$(PREFIX)
-@BDEF.IOTYPE=@$(DEVID)
-@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME)=((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
-##
+		m_core->i_@$(PREFIX)_scl = m_core->o_@$(PREFIX)_scl;
+		m_core->i_@$(PREFIX)_sda = m_core->o_@$(PREFIX)_sda;

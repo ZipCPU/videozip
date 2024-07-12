@@ -6,12 +6,11 @@
 //
 // Purpose:	
 //
-//
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,8 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
-
+// }}}
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -245,8 +243,13 @@ assert(n != 0);
 		*/
 
 /*
+		// Only turn this on if you need to, otherwise it creates
+		// way too much debugging output--one line per char in the
+		// design
 		if (dbg) for(unsigned j=0; j<r[i]->m_len; j++)
-			fprintf(stderr, "ADR[%04x] = %02x\n", r[i]->m_start+j,
+			fprintf(stderr, "ADR[%04x -> %04x] = %02x\n",
+				r[i]->m_start+j,
+				(unsigned)(phdr.p_vaddr+j),
 				r[i]->m_data[j] & 0x0ff);
 */
 	}

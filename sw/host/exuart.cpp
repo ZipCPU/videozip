@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	sw/host/netuart.cpp
+// Filename:	sw/host/exuart.cpp
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -10,8 +10,8 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
-// Copyright (C) 2015-2024, Gisselquist Technology, LLC
+// }}}
+// Copyright (C) 2023-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
 // modify it under the terms of the GNU General Public License as published
@@ -34,8 +34,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
-
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -52,42 +51,67 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "port.h"
-#include "regdefs.h"
+// Get design info
+// {{{
+#include "regdefs.h"	// Replace with empty file if not present
+#include "port.h"	// Replace with empty file if not present
 
+// BAUDRATE should be defined in regdefs.h.  If it isn't, provide a basic
+// definition here.
 #ifndef	BAUDRATE
 #define	BAUDRATE	115200
 #endif
+
+// FPGAPORT should be defined in port.h.  If it isn't, provide a basic
+// definition.  In general, the FPGAPORT should be unique to the project,
+// chosen in a user port range, and not a port used by anything else locally.
+#ifndef	FPGAPORT
+#define	FPGAPORT	6121
+#endif
+// }}}
 
 #define	NO_WAITING	0
 #define	FOREVER		-1
 
 void	sigstop(int v) {
+	// {{{
 	fprintf(stderr, "SIGSTOP!!\n");
 	exit(0);
 }
+// }}}
 void	sighup(int v) {
+	// {{{
 	fprintf(stderr, "SIGHUP!!\n");
 	exit(0);
 }
+// }}}
 void	sigint(int v) {
+	// {{{
 	fprintf(stderr, "SIGINT!!\n");
 	exit(0);
 }
+// }}}
 void	sigsegv(int v) {
+	// {{{
 	fprintf(stderr, "SIGSEGV!!\n");
 	exit(0);
 }
+// }}}
 void	sigbus(int v) {
+	// {{{
 	fprintf(stderr, "SIGBUS!!\n");
 	exit(0);
 }
+// }}}
 void	sigpipe(int v) {
+	// {{{
 	fprintf(stderr, "SIGPIPE!!\n");
 	exit(0);
 }
+// }}}
 
 int	setup_listener(const int port) {
+	// {{{
 	int	skt;
 	struct  sockaddr_in     my_addr;
 
@@ -126,6 +150,7 @@ int	setup_listener(const int port) {
 
 	return skt;
 }
+// }}}
 
 class	LINBUFS {
 public:
@@ -140,6 +165,7 @@ public:
 	}
 
 	void	close(void) {
+		// {{{
 		if (!m_connected) {
 			m_fd = -1;
 			return;
@@ -151,18 +177,23 @@ public:
 		m_fd = -1;
 		m_connected = false;
 	}
+	// }}}
 
 	int	read(void) {
+		// {{{
 		return ::read(m_fd, m_buf, sizeof(m_buf));
 	}
+	// }}}
 
 	void	accept(const int skt) {
+		// {{{
 		m_fd = ::accept(skt, 0, 0);
 		if (m_fd < 0) {
 			perror("CMD Accept failed!  O/S Err:");
 			exit(EXIT_FAILURE);
 		} m_connected = (m_fd >= 0);
 	}
+	// }}}
 
 	int	write(int fd, int ln, int mask = 0) {
 		int	pos = 0, nw;
@@ -178,8 +209,11 @@ public:
 			if ((nw < 0)&&(errno == EAGAIN)) {
 				nw = 0;
 				usleep(10);
+			} else if ((nw < 0)&&(errno == EPIPE)) {
+				pos = 0;
+				break;
 			} else if (nw < 0) {
-				fprintf(stderr, "ERR: %4d\n", errno);
+				fprintf(stderr, "WR-ERR: %4d\n", errno);
 				perror("O/S Err: ");
 				// exit(EXIT_FAILURE);
 				break;
@@ -196,6 +230,7 @@ public:
 	}
 
 	void	print_in(FILE *fp, int ln, const char *prefix = NULL) {
+		// {{{
 		// lbcmd.print_in(ncmd, (lbcmd.m_fd>=0)?"> ":"# ");
 		assert(ln > 0);
 		for(int i=0; i<ln; i++) {
@@ -218,8 +253,10 @@ public:
 			}
 		}
 	}
+	// }}}
 
 	void	print_out(FILE *fp, int ln, const char *prefix = NULL) {
+		// {{{
 		for(int i=0; i<ln; i++) {
 			m_oline[m_olen++] = m_buf[i] & 0x07f;
 			assert(m_buf[i] != '\0');
@@ -238,14 +275,17 @@ public:
 			}
 		}
 	}
+	// }}}
 
 	void	flush_out(FILE *fp, const char *prefix = NULL) {
+		// {{{
 		if(m_olen > 0) {
 			m_oline[m_olen] = '\0';
 			fprintf(fp, "%s%s\n", (prefix)?prefix:"", m_oline);
 			m_olen = 0;
 		}
 	}
+	// }}}
 };
 
 int	main(int argc, char **argv) {
@@ -253,15 +293,21 @@ int	main(int argc, char **argv) {
 	int	skt = setup_listener(FPGAPORT),
 		console = setup_listener(FPGAPORT+1);
 	int	tty;
-	bool	done = false;
+	bool	done = false, syncd = false;
+	int	last_idle, idle_count = 0;
 
+	// Disable signals
+	// {{{
 	signal(SIGSTOP, sigstop);
 	signal(SIGBUS, sigbus);
 	signal(SIGSEGV, sigsegv);
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGINT, sigint);
 	signal(SIGHUP, sighup);
+	// }}}
 
+	// Open a connection to the TTY port
+	// {{{
 	if ((argc > 1)&&(NULL != strstr(argv[1], "/ttyUSB"))) {
 		// printf("Opening %s\n", argv[1]);
 		tty = open(argv[1], O_RDWR | O_NONBLOCK);
@@ -289,7 +335,12 @@ int	main(int argc, char **argv) {
 		printf("Could not open tty\n");
 		perror("O/S Err:");
 		exit(-1);
-	} else if (isatty(tty)) {
+	}
+	// }}}
+
+	// Configure the BAUDRATE, parity, stop bits, etc.
+	// {{{
+	if (isatty(tty)) {
 		struct	termios	tb;
 
 		printf("Setting up TTY for %d Baud\n", BAUDRATE);
@@ -365,16 +416,16 @@ int	main(int argc, char **argv) {
 		}
 		tcflow(tty, TCOON);
 	}
+	// }}}
 
 	LINBUFS	lbcmd, lbcon;
 	while(!done) {
 		struct	pollfd	p[4];
 		int	pv, nfds;
 
-
 		//
-		// Set up a poll to see if we have any events to examine
-		//
+		// Poll to see if we have any events to examine
+		// {{{
 		nfds = 0;
 
 		p[nfds].fd = tty;
@@ -405,7 +456,7 @@ int	main(int argc, char **argv) {
 			perror("Poll Failed!  O/S Err:");
 			exit(-1);
 		}
-
+		// }}}
 
 		//
 		//
@@ -413,7 +464,8 @@ int	main(int argc, char **argv) {
 		//
 		//
 
-		// Start by flusing everything on the TTY channel
+		// Start by flushing everything on the TTY channel
+		// {{{
 		if (p[0].revents & POLLIN) {
 			char	rawbuf[256];
 			int nr = read(tty, rawbuf, sizeof(rawbuf));
@@ -426,13 +478,29 @@ int	main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			} else while(nr > 0) {
 				int	ncmd = 0, ncon = 0;
-				for(int i=0; i<nr; i++) {
-					if (rawbuf[i] & 0x80)
+				for(int i=0; i<nr; i++) { // Buffer up data
+					// {{{
+					if (rawbuf[i] & 0x80) {
 						lbcmd.m_buf[ncmd++] = rawbuf[i] & 0x07f;
-					else
+						if (0xe4 == (rawbuf[i] & 0xe4)){
+							last_idle = rawbuf[i];
+							if (idle_count == 5) {
+								if (!syncd)
+									printf("SYNCD!\n");
+								syncd = true;
+							} if (idle_count < 256)
+								idle_count++;
+						} else {
+							idle_count = 0;
+						}
+					} else {
 						lbcon.m_buf[ncon++] = rawbuf[i];
+					}
 				}
-				if ((lbcmd.m_fd >= 0)&&(ncmd>0)) {
+				// }}}
+
+				if ((lbcmd.m_fd >= 0)&&(ncmd>0)) { // DBG Port
+					// {{{
 					int	nw;
 					nw = lbcmd.write(lbcmd.m_fd, ncmd);
 					if(nw != ncmd) {
@@ -443,8 +511,10 @@ int	main(int argc, char **argv) {
 					lbcmd.close();
 					}
 				}
+				// }}}
 
 				if ((lbcon.m_fd >= 0)&&(ncon>0)) {
+					// {{{
 					int	nw;
 					nw = lbcon.write(lbcon.m_fd, ncon);
 					if(nw != ncon) {
@@ -455,9 +525,10 @@ int	main(int argc, char **argv) {
 					lbcon.close();
 					}
 				}
+				// }}}
 
-				if (ncmd > 0)
-					lbcmd.print_in(stdout, ncmd, (lbcmd.m_fd>=0)?"> ":"# ");
+				// if (ncmd > 0)
+				//	lbcmd.print_in(stdout, ncmd, (lbcmd.m_fd>=0)?"> ":"# ");
 				if (ncon > 0)
 					lbcon.print_in(stdout, ncon);
 				nr = read(tty, rawbuf, sizeof(rawbuf));
@@ -467,24 +538,37 @@ int	main(int argc, char **argv) {
 			perror("O/S Err?");
 			exit(EXIT_FAILURE);
 		}
+		// }}}
 
+		// Read from the command channel, forward to TTY
+		// {{{
 		if (p[1].revents & POLLIN) {
 			if (p[1].fd == skt) {
 				lbcmd.accept(skt);
+				if (idle_count >= 5) {
+					for(int k=0; k<6; k++)
+						lbcmd.m_buf[k] = (char)last_idle;
+					lbcmd.write(skt, 5);
+				}
 			} else { // p[1].fd == lbcmd.m_fd
 				int nr = lbcmd.read();
 				if (nr == 0) {
-					lbcmd.flush_out(stdout, "< ");
+					// lbcmd.flush_out(stdout, "< ");
 					// printf("Disconnect\n");
 					lbcmd.close();
+					if (idle_count < 5)
+						syncd = false;
 				} else if (nr > 0) {
 					// printf("%d read from SKT\n", nr);
 					lbcmd.write(tty, nr, 0x80);
-					lbcmd.print_out(stdout, nr, "< ");
+					// lbcmd.print_out(stdout, nr, "< ");
 				}
 			}
 		}
+		// }}}
 
+		// Read from the console channel, forward to TTY
+		// {{{
 		if (p[2].revents & POLLIN) {
 			if (p[2].fd == console) {
 				lbcon.accept(console);
@@ -500,10 +584,14 @@ int	main(int argc, char **argv) {
 				}
 			}
 		}
+		// }}}
 	}
 
+	// Close up
+	// {{{
 	printf("Closing our sockets\n");
 	close(console);
 	close(skt);
+	// }}}
 }
 

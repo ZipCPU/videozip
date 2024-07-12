@@ -14,7 +14,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -38,7 +38,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -51,36 +51,26 @@
 #include "port.h"
 #include "llcomms.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "devbus.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 void	closeup(int v) {
 	m_fpga->kill();
 	exit(0);
 }
 
+/*
 unsigned int	cmd_read(FPGA *fpga, int r) {
 	const unsigned int	MAXERR = 1000;
 	unsigned int	errcount = 0;
 	unsigned int	s;
 
-	fpga->writeio(R_ZIPCTRL, CPU_HALT|(r&0x03f));
-	while((((s = fpga->readio(R_ZIPCTRL))&CPU_STALL)== 0)&&(errcount<MAXERR))
-		errcount++;
-	if (errcount >= MAXERR) {
-		printf("ERR: errcount(%d) >= MAXERR on cmd_read(a=%02x)\n",
-			errcount, r);
-		printf("ZIPCTRL = 0x%08x", s);
-		if ((s & 0x0200)==0) printf(" BUSY");
-		if  (s & 0x0400)     printf(" HALTED");
-		if ((s & 0x03000)==0x01000)
-			printf(" SW-HALT");
-		else {
-			if (s & 0x01000) printf(" SLEEPING");
-			if (s & 0x02000) printf(" GIE(UsrMode)");
-		} printf("\n");
-		exit(EXIT_FAILURE);
-	} return fpga->readio(R_ZIPDATA);
+	return	fpga->readio(R_ZIPCTRL, CPU_REGBASE + (r*4));
+}
+*/
+
+void	read_regs(DEVBUS *fpga, unsigned *r) {
+	fpga->readi(R_ZIPREGS, 32, r);
 }
 
 void	usage(void) {
@@ -102,40 +92,53 @@ int main(int argc, char **argv) {
 			argv[argn] = argv[argn+skp];
 	} argc -= skp;
 
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	if (!long_state) {
 		v = m_fpga->readio(R_ZIPCTRL);
 
 		printf("0x%08x: ", v);
-		if (v & 0x0080) printf("PINT ");
+		if (v & 0x0008) printf("RESET ");
+		if (v & 0x0400) printf("PINT ");
 		// if (v & 0x0100) printf("STEP "); // self resetting
-		if((v & 0x00200)==0) printf("BUSY ");
-		if (v & 0x00400) printf("HALTED ");
-		if((v & 0x03000)==0x01000) {
-			printf("SW-HALT");
-		} else {
-			if (v & 0x01000) printf("SLEEPING ");
-			if (v & 0x02000) printf("GIE(UsrMode) ");
+		// if (v & 0x00200) printf("DBG-STALL ");
+		if (v & 0x0001) {
+			if (v & 0x002)
+				printf("DBG-HALTED ");
+			else
+				printf("HALT_REQ ");
 		}
 		// if (v & 0x0800) printf("CLR-CACHE ");
+		if ((v & 0x0300)==0x0100) {
+			printf("SW-HALTED");
+		} else {
+			if (v & 0x0100) printf("SLEEPING ");
+			if (v & 0x0200) printf("GIE(UsrMode) ");
+		}
+		// if (v & 0x04000) printf("sBusErr ");
+		if (v & 0x0800) printf("BREAK-HALT");
+
+		// if ((v & 0x0fc00) == 0) printf("Running");
 		printf("\n");
 	} else {
-		printf("Reading the long-state ...\n");
+		unsigned	r[32];
+
+		printf("Reading the long-state ...\n"); fflush(stdout);
+		read_regs(m_fpga, r);
 		for(int i=0; i<14; i++) {
-			printf("sR%-2d: 0x%08x ", i, cmd_read(m_fpga, i));
+			printf("sR%-2d: 0x%08x ", i, r[i]);
 			if ((i&3)==3)
 				printf("\n");
-		} printf("sCC : 0x%08x ", cmd_read(m_fpga, 14));
-		printf("sPC : 0x%08x ", cmd_read(m_fpga, 15));
+		} printf("sCC : 0x%08x ", r[14]);
+		printf("sPC : 0x%08x ", r[15]);
 		printf("\n\n"); 
 
 		for(int i=0; i<14; i++) {
-			printf("uR%-2d: 0x%08x ", i, cmd_read(m_fpga, i+16));
+			printf("uR%-2d: 0x%08x ", i, r[i+16]);
 			if ((i&3)==3)
 				printf("\n");
-		} printf("uCC : 0x%08x ", cmd_read(m_fpga, 14+16));
-		printf("uPC : 0x%08x ", cmd_read(m_fpga, 15+16));
+		} printf("uCC : 0x%08x ", r[30]);
+		printf("uPC : 0x%08x ", r[31]);
 		printf("\n\n"); 
 	}
 

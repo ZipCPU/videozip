@@ -64,7 +64,7 @@ CFLAGS	:= -O3 -std=gnu++14 -faligned-new -Wall $(VDEFS) $(INCS) $(GFXFLAGS)
 #
 # A list of our sources and headers
 #
-SIMSOURCES:= flashsim.cpp zipelf.cpp i2csim.cpp	\
+SIMSOURCES:= flashsim.cpp zipelf.cpp i2csim.cpp	hdmisource.cpp \
 	memsim.cpp sdspisim.cpp uartsim.cpp byteswap.cpp dbluartsim.cpp	\
 	sdiosim.cpp netsim.cpp udpsocket.cpp hdmisim.cpp enetctrlsim.cpp
 SIMOBJECTS:= $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SIMSOURCES)))
@@ -87,6 +87,7 @@ $(OBJDIR)/%.o: $(VINCD)/%.cpp
 	$(mk-objdir)
 	$(CXX) $(CFLAGS) $(INCS) -c $< -o $@
 
+$(OBJDIR)/automaster_tb.o: automaster_tb.cpp main_tb.cpp
 
 # .PHONY: oledsim.o
 # oledsim.o: $(OBJDIR)/oledsim.o

@@ -221,6 +221,7 @@ module	idecode #(
 	assign	w_lock  = (w_special)&&(w_op[4:0]==5'h1d);
 	assign	w_sim   = (w_special)&&(w_op[4:0]==5'h1e);
 	assign	w_noop  = (w_special)&&(w_op[4:1]==4'hf); // Must include w_sim
+	// }}}
 
 	// w_dcdR, w_dcdA
 	// {{{

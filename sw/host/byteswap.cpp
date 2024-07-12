@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include "byteswap.h"
 
+// }}}
 uint32_t
 byteswap(uint32_t v) {
 	uint32_t	r = 0;

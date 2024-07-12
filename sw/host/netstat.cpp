@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2019-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,13 +43,14 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
-#include "ttybus.h"
 #include "regdefs.h"
+#include "port.h"
+#include "exbus.h"
 #include "design.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
 void	usage(void) {
 	printf("USAGE: netstat\n");
@@ -62,10 +62,10 @@ void	usage(void) {
 	"\tstream.\n\n");
 }
 
-#ifndef	R_NET_TXCMD
+#ifndef	R_MEGANET_TXCMD
 #define	NO_NETWORK_CONTROLLER
 #endif
-#ifndef	R_NET_RXCMD
+#ifndef	R_MEGANET_RXCMD
 #define	NO_NETWORK_CONTROLLER
 #endif
 
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
 "in and try again.\n");
 #else
 
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	if (argc != 1) {
 		// usage();
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 
 	////////////////////////////////
 	//
-	v = m_fpga->readio(R_NET_RXCMD);
+	v = m_fpga->readio(R_MEGANET_RXCMD);
 	if ((v & 0xc0000000) == 0)
 		printf("RX:\t1000 Mbase T\n");
 	else if ((v & 0xc0000000) == 0x40000000)
@@ -106,24 +106,10 @@ int main(int argc, char **argv) {
 		printf("RX:\tlink is down\n");
 	else
 		printf("RX:\tlink is up\n");
-	printf("RX:\t%d byte buffer\n", 1<<((v>>24) & 0x0f));
-	if (v & 0x80000)
-		printf("RX:\tBroadcast packet\n");
-	if (v & 0x40000)
-		printf("RX:\tPacket CRC error\n");
-	if (v & 0x20000)
-		printf("RX:\tPacket err (collision?)\n");
-	if (v & 0x10000)
-		printf("RX:\tPacket missed\n");
-	if (v & 0x08000)
-		printf("RX:\tIncoming packet\n");
-	if (v & 0x04000)
-		printf("RX:\tPacket available\n");
-	printf("--");
 	
 	////////////////////////////////
 	//
-	v = m_fpga->readio(R_NET_TXCMD);
+	v = m_fpga->readio(R_MEGANET_TXCMD);
 	if ((v & 0xc0000000) == 0)
 		printf("TX:\t1000 Mbase T\n");
 	else if ((v & 0xc0000000) == 0x40000000)
@@ -132,36 +118,39 @@ int main(int argc, char **argv) {
 		printf("TX:\t  10 Mbase T\n");
 	else
 		printf("TX:\tUnknown speed\n");
-	printf("TX:\t%d byte buffer\n", 1<<((v>>24) & 0x0f));
 	if (v & 0x0080000)
-		printf("TX:\t(Transmit debug output is built-in)\n");
-	if (v & 0x0040000)
 		printf("TX:\tHardware IP check  -- DISABLED\n");
-	if (v & 0x0020000)
+	if (v & 0x0040000)
 		printf("TX:\tNETWORK IS IN RESET\n");
-	if (v & 0x0010000)
+	if (v & 0x0020000)
 		printf("TX:\tHardware MAC check -- DISABLED\n");
-	if (v & 0x0008000)
+	if (v & 0x0010000)
 		printf("TX:\tHardware CRC check -- DISABLED\n");
-	if (v & 0x0004000)
-		printf("TX:\tTransmitter is busy\n");
-	printf("--");
 
 	////////////////////////////////
 	//
-	v = m_fpga->readio(R_NET_MACHI);
+	v = m_fpga->readio(R_MEGANET_MACHI);
 	printf("MAC: %02x:%02x", (v>>8)&0x0ff, (v & 0x0ff));
-	v = m_fpga->readio(R_NET_MACLO);
+	v = m_fpga->readio(R_MEGANET_MACLO);
 	printf(":%02x:%02x:%02x:%02x\n",
 		(v>>24)&0x0ff, ((v>>16) & 0x0ff), (v>>8)&0x0ff, (v & 0x0ff));
 
-	v = m_fpga->readio(R_NET_RXMISS);
-	printf("%6d\tMissed packets\n", v);
-	v = m_fpga->readio(R_NET_RXERR);
-	printf("%6d\tPackets received in error\n", v);
-	v = m_fpga->readio(R_NET_RXCRC);
-	printf("%6d\tPackets with bad CRCs\n", v);
+	v = m_fpga->readio(R_MEGANET_MACHI);
+	printf("MAC: %02x:%02x", (v>>8)&0x0ff, (v & 0x0ff));
+	v = m_fpga->readio(R_MEGANET_MACLO);
+	printf(":%02x:%02x:%02x:%02x\n",
+		(v>>24)&0x0ff, ((v>>16) & 0x0ff), (v>>8)&0x0ff, (v & 0x0ff));
 
+	v = m_fpga->readio(R_MEGANET_IPADDR);
+	printf("IP: %3d.%3d.%3d.%3d\n",
+		(v>>24)&0x0ff, (v>>16)&0x0ff, (v>> 8)&0x0ff, (v    )&0x0ff);
+
+	// v = m_fpga->readio(R_NET_RXMISS);
+	// printf("%6d\tMissed packets\n", v);
+	// v = m_fpga->readio(R_NET_RXERR);
+	// printf("%6d\tPackets received in error\n", v);
+	// v = m_fpga->readio(R_NET_RXCRC);
+	// printf("%6d\tPackets with bad CRCs\n", v);
 
 	delete	m_fpga;
 #endif

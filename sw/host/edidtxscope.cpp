@@ -13,7 +13,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -46,11 +46,12 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
 #include "regdefs.h"
+#include "port.h"
 #include "scopecls.h"
-#include "ttybus.h"
+#include "exbus.h"
 
 #if	defined(R_EDID_SCOPC) && defined(R_EDID_SCOPD)
 #else
@@ -60,66 +61,50 @@
 #define	WBSCOPE		R_EDID_SCOPC
 #define	WBSCOPEDATA	R_EDID_SCOPD
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 
 class	EDIDTXSCOPE : public SCOPE {
 public:
-	EDIDTXSCOPE(FPGA *fpga, unsigned addr, bool vecread=true)
+	EDIDTXSCOPE(DEVBUS *fpga, unsigned addr, bool vecread=true)
 		: SCOPE(fpga, addr, true, vecread) {};
 	~EDIDTXSCOPE(void) {}
 
 	virtual	void	define_traces(void) {
-		register_trace("ll_cyc",       1, 30);
-		register_trace("ll_stb",       1, 29);
 		//
-		register_trace("last_adr",     7, 22);
-		register_trace("wr_inc",       1, 21);
-		register_trace("count_left",   6, 15);
-		register_trace("watchdog",     1, 14);
+		register_trace("ovw_valid",         1, 30);
+		register_trace("i2c_abort",         1, 29);
+		register_trace("i2c_stretch",       1, 28);
+		register_trace("half_insn",         4, 24);
+		register_trace("r_wait",            1, 23);
+		register_trace("soft_halt_request", 1, 22);
 		//
-		register_trace("o_ack",        1, 13);
-		register_trace("o_busy",       1, 12);
+		register_trace("r_aborted",  1, 21);
+		register_trace("r_err",      1, 20);
+		register_trace("r_halted",   1, 19);
+		register_trace("insn_valid", 1, 18);
+		register_trace("half_valid", 1, 17);
+		register_trace("imm_cycle",  1, 16);
 		//
-		register_trace("o_err",        1, 11);
-		register_trace("stop_bit",     1, 10);
-		register_trace("start_bit",    1,  9);
-		register_trace("channel_busy", 1,  8);
-		//
-		register_trace("ll_state", 4, 4);
-		//
-		register_trace("i_tx_scl", 1, 3);
-		register_trace("i_tx_sda", 1, 2);
-		register_trace("o_tx_scl", 1, 1);
-		register_trace("o_tx_sda", 1, 0);
+		register_trace("o_i2c_scl",  1, 15);
+		register_trace("o_i2c_sda",  1, 14);
+		register_trace("i_i2c_scl",  1, 13);
+		register_trace("i_i2c_sda",  1, 12);
+		register_trace("i2cinsn",   12,  0);
 	}
 
 	virtual	void	decode(DEVBUS::BUSW val) const {
-		int	i_tx_sck, i_tx_sda, o_tx_sck, o_tx_sda, ll_state,
-			ll_cyc, ll_stb, ll_stall, ll_ack, ll_err;
+		int	o_scl, o_sda, i_scl, i_sda, insn;
 
-		ll_cyc   = (val>>30)&1;
-		ll_stb   = (val>>29)&1;
-		ll_ack   = (val>>13)&1;
-		ll_stall = (val>>12)&1;
-		ll_err   = (val>>11)&1;
-		//
-		ll_state = (val>> 4)&15;
-		//
-		i_tx_sck = (val>>3)&1;
-		i_tx_sda = (val>>2)&1;
-		o_tx_sck = (val>>1)&1;
-		o_tx_sda = (val   )&1;
-		//
+		o_scl = (val >> 15)&1;
+		o_sda = (val >> 12)&1;
+		i_scl = (val >> 13)&1;
+		i_sda = (val >> 12)&1;
+		insn  = val & 0x03ff;
 
-		printf("%s%s %s%s%s sLL[%x] TX-CMD[%s %s] TX-RCVD[%s %s]",
-			(ll_cyc) ? "CYC":"   ",
-			(ll_stb) ? "STB":"   ",
-			(ll_ack) ? "ACK":"   ",
-			(ll_stall)?"STALL":"     ",
-			(ll_err) ? "ERR":"   ",
-			ll_state,
-			(o_tx_sck)?"SCK":"   ", (o_tx_sda)?"SDA":"   ",
-			(i_tx_sck)?"SCK":"   ", (i_tx_sda)?"SDA":"   ");
+		printf("%3s %3s / %03x",
+				(o_scl && i_scl) ? "SCL" : "   ",
+				(o_sda && i_sda) ? "SDA" : "   ",
+				insn);
 	}
 };
 
@@ -129,7 +114,7 @@ int main(int argc, char **argv) {
 #else
 	// Open and connect to our FPGA.  This macro needs to be defined in the
 	// include files above.
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	// Here, we open a scope.  An EDIDTXSCOPE specifically.  The difference
 	// between an EDIDTXSCOPE and any other scope is ... that the

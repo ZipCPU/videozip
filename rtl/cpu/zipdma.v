@@ -414,11 +414,13 @@ module zipdma #(
 
 	// Make verilator happy
 	// {{{
+	// verilator coverage_off
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = &{ 1'b0, ign_sfifo_fill, mm2s_rd_data, rx_ready,
 				s2mm_transferlen };
 	// verilator lint_on  UNUSED
+	// verilator coverage_on
 	// }}}
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////

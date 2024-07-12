@@ -13,7 +13,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -46,17 +46,20 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "port.h"
+#include "exbus.h"
 #include "byteswap.h"
 
-FPGA	*m_fpga;
+DEVBUS	*m_fpga;
 void	closeup(int v) {
+	// {{{
 	m_fpga->kill();
 	exit(0);
 }
+// }}}
 
 void	usage(void) {
 	printf("USAGE: cpedid\n"
@@ -79,13 +82,13 @@ int main(int argc, char **argv) {
 			argv[argn] = argv[argn+skp];
 	} argc -= skp;
 
-	FPGAOPEN(m_fpga);
+	m_fpga = connect_devbus(NULL);
 
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
 	char	edid_buffer[256];
-	m_fpga->readi(R_EDID_OUT, (256>>2), (unsigned *)edid_buffer);
+	m_fpga->readi(R_EDIDRX, (256>>2), (unsigned *)edid_buffer);
 	byteswapbuf((256>>2), (unsigned *)edid_buffer);
 
 	{

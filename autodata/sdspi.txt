@@ -131,13 +131,20 @@
 	//
 	//
 
-	sdspi
+	sdspi #(
+		// {{{
+		.OPT_CARD_DETECT(1'b1),
+		.OPT_LITTLE_ENDIAN(1'b0),
+		.OPT_SPI_ARBITRATION(1'b0)
+		// }}}
 	@$(PREFIX)i(
 		// {{{
-		i_clk, sd_reset,
-		@$(SLAVE.PORTLIST),
-		w_sd_cs_n, o_sd_sck, w_sd_mosi, w_sd_miso, i_sd_detect,
-		@$(PREFIX)_int, 1'b1, sdspi_debug
+		.i_clk(i_clk), .i_sd_reset(sd_reset),
+		@$(SLAVE.ANSIPORTLIST),
+		.o_cs_n(w_sd_cs_n), .o_sck(o_sd_sck), .o_miso(w_sd_mosi),
+		.i_miso(w_sd_miso), .i_card_detect(i_sd_detect),
+		.o_int(@$(PREFIX)_int), .i_bus_grant(1'b1),
+		.o_debug(sdspi_debug)
 		// }}}
 	);
 

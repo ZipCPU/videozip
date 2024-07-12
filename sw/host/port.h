@@ -5,14 +5,16 @@
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	Defines the communication parameters necessary for communicating
-//		with the device.
+//		both with our actual hardware device, as well as with our Verilator
+//	simulation.  The result is that whatever communicates with the other may
+//	not know the difference (as desired).
 //
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,7 +38,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #ifndef	PORT_H
 #define	PORT_H
 
@@ -46,13 +48,11 @@
 // with the test-bench.  Across the network, no one will know any better that
 // anything had changed.
 #define	FPGAHOST	"localhost"
-#define	FPGATTY		"/dev/ttyUSB1"
-#define	FPGAPORT	6782
 
-#ifndef	FORCE_UART
-#define	FPGAOPEN(V) V= new FPGA(new NETCOMMS(FPGAHOST, FPGAPORT))
-#else
-#define	FPGAOPEN(V) V= new FPGA(new TTYCOMMS(FPGATTY))
+#ifndef	FPGAPORT
+#define	FPGAPORT	6782
 #endif
+
+#define FPGAOPEN(V) V= connect_devbus(NULL)
 
 #endif

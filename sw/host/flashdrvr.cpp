@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,7 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
+// }}}
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -49,7 +49,7 @@
 #include "port.h"
 #include "design.h"
 #include "regdefs.h"
-#include "ttybus.h"
+#include "devbus.h"
 #include "flashdrvr.h"
 #include "byteswap.h"
 
@@ -69,21 +69,35 @@
 #define	CFG_WEDIR	(1<<9)
 #define	CFG_USER_CS_n	(1<<8)
 
+const	bool	HIGH_SPEED = false;
+#ifdef	FLASH_ACCESS
+const	bool	OPT_ADDR32 = (FLASHLEN > (1<<24));
+const	unsigned FLASH_ADDR_MASK = (FLASHLEN -1);
+#else
+const	bool	OPT_ADDR32 = false;
+const	unsigned FLASH_ADDR_MASK = -1;
+#endif
+
 static const unsigned	F_RESET = (CFG_USERMODE|0x0ff),
 			F_EMPTY = (CFG_USERMODE|0x000),
 			F_WRR   = (CFG_USERMODE|0x001),
-			F_PP    = (CFG_USERMODE|0x002),
-			F_QPP   = (CFG_USERMODE|0x032),
-			F_READ  = (CFG_USERMODE|0x003),
+			F_PP    = (OPT_ADDR32)
+					? (CFG_USERMODE|0x012)
+					: (CFG_USERMODE|0x002),
+			F_QPP   = (OPT_ADDR32)
+					? (CFG_USERMODE|0x034)
+					: (CFG_USERMODE|0x032),
+			F_READ  = (OPT_ADDR32)
+					? (CFG_USERMODE|0x013)
+					: (CFG_USERMODE|0x003),
 			F_WRDI  = (CFG_USERMODE|0x004),
 			F_RDSR1 = (CFG_USERMODE|0x005),
 			F_WREN  = (CFG_USERMODE|0x006),
 			F_MFRID = (CFG_USERMODE|0x09f),
-			F_SE    = (CFG_USERMODE|0x0d8),
+			F_SE    = (OPT_ADDR32)	// Sector erase
+					? (CFG_USERMODE|0x0dc)
+					: (CFG_USERMODE|0x0d8),
 			F_END   = (CFG_USERMODE|CFG_USER_CS_n);
-
-
-const	bool	HIGH_SPEED = false;
 
 #ifdef	R_FLASHSCOPE // Scope for the flash driver
 # define SETSCOPE m_fpga->writeio(R_FLASHSCOPE, 8180)
@@ -136,14 +150,18 @@ void	FLASHDRVR::place_online(void) {
 
 void	FLASHDRVR::take_offline(DEVBUS *fpga) {
 #ifdef	R_FLASHCFG
-	fpga->writeio(R_FLASHCFG, F_END);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_RESET);
-	fpga->writeio(R_FLASHCFG, F_END);
+	DEVBUS::BUSW	dprog[10], *dp;
+	
+	dp = dprog;
+	*dp++ = F_END;
+	*dp++ = F_RESET;
+	*dp++ = F_RESET;
+	*dp++ = F_RESET;
+	*dp++ = F_RESET;
+	*dp++ = F_RESET;
+	*dp++ = F_RESET;
+	*dp++ = F_END;
+	fpga->writez(R_FLASHCFG, dp-dprog, dprog);
 #endif
 }
 
@@ -173,82 +191,105 @@ void	FLASHDRVR::restore_quadio(void) {
 }
 
 void	FLASHDRVR::restore_quadio(DEVBUS *fpga) {
+		// {{{
 #ifdef	QSPI_FLASH
-	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE|0xeb;
+	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE
+			|(OPT_ADDR32 ? 0xec : 0xeb);
+	DEVBUS::BUSW	dprog[40], *dp;
+	
+	dp = dprog;
 
-	fpga->writeio(R_FLASHCFG, F_END);
-	/*
-	if (MICRON_FLASHID == m_id) {
+	*dp++ = F_END;
+
+	if (0) { // if (MICRON_FLASHID == m_id)
 		// printf("MICRON-flash\n");
 		// Need to enable XIP first for MICRON's flash
 		//
 		// This requires sending a write enable first
-		fpga->writeio(R_FLASHCFG, F_WREN);
-		fpga->writeio(R_FLASHCFG, F_END);
+		*dp++ = F_WREN;
+		*dp++ = F_END;
 
 		// Then sending a 0xab, 0x81
-		fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0x81);
-		fpga->writeio(R_FLASHCFG, CFG_USERMODE | 0xf3);
-		fpga->writeio(R_FLASHCFG, F_END);
+		*dp++ = CFG_USERMODE | 0x81;
+		*dp++ = CFG_USERMODE | 0x83;
+		*dp++ = F_END;
 	}
-	*/
 
-	fpga->writeio(R_FLASHCFG, QUAD_IO_READ);
+	*dp++ = CFG_WEDIR | QUAD_IO_READ;
 	// 3 address bytes
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR);
+	*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR;
+	*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR;
+	*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR;
+	// 4 address bytes if in 32bit mode
+	if (OPT_ADDR32)
+		*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR;
+	
 	// Mode byte
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0);
+	*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0;
 	// Read NDUMMY clocks worth
 #ifdef	FLASH_NDUMMY
 	for(int k=0; k<(FLASH_NDUMMY-2)/2; k++)
-		fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
+		*dp++ = CFG_USERMODE | CFG_QSPEED;
 #endif
 	// Read a dummy byte
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE | CFG_QSPEED );
+	*dp++ = CFG_USERMODE | CFG_QSPEED;
 	// Close the interface
-	fpga->writeio(R_FLASHCFG, CFG_USERMODE);
-	fpga->writeio(R_FLASHCFG, CFG_USER_CS_n);
+	*dp++ = CFG_USERMODE;
+	*dp++ = CFG_USER_CS_n;
+
+	fpga->writez(R_FLASHCFG, dp-dprog, dprog);
 #endif
 }
+// }}}
 
 void	FLASHDRVR::flwait(void) {
+	// {{{
 #ifdef	FLASH_ACCESS
 	const	int	WIP = 1;	// Write in progress bit
-	DEVBUS::BUSW	sr;
+	DEVBUS::BUSW	sr, dprog[8], *dp;
 
-	m_fpga->writeio(R_FLASHCFG, F_END);
-	m_fpga->writeio(R_FLASHCFG, F_RDSR1);
+	dp = dprog;
+	*dp++ = F_END;
+	*dp++ = F_RDSR1;
 	do {
-		m_fpga->writeio(R_FLASHCFG, F_EMPTY);
+		*dp++ = F_EMPTY;
+		m_fpga->writez(R_FLASHCFG, dp-dprog, dprog);
+		dp = dprog;
+
 		sr = m_fpga->readio(R_FLASHCFG);
 	} while(sr&WIP);
 	m_fpga->writeio(R_FLASHCFG, F_END);
 #endif
 }
+// }}}
 
-bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase) {
+bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase){
+	// {{{
 #ifdef	FLASH_ACCESS
-	unsigned	flashaddr = sector & 0x0ffffff;
+	unsigned	flashaddr = sector & FLASH_ADDR_MASK;
+	DEVBUS::BUSW	page[SZPAGEW];
+	DEVBUS::BUSW	dprog[32], *dp;
+	dp = dprog;
 
 	take_offline();
 
 	// Write enable
-	m_fpga->writeio(R_FLASHCFG, F_END);
-	m_fpga->writeio(R_FLASHCFG, F_WREN);
-	m_fpga->writeio(R_FLASHCFG, F_END);
-
-	DEVBUS::BUSW	page[SZPAGEW];
+	*dp++ = F_END;
+	*dp++ = F_WREN;
+	*dp++ = F_END;
 
 	// printf("EREG before   : %08x\n", m_fpga->readio(R_QSPI_EREG));
 	printf("Erasing sector: %06x\n", flashaddr);
 
-	m_fpga->writeio(R_FLASHCFG, F_SE);
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | ((flashaddr>>16)&0x0ff));
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | ((flashaddr>> 8)&0x0ff));
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE | ((flashaddr    )&0x0ff));
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	*dp++ = F_SE;
+	if (OPT_ADDR32)
+		*dp++ = CFG_USERMODE|((flashaddr>>24)&0x0ff);
+	*dp++ = CFG_USERMODE | ((flashaddr>>16)&0x0ff);
+	*dp++ = CFG_USERMODE | ((flashaddr>> 8)&0x0ff);
+	*dp++ = CFG_USERMODE | ((flashaddr    )&0x0ff);
+	*dp++ = F_END;
+	m_fpga->writez(R_FLASHCFG, dp-dprog, dprog);
+	dp = dprog;
 
 	// Wait for the erase to complete
 	flwait();
@@ -283,14 +324,15 @@ bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase) {
 	return false; // No flash preset
 #endif
 }
+// }}}
 
 bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 		const char *data, const bool verify_write) {
+	// {{{
 #ifdef	FLASH_ACCESS
 	DEVBUS::BUSW	buf[SZPAGEW], bswapd[SZPAGEW];
-	unsigned	flashaddr = addr & 0x0ffffff;
-
-	take_offline();
+	unsigned	flashaddr = addr & FLASH_ADDR_MASK;
+	DEVBUS::BUSW	*dprog, *dp;
 
 	assert(len > 0);
 	assert(len <= PGLENB);
@@ -313,10 +355,16 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 		return true;
 	}
 
+	take_offline();
+
+	dprog = new unsigned[len+1+4+5];
+	dp = dprog;
+
 	// Write enable
-	m_fpga->writeio(R_FLASHCFG, F_END);
-	m_fpga->writeio(R_FLASHCFG, F_WREN);
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	dprog[0] = F_END;
+	dprog[1] = F_WREN;
+	dprog[2] = F_END;
+	m_fpga->writei(R_FLASHCFG, 3, dprog);
 
 	//
 	// Write the page
@@ -327,22 +375,26 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	// Our interface will limit us, so there's no reason to use
 	// QUAD page programming here
 	// if (F_QPP) {} else
-	m_fpga->writeio(R_FLASHCFG, F_PP);
+	*dp++ = F_PP;
 	// The address of the page to be programmed
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>>16)&0x0ff));
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr>> 8)&0x0ff));
-	m_fpga->writeio(R_FLASHCFG, CFG_USERMODE|((flashaddr    )&0x0ff));
+	if (OPT_ADDR32)
+		*dp++ = CFG_USERMODE|((flashaddr>>24)&0x0ff);
+	*dp++ = CFG_USERMODE|((flashaddr>>16)&0x0ff);
+	*dp++ = CFG_USERMODE|((flashaddr>> 8)&0x0ff);
+	*dp++ = CFG_USERMODE|((flashaddr    )&0x0ff);
 
 	//
 	// Write the page data itself
 	//
-	for(unsigned i=0; i<len; i++)
-		m_fpga->writeio(R_FLASHCFG, 
-			CFG_USERMODE | CFG_WEDIR | (data[i] & 0x0ff));
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	if (len > 0) {
+		for(unsigned i=0; i<len; i++)
+			*dp++ = CFG_USERMODE | CFG_WEDIR | (data[i] & 0x0ff);
+	} *dp++ = F_END;
+	m_fpga->writez(R_FLASHCFG, dp-dprog, dprog);
+	delete[]	dprog;
 
 	printf("Writing page: 0x%08x - 0x%08x", addr, addr+len-1);
-	if ((m_debug)&&(verify_write))
+	if (m_debug && verify_write)
 		fflush(stdout);
 	else
 		printf("\n");
@@ -353,6 +405,8 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 	// Turn quad-mode read back on, so we can verify the program
 	place_online();
 	if (verify_write) {
+		bool	passed = true;
+
 		// printf("Attempting to verify page\n");
 		// NOW VERIFY THE PAGE
 		m_fpga->readi(addr, len>>2, buf);
@@ -361,15 +415,18 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 				printf("\nVERIFY FAILS[%d]: %08x\n", i, (i<<2)+addr);
 				printf("\t(Flash[%d]) %08x != %08x (Goal[%08x])\n", 
 					(i<<2), buf[i], bswapd[i], (i<<2)+addr);
-				return false;
+				passed = false;
 			}
-		} if (m_debug)
+		} if (!passed)
+			return false;
+		else if (m_debug)
 			printf(" -- Successfully verified\n");
 	} return true;
 #else
 	return false; // No flash present
 #endif
 }
+// }}}
 
 #ifdef	R_QSPI_VCONF
 #define	VCONF_VALUE	0xab
@@ -409,6 +466,7 @@ void	FLASHDRVR::set_config(void) {
 bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 		const char *data, const bool verify) {
 #ifdef	FLASH_ACCESS
+	DEVBUS::BUSW	dprog[4], *dp = dprog;
 
 	flashid();
 
@@ -447,8 +505,10 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 			for(unsigned i=0; i<ln; i++) {
 				if ((sbuf[i]&dp[i]) != dp[i]) {
 					if (m_debug) {
-						printf("\nNEED-ERASE @0x%08x ... %08x != %08x (Goal)\n", 
-							i+base-addr, sbuf[i], dp[i]);
+						printf("\nNEED-ERASE @0x%08x ... 0x%02x != 0x%02x (Goal)\n", 
+							i+base-addr,
+							sbuf[i] & 0x0ff,
+							dp[i] & 0x0ff);
 					}
 					need_erase = true;
 					newv = (i&-4)+base;
@@ -475,13 +535,13 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 		// Now walk through all of our pages in this sector and write
 		// to them.
 		for(unsigned p=newv; (p<s+SECTORSZB)&&(p<addr+len); p=PAGEOF(p+PGLENB)) {
-			unsigned start = p, len = addr+len-start;
+			unsigned start = p, ln = addr+len-start;
 
 			// BUT! if we cross page boundaries, we need to clip
 			// our results to the page boundary
 			if (PAGEOF(start+len-1)!=PAGEOF(start))
-				len = PAGEOF(start+PGLENB)-start;
-			if (!page_program(start, len, &data[p-addr], verify)) {
+				ln = PAGEOF(start+PGLENB)-start;
+			if (!page_program(start, ln, &data[p-addr], verify)) {
 				printf("WRITE-PAGE FAILED!\n");
 				return false;
 			}
@@ -491,8 +551,10 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 
 	take_offline();
 
-	m_fpga->writeio(R_FLASHCFG, F_WRDI);
-	m_fpga->writeio(R_FLASHCFG, F_END);
+	dp = dprog;
+	*dp++ = F_WRDI;
+	*dp++ = F_END;
+	m_fpga->writez(R_FLASHCFG, dprog-dp, dprog);
 
 	place_online();
 
