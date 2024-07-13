@@ -12,7 +12,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -36,7 +36,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -45,10 +44,11 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
-#include "port.h"
-#include "ttybus.h"
+#include "exbus.h"
 #include "regdefs.h"
+#include "port.h"
 #include <design.h>
 
 #ifdef	R_NETSCOPE
@@ -56,12 +56,6 @@
 #else
 #define	SETSCOPE
 #endif
-
-//
-// Define DONT_INVERT for debugging only, as it will break the interface
-// test
-//
-// #define	DONT_INVERT
 
 
 FPGA	*m_fpga;
@@ -142,11 +136,7 @@ bool	strtoinetaddr(char *s, unsigned char *addr) {
 
 unsigned	calccrc(const int bytelen, const unsigned *buf) {
 	const unsigned int	taps = 0xedb88320u;
-#ifdef	DONT_INVERT
-	unsigned int	crc = 0;
-#else
 	unsigned int	crc = 0xffffffff; // initial value
-#endif
 	int	bidx;
 	int	bp = 0;
 
@@ -165,9 +155,8 @@ unsigned	calccrc(const int bytelen, const unsigned *buf) {
 				crc >>= 1;
 		} bp++;
 	}
-#ifndef	DONT_INVERT
+
 	crc ^= 0xffffffff;
-#endif
 	// Now, we need to reverse these bytes
 	// ABCD
 	unsigned a,b,c,d;
@@ -223,7 +212,7 @@ void	clear_scope(FPGA *fpga) {
 }
 
 int main(int argc, char **argv) {
-#ifndef	ETHERNET_ACCESS
+#ifndef	MEGANET_ACCESS
 	fprintf(stderr,
 "The ethernet core was not included in this design.  Reconfigure your\n"
 "autofpga settings, and build this again if you want to test your network\n"
@@ -466,7 +455,7 @@ int main(int argc, char **argv) {
 	rxstat = m_fpga->readio(R_NET_RXCMD);
 	printf("Final Rx Status = %08x\n", rxstat);
 
-	
+
 	delete	m_fpga;
 #endif
 }
