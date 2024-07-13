@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	rtl/lli2cm.v
+// Filename:	rtl/wbi2c/lli2cm.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //

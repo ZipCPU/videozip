@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename: 	sdfifo.v
+// Filename:	rtl/sdspi/sdfifo.v
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
