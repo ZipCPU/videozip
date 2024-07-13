@@ -54,6 +54,7 @@
 #include "dbluartsim.h"
 
 int	DBLUARTSIM::setup_listener(const int port) {
+	// {{{
 	struct	sockaddr_in	my_addr;
 	int	skt;
 
@@ -96,10 +97,13 @@ int	DBLUARTSIM::setup_listener(const int port) {
 
 	return skt;
 }
+// }}}
 
 DBLUARTSIM::DBLUARTSIM(const int port, const bool copy_to_stdout)
 		: m_copy(copy_to_stdout) {
-	m_debug = true;
+	// {{{
+	m_debug = false;
+	m_numsyncs = 0;
 	m_con = m_cmd = -1;
 	m_skt = setup_listener(port);
 	m_console = setup_listener(port+1);
@@ -112,8 +116,10 @@ DBLUARTSIM::DBLUARTSIM(const int port, const bool copy_to_stdout)
 	m_tx_state = TXIDLE;
 	m_cllen = 0;
 }
+// }}}
 
 void	DBLUARTSIM::kill(void) {
+	// {{{
 	// Close any active connection
 	if (m_con >= 0)	    {
 		const	char	*SIM_CLOSED = "\n[SIM] Connection-Closed\n";
@@ -154,8 +160,10 @@ void	DBLUARTSIM::kill(void) {
 	m_console = -1;
 	m_cmd     = -1;
 }
+// }}}
 
 void	DBLUARTSIM::setup(unsigned isetup) {
+	// {{{
 	if (isetup != m_setup) {
 		m_setup = isetup;
 		m_baud_counts = (isetup & 0x0ffffff);
@@ -166,8 +174,10 @@ void	DBLUARTSIM::setup(unsigned isetup) {
 		m_evenp   = (isetup >> 24)&1;
 	}
 }
+// }}}
 
 void	DBLUARTSIM::poll_accept(void) {
+	// {{{
 	struct	pollfd	pb[2];
 	int	npb = 0;
 
@@ -200,7 +210,16 @@ void	DBLUARTSIM::poll_accept(void) {
 
 				if (m_cmd < 0)
 					perror("CMD Accept failed:");
-				else printf("Accepted CMD connection\n");
+				else {
+					printf("Accepted CMD connection.  Sending %d syncs\n", m_numsyncs);
+
+					if (m_numsyncs > 0) {
+						char	sync_buf[8];
+						for(int s=0; s<8; s++)
+							sync_buf[s] = m_sync_char;
+						send(m_cmd, sync_buf, m_numsyncs, 0);
+					}
+				}
 			} else if (pb[k].fd == m_console) {
 				m_con = accept(m_console, 0, 0);
 				if (m_con < 0)
@@ -212,8 +231,10 @@ void	DBLUARTSIM::poll_accept(void) {
 
 	// End of trying to accept more connections
 }
+// }}}
 
 void	DBLUARTSIM::poll_read(void) {
+	// {{{
 	struct	pollfd	pb[2];
 	int		npb = 0, r;
 
@@ -250,13 +271,13 @@ void	DBLUARTSIM::poll_read(void) {
 					if (m_cmdline[m_cllen] != '\r') {
 						if (m_cmdline[m_cllen] == '\n'){
 							m_cmdline[m_cllen]='\0';
-							printf("< %s\n", m_cmdline);
+							// printf("< %s\n", m_cmdline);
 							m_cllen=0;
 						} else
 							m_cllen++;
 					} if (m_cllen >= 64) {
 						m_cmdline[m_cllen+1] = '\0';
-						printf("< %s\n", m_cmdline);
+						// printf("< %s\n", m_cmdline);
 						m_cllen = 0;
 					}
 					
@@ -266,7 +287,7 @@ void	DBLUARTSIM::poll_read(void) {
 
 				if (nr <= 0) {
 					m_cmdline[m_cllen] = '\0';
-					printf("< %s [CLOSED]\n", m_cmdline);
+					// printf("< %s [CLOSED]\n", m_cmdline);
 					m_cllen = 0;
 				}
 			} if (nr > 0) {
@@ -283,14 +304,22 @@ void	DBLUARTSIM::poll_read(void) {
 		}
 	} m_rxpos = 0;
 }
+// }}}
 
 void	DBLUARTSIM::received(const char ch) {
+	// {{{
 	if (ch & 0x80) {
 		m_cmdbuf[m_cmdpos++] = ch & 0x7f;
+		if (0xe0 == (ch & 0xe0)) {
+			if (m_numsyncs < 8)
+				m_numsyncs++;
+			m_sync_char = ch;
+		} else
+			m_numsyncs = 0;
 	} else
 		m_conbuf[m_conpos++] = ch & 0x7f;
-	if ((m_cmdpos>0)&&((m_cmdbuf[m_cmdpos-1] == '\n')
-				||(m_cmdpos >= DBLPIPEBUFLEN-2))) {
+
+	if (m_cmdpos>0) {
 		int	snt = 0;
 		if (m_cmd >= 0)
 			snt = send(m_cmd,m_cmdbuf, m_cmdpos, 0);
@@ -303,7 +332,7 @@ void	DBLUARTSIM::received(const char ch) {
 			snt = 0;
 		} // else printf("%d/%d bytes returned\n", snt, m_cmdpos);
 		m_cmdbuf[m_cmdpos] = '\0';
-		if (m_copy) printf("> %s", m_cmdbuf);
+		// if (m_copy) printf("> %s", m_cmdbuf);
 		if (snt < m_cmdpos) {
 			fprintf(stderr, "CMD: Only sent %d bytes of %d!\n",
 				snt, m_cmdpos);
@@ -329,8 +358,10 @@ void	DBLUARTSIM::received(const char ch) {
 		m_conpos = 0;
 	}
 }
+// }}}
 
 int	DBLUARTSIM::next(void) {
+	// {{{
 	// If our transmit buffer is empty, see if we can
 	// fill it.
 	if (m_ilen == 0)
@@ -344,8 +375,10 @@ int	DBLUARTSIM::next(void) {
 
 	return nval & 0x0ff;
 }
+// }}}
 
 int	DBLUARTSIM::tick(int i_tx) {
+	// {{{
 	int	o_rx = 1;
 
 	poll_accept();
@@ -432,3 +465,4 @@ int	DBLUARTSIM::tick(int i_tx) {
 
 	return o_rx;
 }
+// }}}

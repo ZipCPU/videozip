@@ -25,6 +25,9 @@ create_clock -period 10.000 -name INCLK -waveform {0.000 5.000} -add [get_ports 
 
 ## LEDs
 ## {{{
+## The correct voltage for the LEDs is not really given in either the LED
+## circuit or the reference manual.  However, according to the schematic they
+## are connected to the 2.5V bank.  Hence they are declared LVCMOS25 here.
 set_property -dict {PACKAGE_PIN T14 IOSTANDARD LVCMOS25} [get_ports {o_led[0]}]
 set_property -dict {PACKAGE_PIN T15 IOSTANDARD LVCMOS25} [get_ports {o_led[1]}]
 set_property -dict {PACKAGE_PIN T16 IOSTANDARD LVCMOS25} [get_ports {o_led[2]}]
@@ -37,25 +40,28 @@ set_property -dict {PACKAGE_PIN Y13 IOSTANDARD LVCMOS25} [get_ports {o_led[7]}]
 
 ## Buttons
 ## {{{
-set_property -dict {PACKAGE_PIN B22 IOSTANDARD LVCMOS12} [get_ports i_btnc]
-set_property -dict {PACKAGE_PIN D22 IOSTANDARD LVCMOS12} [get_ports i_btnd]
-set_property -dict {PACKAGE_PIN C22 IOSTANDARD LVCMOS12} [get_ports i_btnl]
-set_property -dict {PACKAGE_PIN D14 IOSTANDARD LVCMOS12} [get_ports i_btnr]
-set_property -dict {PACKAGE_PIN F15 IOSTANDARD LVCMOS12} [get_ports i_btnu]
-#set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS15} [get_ports i_cpu_resetn]
+## The correct voltage for the buttons is VADJ.  If you adjust VADJ, adjust the
+## button voltages.
+set_property -dict {PACKAGE_PIN B22 IOSTANDARD LVCMOS33} [get_ports i_btnc]
+set_property -dict {PACKAGE_PIN D22 IOSTANDARD LVCMOS33} [get_ports i_btnd]
+set_property -dict {PACKAGE_PIN C22 IOSTANDARD LVCMOS33} [get_ports i_btnl]
+set_property -dict {PACKAGE_PIN D14 IOSTANDARD LVCMOS33} [get_ports i_btnr]
+set_property -dict {PACKAGE_PIN F15 IOSTANDARD LVCMOS33} [get_ports i_btnu]
+#set_property -dict {PACKAGE_PIN G4  IOSTANDARD LVCMOS33} [get_ports i_cpu_resetn]
 ## }}}
-
 
 ## Switches
 ## {{{
-set_property -dict {PACKAGE_PIN E22 IOSTANDARD LVCMOS12} [get_ports {i_sw[0]}]
-set_property -dict {PACKAGE_PIN F21 IOSTANDARD LVCMOS12} [get_ports {i_sw[1]}]
-set_property -dict {PACKAGE_PIN G21 IOSTANDARD LVCMOS12} [get_ports {i_sw[2]}]
-set_property -dict {PACKAGE_PIN G22 IOSTANDARD LVCMOS12} [get_ports {i_sw[3]}]
-set_property -dict {PACKAGE_PIN H17 IOSTANDARD LVCMOS12} [get_ports {i_sw[4]}]
-set_property -dict {PACKAGE_PIN J16 IOSTANDARD LVCMOS12} [get_ports {i_sw[5]}]
-set_property -dict {PACKAGE_PIN K13 IOSTANDARD LVCMOS12} [get_ports {i_sw[6]}]
-set_property -dict {PACKAGE_PIN M17 IOSTANDARD LVCMOS12} [get_ports {i_sw[7]}]
+## The correct voltage for the switches is VADJ.  If you adjust VADJ, adjust
+## the switch voltage.
+set_property -dict {PACKAGE_PIN E22 IOSTANDARD LVCMOS33} [get_ports {i_sw[0]}]
+set_property -dict {PACKAGE_PIN F21 IOSTANDARD LVCMOS33} [get_ports {i_sw[1]}]
+set_property -dict {PACKAGE_PIN G21 IOSTANDARD LVCMOS33} [get_ports {i_sw[2]}]
+set_property -dict {PACKAGE_PIN G22 IOSTANDARD LVCMOS33} [get_ports {i_sw[3]}]
+set_property -dict {PACKAGE_PIN H17 IOSTANDARD LVCMOS33} [get_ports {i_sw[4]}]
+set_property -dict {PACKAGE_PIN J16 IOSTANDARD LVCMOS33} [get_ports {i_sw[5]}]
+set_property -dict {PACKAGE_PIN K13 IOSTANDARD LVCMOS33} [get_ports {i_sw[6]}]
+set_property -dict {PACKAGE_PIN M17 IOSTANDARD LVCMOS33} [get_ports {i_sw[7]}]
 ## }}}
 
 ## OLED Display
@@ -361,6 +367,9 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clksysclkctr/avgs*}]       -to [ get_cells -hier -filter {NAME =~*clksysclkctr/q_v*}]   8.0
 ## No XDC.INSERT tag in mem_flash_bkram
 ## No XDC.INSERT tag in zipscope
+## From netbus
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbg_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_eth0/dbg_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
 ## No XDC.INSERT tag in netdirs
 ## No XDC.INSERT tag in pwrcount
 ## No XDC.INSERT tag in alt

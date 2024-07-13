@@ -44,7 +44,7 @@
 @PREFIX=netbus
 @DEVID=NETBUS
 @ACCESS=NETBUS_ACCESS
-@DEPENDS=ETH0_ACCESS
+@DEPENDS=MEGANET_ACCESS
 @MASTER.BUS=wbu
 @MASTER.TYPE=HOST
 @MASTER.PREFIX=@$(PREFIX)
@@ -52,10 +52,10 @@
 @CLOCK.RESET=i_reset
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 @NET=eth0
-@NETADDR=eth0_ip_addr
-@NETVALID=eth0_dbg_tvalid
-@NETREADY=eth0_dbg_tready
-@NETDATA=eth0_dbg_tdata
+@NETADDR=net_ip_addr
+@NETVALID=net_dbg_tvalid
+@NETREADY=net_dbg_tready
+@NETDATA=net_dbg_tdata
 @MAIN.PARAM=
 	////////////////////////////////////////////////////////////////////////
 	//

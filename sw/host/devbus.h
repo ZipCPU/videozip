@@ -145,6 +145,7 @@ public:
 	virtual	~DEVBUS(void) { };
 };
 
+extern	const	char *gbl_devname;
 extern	DEVBUS *connect_devbus(const char *);
 
 #endif

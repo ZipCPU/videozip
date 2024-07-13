@@ -39,7 +39,7 @@
 all:
 ## }}}
 PROGRAMS := exregs exuart mkedid zipdbg zipload zipstate cpedid flashid \
-	dumpflash readmdio netstat mkedid # rdclocks rdsync manping
+	dumpflash readmdio netstat mkedid rdsync rdclocks excheck # manping
 SCOPES := mdioscope edidtxscope flashscope zipscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
@@ -95,6 +95,8 @@ exuart: $(OBJDIR)/exuart.o
 zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 exregs: $(OBJDIR)/exregs.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+excheck: $(OBJDIR)/excheck.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 rdclocks: $(OBJDIR)/rdclocks.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@

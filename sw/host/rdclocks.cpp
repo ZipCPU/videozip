@@ -64,7 +64,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
-#if	defined(R_SYSCLK) || defined(R_HDMI_CLK) || defined(R_HDMI_OUTCLK) ||defined(R_NETCLOCKCTR)
+#if	defined(R_SYSCLK) || defined(R_HDMIFREQ) || defined(R_PXFREQ) ||defined(R_NETCLOCKCTR)
 	m_fpga = connect_devbus(NULL);
 
 	if (argc != 1) {
@@ -75,14 +75,14 @@ int main(int argc, char **argv) {
 #ifdef	R_SYSCLK
 	printclk(m_fpga, R_SYSCLK,      "System");
 #endif
-#ifdef	R_HDMI_INCLK
-	printclk(m_fpga, R_HDMI_INCLK,  "HCLKIN");
+#ifdef	R_HDMIFREQ
+	printclk(m_fpga, R_HDMIFREQ,  "HCLKIN");
 #endif
-#ifdef	R_HDMI_OUTCLK
-	printclk(m_fpga, R_HDMI_OUTCLK, "HCLKOUT");
+#ifdef	R_PXFREQ
+	printclk(m_fpga, R_PXFREQ, "HCLKOUT");
 #endif
-#ifdef	R_NETRXCLK
-	printclk(m_fpga, R_NETRXCLK, "NETRXCK");
+#ifdef	R_NETCLOCKCTR
+	printclk(m_fpga, R_NETCLOCKCTR, "NETRXCK");
 #endif
 #ifdef	R_NETTXCLK
 	printclk(m_fpga, R_NETTXCLK, "NETTXCK");

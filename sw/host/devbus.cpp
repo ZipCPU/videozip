@@ -64,6 +64,8 @@
 #define	UARTDBGPORT	5927
 #endif
 
+const	char	*gbl_devname = "VIDEODEV";
+
 DEVBUS	*connect_devbus(const char *ustr) {
 	const char *str, *start = NULL;
 	bool	tty_flag = false;
@@ -71,7 +73,7 @@ DEVBUS	*connect_devbus(const char *ustr) {
 
 	str = ustr;
 	if (NULL == ustr || '\0' == ustr[0])
-		str = getenv("KIMOSDEV");
+		str = getenv(gbl_devname);
 	if (NULL == str) {
 		fprintf(stderr, "ERR: No device defined\n");
 		exit(EXIT_FAILURE);

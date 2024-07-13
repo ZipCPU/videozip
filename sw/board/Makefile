@@ -99,7 +99,7 @@ $(OBJDIR)/cputest.s: cputest.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -S -Wa,-cis -fno-builtin $< -o $@
 
-cputest: $(OBJDIR)/cputestcis.o board.ld
+cputest: $(OBJDIR)/cputestcis.o board.ld $(ZLIBD)/$(ZIPLIB)
 	# $(CC) $(CFLAGS) $(LFLAGS) $< $(LIBS) -o $@
 	$(CC) $(CFLAGS) $(LBKRAM) $< $(LIBS) -o $@
 ## }}}
@@ -109,27 +109,27 @@ CONTESTOBJ := $(addprefix $(OBJDIR)/,$(subst .c,.o,$(CONTESTSRC))) # $(DIVOBJ)
 $(OBJDIR)/%.o: %.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -I../host -c $< -o $@
-contest: $(CONTESTOBJ) bkram.ld
+contest: $(CONTESTOBJ) bkram.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(LBKRAM) $(CFLAGS) $(CONTESTOBJ) $(LIBS) -o $@
 
-memtest: $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o bkram.ld
+memtest: $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o bkram.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/memtest.map $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o $(LIBS) -o $@
 
 HDMISTARTOBJS:= $(addprefix $(OBJDIR)/,hdmistart.o txfns.o)
 $(OBJDIR)/hdmistart.o: hdmistart.c
 	$(mk-objdir)
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistart: $(HDMISTARTOBJS) bkram.ld
+hdmistart: $(HDMISTARTOBJS) bkram.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
 
 HDMISTESTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
 $(OBJDIR)/hdmistest.o: hdmistest.c
 	$(mk-objdir)
 	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistest: $(HDMISTESTOBJS) bkram.ld
+hdmistest: $(HDMISTESTOBJS) bkram.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
 
-helloworld: $(OBJDIR)/helloworld.o
+helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
 simple_ping: $(OBJDIR)/simple_ping.o $(OBJDIR)/zipcpu.o
@@ -141,6 +141,24 @@ define	mk-objdir
 	@bash -c "if [ ! -e $(OBJDIR) ]; then mkdir -p $(OBJDIR)/; fi"
 endef
 
+## tags
+## {{{
+tags: $(SOURCES) $(HEADERS)
+	@echo "Generating tags"
+	@ctags $(SOURCES) $(HEADERS)
+## }}}
+
+.PHONY: clean
+## {{{
+clean:
+	rm -f $(PROGRAMS)
+	rm -rf $(addsuffix .map,$(PROGRAMS))
+	rm -rf $(addsuffix .txt,$(PROGRAMS))
+	rm -rf $(OBJDIR)/
+## }}}
+
+.PHONY: depends
+## {{{
 define	build-depends
 	@echo "Building dependency file(s)"
 	$(mk-objdir)
@@ -149,24 +167,13 @@ define	build-depends
 	@rm $(OBJDIR)/xdepends.txt
 endef
 
-tags: $(SOURCES) $(HEADERS)
-	@echo "Generating tags"
-	@ctags $(SOURCES) $(HEADERS)
-
-.PHONY: clean
-clean:
-	rm -f $(PROGRAMS)
-	rm -rf $(addsuffix .map,$(PROGRAMS))
-	rm -rf $(addsuffix .txt,$(PROGRAMS))
-	rm -rf $(OBJDIR)/
-
 $(OBJDIR)/depends.txt: tags
 	$(build-depends)
 
-.PHONY: depends
 depends:
 	$(build-depends)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(OBJDIR)/depends.txt
 endif
+## }}}

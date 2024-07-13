@@ -135,7 +135,7 @@
 		// .LGWATCHDOG(@$(DEVID)WATCHDOG)
 		.ADDRESS_WIDTH(@$(BUS_ADDRESS_WIDTH))
 		// }}}
-	) genbus(
+	) u_exbus(
 		// {{{
 		.i_clk(@$(CLOCK.WIRE)), .i_reset(@$(CLOCK.RESET)),
 		.o_reset(ex_reset),

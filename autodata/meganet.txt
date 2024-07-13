@@ -190,7 +190,7 @@
 			.S_CPU_TREADY(@$(PREFIX)cputx_tready),
 			.S_CPU_TDATA(@$(PREFIX)cputx_tdata),
 		// }}}
-`ifdef	@$(DEVID)BUS_ACCESS
+`ifdef	NETBUS_ACCESS
 		// {{{
 		.S_DBG_TVALID(@$(PREFIX)bus_tvalid),
 			.S_DBG_TREADY(@$(PREFIX)bus_tready),
@@ -213,7 +213,7 @@
 			.M_CPU_LAST(@$(PREFIX)cpurx_last),
 			.M_CPU_ABORT(@$(PREFIX)cpurx_abort),
 		// }}}
-`ifdef	@$(DEVID)BUS_ACCESS
+`ifdef	NETBUS_ACCESS
 		// {{{
 		.M_DBG_VALID(@$(PREFIX)_dbg_tvalid),
 			.M_DBG_READY(@$(PREFIX)_dbg_tready),

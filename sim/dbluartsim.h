@@ -53,6 +53,7 @@
 #include <signal.h>
 
 #include "port.h"
+#include "regdefs.h"
 
 #define	TXIDLE	0
 #define	TXDATA	1
@@ -77,6 +78,8 @@ public:
 		m_cmdline[DBLPIPEBUFLEN],
 		m_intransit_data;
 	int	m_ilen, m_rxpos, m_cmdpos, m_conpos, m_cllen;
+	unsigned	m_numsyncs;
+	char		m_sync_char;
 	bool	m_started_flag;
 	bool	m_copy;
 	//

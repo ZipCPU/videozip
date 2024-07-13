@@ -73,7 +73,7 @@ VOBJS   := $(OBJDIR)/verilated.o $(OBJDIR)/verilated_vcd_c.o $(OBJDIR)/verilated
 
 SOURCES := $(SIMSOURCES) main_tb.cpp automaster_tb.cpp
 HEADERS := $(foreach header,$(subst .cpp,.h,$(SOURCES)),$(wildcard $(header))) \
-	port.h testb.h
+	testb.h
 #
 PROGRAMS := main_tb sdcard.img
 # Now the return to the "all" target, and fill in some details

@@ -113,8 +113,7 @@ int	ENETCTRLSIM::operator()(int in_reset, int clk, int data) {
 		m_tickcount = 0;
 	}
 	if (m_consecutive_clocks > 32) {
-		if (!m_synched)
-			printf("ENETCTRL: SYNCH!\n");
+		// if (!m_synched) printf("ENETCTRL: SYNCH!\n");
 		m_synched = true;
 		m_lastout = 1;
 		m_halfword = 0;

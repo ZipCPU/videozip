@@ -191,32 +191,32 @@ void	usage(void) {
 
 int main(int argc, char **argv) {
 	bool	use_decimal = false;
-	char	*map_file = NULL, *kimos_env = NULL;
+	char	*map_file = NULL, *videozip_env = NULL;
 	int	opt;
 
 	// Check first for our environment value -- use it to set defaults
 	// {{{
-	if (NULL != (kimos_env = getenv("KIMOSDEV")) && kimos_env[0]) {
+	if (NULL != (videozip_env = getenv(gbl_devname)) && videozip_env[0]) {
 		char	*portstr, *host = NULL;
 
-		kimos_env = strdup(kimos_env);
-		if (0 == strncasecmp(kimos_env, "UART://", 7)) {
-			host = kimos_env+7;
+		videozip_env = strdup(videozip_env);
+		if (0 == strncasecmp(videozip_env, "UART://", 7)) {
+			host = videozip_env+7;
 			gbl_uart = true;
-		} else if (0 == strncasecmp(kimos_env, "EXBUS://", 8)) {
-			host = kimos_env+8;
+		} else if (0 == strncasecmp(videozip_env, "EXBUS://", 8)) {
+			host = videozip_env+8;
 			gbl_uart = true;
-		} else if (0 == strncasecmp(kimos_env, "SIM://", 6)) {
-			host = kimos_env+6;
+		} else if (0 == strncasecmp(videozip_env, "SIM://", 6)) {
+			host = videozip_env+6;
 			gbl_uart = true;
-		} else if (0 == strncasecmp(kimos_env, "NEXBUS://", 9)) {
-			host = kimos_env+6;
+		} else if (0 == strncasecmp(videozip_env, "NEXBUS://", 9)) {
+			host = videozip_env+6;
 			gbl_uart = false;
-		} else if (0 == strncasecmp(kimos_env, "NET://", 6)) {
-			host = kimos_env+6;
+		} else if (0 == strncasecmp(videozip_env, "NET://", 6)) {
+			host = videozip_env+6;
 			gbl_uart = false;
-		} else if (0 == strncasecmp(kimos_env, "UDP://", 6)) {
-			host = kimos_env+6;
+		} else if (0 == strncasecmp(videozip_env, "UDP://", 6)) {
+			host = videozip_env+6;
 			gbl_uart = false;
 		} else {
 			fprintf(stderr, "ERR: Unrecognized environment string\n");
