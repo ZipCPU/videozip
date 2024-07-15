@@ -70,6 +70,8 @@ int main(int argc, char **argv) {
 		goto failed;
 	}
 
+	printf("SD Card directory\n"
+		"---------------------------------\n");
 	do {
 		r = f_readdir(&ds, &fis);
 		if (r != FR_OK) {

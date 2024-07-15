@@ -104,8 +104,7 @@ main_tb: $(VOBJS) $(VOBJDR)/Vmain__ALL.a
 #
 # Build a 64M SD-card image file that we can use for testing
 sdcard.img:
-	dd if=/dev/zero of=$@ bs=512 count=131072
-	mkfs.fat -F 16 $@
+	@bash -c "if [ ! -e $@ ]; then dd if=/dev/zero of=$@ bs=512 count=131072; mkfs.dat -F 16 $@; fi"
 
 .PHONY: mount
 mount: sdcard.img

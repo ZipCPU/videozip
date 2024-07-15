@@ -50,7 +50,7 @@ class	SDIOSIM {
 	uint32_t	m_last_dat, m_last_cmd, m_lastck, m_app_cmd,
 			m_selected, m_RCA, m_width, m_drive, m_data_count;
 	char		m_cmd_buf[8], m_cid[16], m_reply_buf[20],
-			m_dbuf[DBUFLN], m_csd[16];
+			m_dbuf[DBUFLN], m_csd[16], m_scr[8];
 	uint32_t	m_cmd_pos, m_reply_posn, m_reply_count, m_R1,
 			m_reply_delay, m_sector, m_data_delay, m_data_posn;
 	bool		m_debug;

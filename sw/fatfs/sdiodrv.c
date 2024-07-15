@@ -95,7 +95,7 @@ typedef	uint32_t DWORD, LBA_t, UINT;
 // extern	void	txdecimal(int);
 #endif
 
-static	const int	SDINFO = 1, SDDEBUG=1, SDEXTDMA=0;
+static	const int	SDINFO=0, SDDEBUG=0, SDEXTDMA=0;
 
 // SDMULTI: Controls whether the read multiple block or write multiple block
 // commands will be used.  Set to 1 to use these commands, 0 otherwise.
@@ -764,7 +764,7 @@ unsigned sdio_switch(SDIODRV *dev, unsigned swcmd, unsigned *ubuf) {  // CMD 6
 	// Set to 0x80fffff3 to switch to SDR104 mode (208MHz clock)
 	// Set to 0x80fffff4 to switch to DDR50  mode (50MHz clock)
 	dev->d_dev->sd_data = swcmd;
-	dev->d_dev->sd_cmd = (SDIO_READREG | SDIO_ERR)+6;
+	dev->d_dev->sd_cmd = (SDIO_CMD | SDIO_R1 | SDIO_ERR | SDIO_MEM)+6;
 
 	sdio_wait_while_busy(dev);
 
@@ -1008,17 +1008,17 @@ SDIODRV *sdio_init(SDIO *dev) {
 	dv->d_RCA = 0;
 	dv->d_sector_count = 0;
 	dv->d_block_size   = 0;
-txstr("SDIO-INIT\n");
+	if (SDDEBUG) txstr("SDIO-INIT\n");
 	// NEW_MUTEX;
 	GRAB_MUTEX;
-txstr("SDIO-GO-IDLE\n");
+	if (SDDEBUG) txstr("SDIO-GO-IDLE\n");
 
 	dv->d_dev->sd_phy = SPEED_SLOW | SECTOR_512B;
 	while(SPEED_SLOW != (dv->d_dev->sd_phy & 0x0ff))
 		;
 
 	sdio_go_idle(dv);
-txstr("SDIO-SEND-IF\n");
+	if (SDDEBUG) txstr("SDIO-SEND-IF\n");
 	ifcond = sdio_send_if_cond(dv,0x01a5);
 	if (0x08000 == (dv->d_dev->sd_cmd & 0x038000)) {
 		do {
@@ -1026,7 +1026,7 @@ txstr("SDIO-SEND-IF\n");
 			op_cond = sdio_send_op_cond(dv, op_cond);
 		} while(op_cond & 0x80000000);
 	} else {
-txstr("SDIO-IFCOND\n");
+		if (SDDEBUG) txstr("SDIO-IFCOND\n");
 		if (0xa5 != (ifcond & 0x0ff)) {
 			RELEASE_MUTEX;
 
@@ -1067,13 +1067,13 @@ txstr("SDIO-IFCOND\n");
 			// Set a 4-bit bus width via ACMD6
 			sdio_set_bus_width(dv, 2);
 			dv->d_dev->sd_phy |= SDIO_W4;
-txstr("4b Width set\n");
+			if (SDDEBUG) txstr("4b Width set\n");
 		}
 	}
 
 	// Do we support HS mode?  If so, let's switch to it
 	// {{{
-txstr("Check for HS mode\n");
+	if (SDDEBUG) txstr("Check for HS mode\n");
 	{
 		unsigned phy = dv->d_dev->sd_phy;
 
@@ -1126,13 +1126,20 @@ txstr("Check for HS mode\n");
 				sdio_switch(dv, 0x80fffff1, NULL);
 				phy = (dv->d_dev->sd_phy & (~0x0ff))
 							| SDIOCK_50MHZ;
-				txstr("Setting  PHY to: "); txhex(phy);
+				if (SDDEBUG) {
+					txstr("Setting  PHY to: ");
+					txhex(phy);
+				}
 				dv->d_dev->sd_phy = phy;
 				phy = dv->d_dev->sd_phy;
 				phy = (phy & 0xffe0ffff) | 0x080000;
-				txstr("\nAjusting PHY to: "); txhex(phy);
+				if (SDDEBUG) {
+					txstr("\nAjusting PHY to: ");
+					txhex(phy);
+				}
 				dv->d_dev->sd_phy = phy;
-				txstr("\n");
+				if (SDDEBUG)
+					txstr("\n");
 			} else if (SDINFO || SDDEBUG) {
 				txstr("HS mode is unavailable\n");
 				if (SDDEBUG) {
