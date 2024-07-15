@@ -1126,20 +1126,13 @@ SDIODRV *sdio_init(SDIO *dev) {
 				sdio_switch(dv, 0x80fffff1, NULL);
 				phy = (dv->d_dev->sd_phy & (~0x0ff))
 							| SDIOCK_50MHZ;
-				if (SDDEBUG) {
-					txstr("Setting  PHY to: ");
-					txhex(phy);
-				}
-				dv->d_dev->sd_phy = phy;
-				phy = dv->d_dev->sd_phy;
 				phy = (phy & 0xffe0ffff) | 0x080000;
 				if (SDDEBUG) {
-					txstr("\nAjusting PHY to: ");
+					txstr("Adjusting PHY to: ");
 					txhex(phy);
+					txstr("(HS mode)\n");
 				}
 				dv->d_dev->sd_phy = phy;
-				if (SDDEBUG)
-					txstr("\n");
 			} else if (SDINFO || SDDEBUG) {
 				txstr("HS mode is unavailable\n");
 				if (SDDEBUG) {

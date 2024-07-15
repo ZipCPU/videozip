@@ -42,7 +42,7 @@
 #include <assert.h>
 #include "sdiosim.h"
 
-SDIOSIM::SDIOSIM(const char *fname) : m_debug(true) {
+SDIOSIM::SDIOSIM(const char *fname) : m_debug(false) {
 	// {{{
 	if (0 == access(fname, R_OK|W_OK)) {
 		m_fp = fopen(fname, "rw");
@@ -289,27 +289,26 @@ void	SDIOSIM::appendcrc(unsigned len_bytes) {
 				}
 			}
 
-if (0) {
-// {{{
-			for(unsigned w=0; w < 4; w++) {
-				fill = 0;
-				for(unsigned k=0; k<len_bytes+8; k++) {
-					unsigned b, d;
+			if (m_debug) {
+				// {{{
+				for(unsigned w=0; w < 4; w++) {
+					fill = 0;
+					for(unsigned k=0; k<len_bytes+8; k++) {
+						unsigned b, d;
 
-					d = (m_dbuf[k] & 0x0ff) >> w;
+						d = (m_dbuf[k] & 0x0ff) >> w;
 
-					b = (d & 0x10) ? 1:0;
-					fill = blockcrc(fill, b);
+						b = (d & 0x10) ? 1:0;
+						fill = blockcrc(fill, b);
 
-					b = d & 1;
-					fill = blockcrc(fill, b);
+						b = d & 1;
+						fill = blockcrc(fill, b);
+					}
+					// printf("SDIOSIM: Check CRC%d = %04x\n", w, fill); fflush(stdout);
+					assert(fill == 0);
 				}
-// printf("SDIOSIM: Check CRC%d = %04x\n", w, fill); fflush(stdout);
-assert(fill == 0);
 			}
-}
-// }}}
-
+			// }}}
 
 			for(unsigned k=len_bytes+9; k> 0; k--) {
 				unsigned d;
@@ -339,26 +338,24 @@ assert(fill == 0);
 			m_dbuf[len_bytes+1] =  (fill & 0x0ff);
 			m_dbuf[len_bytes+2] = 0x0ff;
 
-if (1) {
-	// {{{
-			fill = 0;
-			for(unsigned k=0; k<len_bytes+2; k++) {
-				unsigned b, d;
-				d = m_dbuf[k] & 0x0ff;
+			if (m_debug) {
+				// {{{
+				fill = 0;
+				for(unsigned k=0; k<len_bytes+2; k++) {
+					unsigned b, d;
+					d = m_dbuf[k] & 0x0ff;
 
-				for(unsigned w=0; w<8; w++) {
-					b = (d & 0x80) ? 1:0; d<<= 1;
-					fill = blockcrc(fill, b);
+					for(unsigned w=0; w<8; w++) {
+						b = (d & 0x80) ? 1:0; d<<= 1;
+						fill = blockcrc(fill, b);
+					}
 				}
-			}
-printf("SDIOSIM: Check CRC = %08x\n", fill); fflush(stdout);
-assert(fill == 0);
-}
-// }}}
 
-printf("SDIOSIM: Pre -1b shift : ");
-for(unsigned k=0; k<12; k++) printf("%02x:", m_dbuf[k] & 0x0ff);
-printf("\n");
+				//printf("SDIOSIM: Check CRC = %08x\n", fill); fflush(stdout);
+				assert(fill == 0);
+			}
+			// }}}
+
 			for(unsigned k=len_bytes+3; k> 0; k--) {
 				unsigned d;
 				d = m_dbuf[k] & 0x0ff;
@@ -369,9 +366,6 @@ printf("\n");
 			} m_dbuf[0] = (m_dbuf[0] & 0x0ff) >> 1u;
 			for(unsigned k=len_bytes+3; k<DBUFLN; k++)
 				m_dbuf[k] = 0x0ff;
-printf("SDIOSIM: Post-1b shift : ");
-for(unsigned k=0; k<12; k++) printf("%02x:", m_dbuf[k] & 0x0ff);
-printf("\n");
 			// }}}
 		}
 	}
