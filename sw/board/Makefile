@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest # hdmistart hdmistest
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd # hdmistart
 all:	$(PROGRAMS)
 #
 #
@@ -51,9 +51,9 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c # hdmistart.c hdmistest.c readhist.c readframe.c
+SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c sdinfo.c # hdmistart.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
-INCS    := -I../zlib -I../../rtl -I.
+INCS    := -I../zlib -I../../rtl -I../fatfs -I.
 LDSCRIPT:= -Tboard.ld
 LBKRAM	:= -T bkram.ld -L../zlib
 ZIPLIB	:= libvidzip.a
@@ -63,6 +63,8 @@ LIB	:= $(NLIBD)/libg.a $(NLIBD)/libc.a
 ZLIBD	:=../zlib
 LFLAGS  := $(LDSCRIPT) -L../zlib -L../fatfs $(ZLIBD)/$(ZIPLIB)
 LIBS    := -lc -lvidzip -lgcc
+LIBFAT  := -lfatfs
+FAT     := ../fatfs/libfatfs.a
 CFLAGS  := -O3 $(INCS)
 #
 # For source analysis, the following macros are defined:
@@ -122,12 +124,12 @@ $(OBJDIR)/hdmistart.o: hdmistart.c
 hdmistart: $(HDMISTARTOBJS) bkram.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
 
-HDMISTESTOBJS:= $(addprefix $(OBJDIR)/,hdmistest.o txfns.o)
-$(OBJDIR)/hdmistest.o: hdmistest.c
+SDREADD:= $(addprefix $(OBJDIR)/,sdreadd.o txfns.o)
+$(OBJDIR)/sdreadd.o: sdreadd.c
 	$(mk-objdir)
-	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistest: $(HDMISTESTOBJS) bkram.ld $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistest.map $(HDMISTESTOBJS) -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
+sdreadd: $(SDREADD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(SDREADD) $(LIBFAT) $(LIBS) -o $@
 
 helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@

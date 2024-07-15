@@ -2883,6 +2883,11 @@ module	main(i_clk, i_reset,
 		.OPT_DDR(1'b1),
 		.OPT_HWRESET(1'b0),
 		.OPT_CARD_DETECT(1'b1),
+`ifdef	VERILATOR
+		.LGTIMEOUT(18),
+`else
+		.LGTIMEOUT(26),
+`endif
 		.OPT_ISTREAM(1'b0),
 		.OPT_OSTREAM(1'b0)
 		// }}}

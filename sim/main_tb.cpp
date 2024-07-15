@@ -185,6 +185,7 @@ public:
 		// From sdio
 #ifdef	SDIO_ACCESS
 		m_sdio = new SDIOSIM("sdcard.img");
+		m_core->i_sdio_detect = 1;
 #endif
 		// From wbu
 		m_wbu = new DBLUARTSIM();
@@ -284,11 +285,15 @@ public:
 			m_core->i_sdio_ad_data);
 		m_core->i_sdio_cmd_strb = (tmp >> 30) & 3;
 		m_core->i_sdio_cmd_data = (tmp >> 28) & 3;
-		m_core->i_sdio_rx_strb  = (tmp >> 24) & 3;
+		m_core->i_sdio_rx_strb  = (tmp >> 26) & 3;
 		m_core->i_sdio_rx_data  =  tmp & 0x0ffff;
 		m_core->i_sdio_ac_valid = (tmp_async & 2) ? 1:0;
 		m_core->i_sdio_ad_valid =  tmp_async & 1;
-		if (!m_core->o_sdio_cfg_ds) {
+		m_core->i_sdio_detect = 1;
+		if (!m_core->o_sdio_cfg_dscmd) {
+			m_core->i_sdio_ac_valid = 0;
+			m_core->i_sdio_ac_data = 0;
+		} if (!m_core->o_sdio_cfg_ds) {
 			m_core->i_sdio_ad_valid = 0;
 			m_core->i_sdio_ad_data = 0;
 		} }

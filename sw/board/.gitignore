@@ -4,6 +4,7 @@ hdmistart
 helloworld
 hdmistest
 memtest
+sdreadd
 simple_ping
 *.map
 *.txt

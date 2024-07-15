@@ -177,7 +177,7 @@ sim: rtl check-gpp
 ## A master target to build all of the support software
 ##
 .PHONY: sw
-sw: sw-host sw-zlib sw-board # sw-boot
+sw: sw-host sw-zlib sw-board sw-fatfs # sw-boot
 
 .PHONY: sw-host
 ## {{{
@@ -197,11 +197,20 @@ sw-zlib: check-zip-gcc
 	+@$(SUBMAKE) sw/zlib
 ## }}}
 
+.PHONY: sw-fatfs
+## {{{
+##
+## Build the FATFS disk access library
+##
+sw-fatfs: sw-zlib
+	+@$(SUBMAKE) sw/fatfs
+## }}}
+
 .PHONY: sw-board
 ## {{{
 ## Build the board software.  This may (or may not) use the software library
 ##
-sw-board: sw-zlib check-zip-gcc
+sw-board: sw-zlib sw-fatfs check-zip-gcc
 	+@$(SUBMAKE) sw/board
 ## }}}
 

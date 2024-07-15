@@ -42,16 +42,18 @@
 #include <stdint.h>
 
 class	SDIOSIM {
+	static	constexpr int	DBUFLN = 512+1+32;
 	FILE		*m_fp;
 	uint32_t	m_buf[512/sizeof(uint32_t)];
 	bool		m_readonly, m_reply_active, m_open_drain, m_ddr,
-			m_data_started, m_cmd_started;
+			m_data_started, m_cmd_started, m_reply_started;
 	uint32_t	m_last_dat, m_last_cmd, m_lastck, m_app_cmd,
-			m_selected, m_RCA, m_width, m_drive;
+			m_selected, m_RCA, m_width, m_drive, m_data_count;
 	char		m_cmd_buf[8], m_cid[16], m_reply_buf[20],
-			m_dbuf[512+1+32], m_csd[16];
+			m_dbuf[DBUFLN], m_csd[16];
 	uint32_t	m_cmd_pos, m_reply_posn, m_reply_count, m_R1,
 			m_reply_delay, m_sector, m_data_delay, m_data_posn;
+	bool		m_debug;
 protected:
 	void		init(void);
 	unsigned	cmdbit(unsigned);
@@ -59,6 +61,7 @@ protected:
 	unsigned	datn(unsigned);
 	void		accept_command(void);
 	void		load_reply(int cmd, unsigned arg);
+	void		appendcrc(unsigned len_bytes);
 	uint8_t		cmdcrc(int ln, char *buf);
 	unsigned	blockcrc(unsigned fill, unsigned bit);
 	void		CID(void);

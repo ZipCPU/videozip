@@ -309,6 +309,11 @@
 		.OPT_DDR(@$(OPT_DDR)),
 		.OPT_HWRESET(@$(OPT_HWRESET)),
 		.OPT_CARD_DETECT(@$(CARD_DETECT)),
+`ifdef	VERILATOR
+		.LGTIMEOUT(18),
+`else
+		.LGTIMEOUT(26),
+`endif
 		.OPT_ISTREAM(1'b0),
 		.OPT_OSTREAM(1'b0)
 		// }}}
@@ -398,6 +403,7 @@ struct @$(DEVID)_S;
 @SIM.INIT=
 #ifdef	@$(ACCESS)
 		m_@$(PREFIX) = new SDIOSIM(@$(SIM.FILE));
+		m_core->i_sdio_detect = 1;
 #endif
 @SIM.TICK=
 #ifdef	@$(ACCESS)
@@ -418,7 +424,11 @@ struct @$(DEVID)_S;
 		m_core->i_@$(PREFIX)_rx_data  =  tmp & 0x0ffff;
 		m_core->i_@$(PREFIX)_ac_valid = (tmp_async & 2) ? 1:0;
 		m_core->i_@$(PREFIX)_ad_valid =  tmp_async & 1;
-		if (!m_core->o_@$(PREFIX)_cfg_ds) {
+		m_core->i_@$(PREFIX)_detect = 1;
+		if (!m_core->o_@$(PREFIX)_cfg_dscmd) {
+			m_core->i_@$(PREFIX)_ac_valid = 0;
+			m_core->i_@$(PREFIX)_ac_data = 0;
+		} if (!m_core->o_@$(PREFIX)_cfg_ds) {
 			m_core->i_@$(PREFIX)_ad_valid = 0;
 			m_core->i_@$(PREFIX)_ad_data = 0;
 		} }
