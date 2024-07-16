@@ -231,6 +231,116 @@ void	SDIOSIM::appendcrc(unsigned len_bytes) {
 
 	//unsigned	SDIOSIM::blockcrc(unsigned fill, unsigned bit) {
 	if (m_ddr) {
+		if (m_width >= 8) {
+			// {{{
+			for(int k=0; k<32; k++)
+				m_dbuf[len_bytes+k] = 0;
+			m_dbuf[len_bytes+32] = 0xff;
+			for(unsigned w=0; w<16; w++) {
+				unsigned lsbw = w & 7;
+				fill = 0;
+				for(unsigned k=(w>=8 ? 1:0);k<len_bytes; k+=2){
+					unsigned b;
+					b = (m_dbuf[k] >> lsb) & 1;
+					fill = blockcrc(fill, b);
+				}
+
+				unsigned msk = 1 << (7-lsb);
+				for(int k=0; k<16; k++)
+					m_dbuf[len_bytes + 2*k + (w>=8 ? 1:0)]
+						|= ((fill & (1<<(15-k))) ? msk:0);
+			}
+
+			for(unsigned k=len_bytes+34; k>0; k--)
+				m_dbuf[k] = m_dbuf[k-2];
+			m_dbuf[0] = 0;
+			m_dbuf[1] = 0;
+			for(unsigned k=len_bytes+14; k<DBUFLN; k++)
+				m_dbuf[k] = 0x0ff;
+			// }}}
+		} else if (m_width >= 4) {
+			// {{{
+			for(int k=0; k<16; k++)
+				m_dbuf[len_bytes+k] = 0;
+			m_dbuf[len_bytes+16] = 0xff;
+			for(unsigned w=0; w<8; w++) {
+				fill = 0;
+				for(unsigned k=0; k<len_bytes; k++) {
+					unsigned b;
+					b = (m_dbuf[k] >> w) & 1;
+					fill = blockcrc(fill, b);
+				}
+
+				unsigned msk = 1 << (7-w);
+				for(int k=0; k<16; k++)
+					m_dbuf[len_bytes + k] |= ((fill & (1<<(15-k))) ? msk:0);
+			}
+
+			for(unsigned k=len_bytes+17; k>0; k--)
+				m_dbuf[k] = m_dbuf[k-1];
+			m_dbuf[0] = 0;
+			for(unsigned k=len_bytes+17; k<DBUFLN; k++)
+				m_dbuf[k] = 0x0ff;
+			// }}}
+		} else { // if (m_width == 1)
+			// {{{
+			fill = 0;
+			for(unsigned k=0; k<len_bytes; k++) {
+				unsigned b, d;
+				d = m_dbuf[k] & 0x0ff;
+
+				for(unsigned w=0; w<8; w+=2) {
+					b = (d & 0x80) ? 1:0; d<<= 2;
+					fill = blockcrc(fill, b);
+				}
+			}
+
+			for(unsigned w=0; w<8; w++) {
+				unsigned b, p;
+
+				b  = fill >> (15-2*w);
+				b &= 1;
+				b <<= (7-2*(w&3));
+
+				p = len_bytes + ((w >= 4) ? 1:0);
+				m_dbuf[p] |= b;
+			}
+
+			fill = 0;
+			for(unsigned k=0; k<len_bytes; k++) {
+				unsigned b, d;
+				d = m_dbuf[k] & 0x0ff;
+
+				for(unsigned w=1; w<8; w+=2) {
+					b = (d & 0x40) ? 1:0; d<<= 2;
+					fill = blockcrc(fill, b);
+				}
+			}
+
+			for(unsigned w=0; w<8; w++) {
+				unsigned b, p;
+
+				b  = fill >> (14-2*w);
+				b &= 1;
+				b <<= (6-2*(w&3));
+
+				p = len_bytes + ((w >= 4) ? 1:0);
+				m_dbuf[p] |= b;
+			}
+
+			m_dbuf[len_bytes+2] = 0x0ff;
+
+			for(unsigned k=len_bytes+3; k> 0; k--) {
+				unsigned d;
+				d = m_dbuf[k] & 0x0ff;
+				d >>= 2;
+				d |= (m_dbuf[k-1] << 6);
+				m_dbuf[k] = d;
+			} m_dbuf[0] = (m_dbuf[0] & 0x0ff) >> 2u;
+			for(unsigned k=len_bytes+3; k<DBUFLN; k++)
+				m_dbuf[k] = 0x0ff;
+			// }}}
+		}
 	} else {
 		if (m_width >= 8) {
 			// {{{
@@ -727,7 +837,7 @@ unsigned SDIOSIM::datp(unsigned in) {
 			m_data_posn ++;
 		}
 
-		if (m_data_posn >= (512*8+m_width*32))
+		if (m_data_posn >= 8*DBUFLN)
 			m_drive = false;
 
 		if (m_open_drain)
@@ -826,7 +936,6 @@ unsigned SDIOSIM::datn(unsigned in) {
 		unsigned	r = 0;
 
 		if (m_data_delay > 0) {
-			m_data_delay--;
 			return 0x0ff;
 		}
 
@@ -849,7 +958,7 @@ unsigned SDIOSIM::datn(unsigned in) {
 			m_data_posn ++;
 		}
 
-		if (!m_ddr && m_data_posn >= (512*8+m_width*16))
+		if (!m_ddr && m_data_posn >= 8*DBUFLN)
 			m_drive = false;
 
 		if (m_open_drain)
