@@ -237,7 +237,7 @@ void	SDIOSIM::appendcrc(unsigned len_bytes) {
 				m_dbuf[len_bytes+k] = 0;
 			m_dbuf[len_bytes+32] = 0xff;
 			for(unsigned w=0; w<16; w++) {
-				unsigned lsbw = w & 7;
+				unsigned lsb = w & 7;
 				fill = 0;
 				for(unsigned k=(w>=8 ? 1:0);k<len_bytes; k+=2){
 					unsigned b;
@@ -579,7 +579,7 @@ void	SDIOSIM::accept_command(void) {
 			m_dbuf[14]= 0x000;	// Bits 399:392, FuncSel, grp6-5
 			m_dbuf[15]= 0x000;	// Bits 391:384, FuncSel, grp4-3
 			m_dbuf[16]= 0x000;	// Bits 383:376, FuncSel, grp2-1
-			m_dbuf[17]= 0x001;	// Bits 375:368, 
+			m_dbuf[17]= 0x001;	// Bits 375:368,
 
 			appendcrc(64);
 		} break;
@@ -653,7 +653,7 @@ void	SDIOSIM::accept_command(void) {
 		} else {
 			printf("SDIOSIM:Ignoring CMD#9, RCA=%04x, arg=%08x\n",
 				m_RCA, arg);
-				
+
 		} break;
 		// }}}
 	case 10: // SEND CID
@@ -671,7 +671,7 @@ void	SDIOSIM::accept_command(void) {
 			m_reply_delay = 0;
 		// } else {
 			// printf("SDIOSIM:Ignoring CMD#10, RCA=%04x, arg=%08x\n", m_RCA, arg);
-				
+
 		} break;
 		// }}}
 	case 11: // VOLTAGE_SWITCH
@@ -979,7 +979,7 @@ unsigned SDIOSIM::datn(unsigned in) {
 
 		return in;
 		// }}}
-	} else if (m_data_posn < 512*8 + 16*16) { // Receive a block of data
+	} else if (m_data_posn < 512*8 + 2*m_width*16) { // Receive a block of data
 		// {{{
 		unsigned	idx = m_data_posn >> 3;
 		if (m_width >= 8) {

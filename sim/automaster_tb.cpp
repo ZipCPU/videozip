@@ -107,7 +107,8 @@ void	cpu_sim_write(MAINTB *tb, unsigned addr, unsigned data) {
 int	main(int argc, char **argv) {
 	// Variable declaration and initialization
 	// {{{
-#if	defined(VIDEO_ACCESS) || defined(OLED_ACCESS)
+#if	defined(VIDPIPE_ACCESS) || defined(OLED_ACCESS)
+fprintf(stderr, "Video startup\n");
 	Gtk::Main	main_instance(argc, argv);
 #endif
 	Verilated::commandArgs(argc, argv);
@@ -264,12 +265,12 @@ int	main(int argc, char **argv) {
 
 	// Main while(1) loop
 	// {{{
-#if	defined(VIDEO_ACCESS) || defined(OLED_ACCESS)
+#if	defined(VIDPIPE_ACCESS) || defined(OLED_ACCESS)
 	if (gbl_use_gui) {
 		printf("CONNECT\n");
 
 		tb->connect_idler();
-		Gtk::Main::run(*tb->m_hdmi);
+		Gtk::Main::run(*tb->m_hdmitx);
 	} else
 #endif
 	if (profile_fp) { // Profile the ZipCPU

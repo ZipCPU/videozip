@@ -22,7 +22,8 @@
 //		must be able to handle unaligned accesses.
 //
 //		If SDMULTI is set, the write multiple blocks command will be
-//		used for better performance.
+//		used for better performance.  SDMULTI *must* be set in order to
+//		use the DMA.
 //
 //	3.  sdio_read(dev, sector, count, buf)
 //		Reads "count" sectors of data to the device, starting at
@@ -32,7 +33,8 @@
 //
 //		If SDMULTI is set, the read multiple blocks command will be
 //		used for better performance.  This requires that the clock
-//		shutdown bit be set, to avoid losing data.
+//		shutdown bit be set, to avoid losing data.  As with writing,
+//		SDMULTI must be set in order to use the DMA.
 //
 //	4. sdio_ioctl
 //
@@ -76,10 +78,8 @@ typedef	uint16_t WORD;
 typedef	uint32_t DWORD, LBA_t, UINT;
 #include <diskio.h>
 #include "board.h"
-#ifdef	INCLUDE_DMA_CONTROLLER
 #include "zipsys.h"
 #include "zipcpu.h"
-#endif
 #include "sdiodrv.h"
 
 #ifndef	TXFNS_H
@@ -111,6 +111,14 @@ typedef	struct SDIO_S {
 #define	GRAB_MUTEX
 #define	RELEASE_MUTEX
 
+#ifdef	_BOARD_HAS_SDIOSCOPE
+#define	SET_SCOPE	_sdioscope->s_ctrl = 0
+#define	TRIGGER_SCOPE	_sdioscope->s_ctrl = 0xff000000
+#else
+#define	SET_SCOPE
+#define	TRIGGER_SCOPE
+#endif
+
 typedef	struct	SDIODRV_S {
 	SDIO		*d_dev;
 	uint32_t	d_CID[4], d_OCR;
@@ -131,24 +139,31 @@ static	const	uint32_t
 		SDIO_DMA      = 0x00002000,
 		SDIO_CMDBUSY  = 0x00004000,
 		SDIO_ERR      = 0x00008000,
+		SDIO_CMDTMOUT = 0x00000000,
+		SDIO_CMDEOKAY = 0x00010000,
+		SDIO_CMDCRCER = 0x00020000,
+		SDIO_CMDFRMER = 0x00030000,
 		SDIO_CMDECODE = 0x00030000,
 		SDIO_REMOVED  = 0x00040000,
 		SDIO_PRESENTN = 0x00080000,
 		SDIO_CARDBUSY = 0x00100000,
-		SDIO_BUSY     = 0x00104800,
+		SDIO_BUSY     = 0x00104800,	// SDIO_CARDBUSY|SDIO_CMDBUSY|SDIO_MEM
 		SDIO_CMDERR   = 0x00200000,
-		SDIO_RXERR    = 0x00400000,
-		SDIO_RXECODE  = 0x00800000,
+		SDIO_RXERR    = 0x00400000,	// Transfer error present
+		SDIO_RXECODE  = 0x00800000,	// CRC Error
+		SDIO_DMAERR   = 0x01000000,
+		SDIO_HWRESET  = 0x02000000,
+		SDIO_RESET    = 0x52000000,
 		// PHY enumerations
-		SDIO_DDR      = 0x00004100,	// Requires CK90
-		SDIO_DS       = 0x00004300,	// Requires DDR & CK90
-		SDIO_W1       = 0x00000000,
-		SDIO_W4       = 0x00000400,
-		SDIO_W8	      = 0x00000800,
-		SDIO_WBEST    = 0x00000c00,
-		SDIO_PPDAT    = 0x00001000,	// Push pull drive for data
-		SDIO_PPCMD    = 0x00002000,	// Push pull drive for cmd wire
-		SDIO_PUSHPULL = SDIO_PPDAT | SDIO_PPCMD,
+		SDPHY_DDR     = 0x00004100,	// Requires CK90
+		SDPHY_DS      = 0x00004300,	// Requires DDR & CK90
+		SDPHY_W1      = 0x00000000,
+		SDPHY_W4      = 0x00000400,
+		SDPHY_W8      = 0x00000800,
+		SDPHY_WBEST   = 0x00000c00,
+		SDPHY_PPDAT   = 0x00001000,	// Push pull drive for data
+		SDPHY_PPCMD   = 0x00002000,	// Push pull drive for cmd wire
+		SDIO_PUSHPULL = SDPHY_PPDAT | SDPHY_PPCMD,
 		SDIOCK_CK90   = 0x00004000,
 		SDIOCK_SHUTDN = 0x00008000,
 		// IO clock speeds
@@ -163,14 +178,14 @@ static	const	uint32_t
 		SDIOCK_100MHZ = 0x00000001,
 		SDIOCK_200MHZ = 0x00000000,
 		SDIOCK_1P2V   = 0x00400000,
-		SDIOCK_DS     = SDIOCK_25MHZ | SDIO_W4 | SDIO_PUSHPULL,
-		SDIOCK_HS     = SDIOCK_50MHZ | SDIO_W4 | SDIO_PUSHPULL,
+		SDIOCK_DS     = SDIOCK_25MHZ | SDPHY_W4 | SDIO_PUSHPULL,
+		SDIOCK_HS     = SDIOCK_50MHZ | SDPHY_W4 | SDIO_PUSHPULL,
 		// Speed abbreviations
-		SDIOCK_SDR50  = SDIOCK_50MHZ  | SDIO_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
-		SDIOCK_DDR50  = SDIOCK_50MHZ  | SDIO_W4 | SDIO_PUSHPULL | SDIO_DDR | SDIOCK_1P2V,
-		SDIOCK_SDR104 = SDIOCK_100MHZ | SDIO_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
-		SDIOCK_SDR200 = SDIOCK_200MHZ | SDIO_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
-		// SDIOCK_HS400= SDIOCK_200MHZ | SDIO_W4 | SDIO_PUSHPULL | SDIO_DS,
+		SDIOCK_SDR50  = SDIOCK_50MHZ  | SDPHY_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
+		SDIOCK_DDR50  = SDIOCK_50MHZ  | SDPHY_W4 | SDIO_PUSHPULL | SDPHY_DDR | SDIOCK_1P2V,
+		SDIOCK_SDR104 = SDIOCK_100MHZ | SDPHY_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
+		SDIOCK_SDR200 = SDIOCK_200MHZ | SDPHY_W4 | SDIO_PUSHPULL | SDIOCK_1P2V,
+		// SDIOCK_HS400= SDIOCK_200MHZ | SDPHY_W4 | SDIO_PUSHPULL | SDPHY_DS,
 		//
 		SPEED_SLOW   = SDIOCK_100KHZ,
 		SPEED_DEFAULT= SDIOCK_DS,
@@ -186,8 +201,14 @@ static	const	uint32_t
 		SDIO_READR2  = (SDIO_CMD | SDIO_R2),
 		SDIO_WRITEBLK = (SDIO_CMD | SDIO_R1 | SDIO_ERR
 				| SDIO_WRITE | SDIO_MEM) + 24,
+		SDIO_WRMULTI = (SDIO_CMD | SDIO_R1
+				| SDIO_WRITE | SDIO_MEM) + 25,
+		SDIO_WRDMA = SDIO_WRMULTI | SDIO_DMA,
 		SDIO_READBLK  = (SDIO_CMD | SDIO_R1
-					| SDIO_MEM) + 17;
+					| SDIO_MEM) + 17,
+		SDIO_RDMULTI  = (SDIO_CMD | SDIO_R1
+					| SDIO_MEM) + 18,
+		SDIO_READDMA  = SDIO_RDMULTI | SDIO_DMA;
 
 static	void	sdio_wait_while_busy(SDIODRV *dev);
 static	void	sdio_go_idle(SDIODRV *dev);
@@ -242,6 +263,15 @@ void	sdio_go_idle(SDIODRV *dev) {				// CMD0
 	dev->d_dev->sd_cmd = SDIO_REMOVED | SDIO_CMD | SDIO_RNONE | SDIO_ERR;
 
 	sdio_wait_while_busy(dev);
+
+	if (SDDEBUG && SDINFO) {
+		unsigned	c = dev->d_dev->sd_cmd;
+		unsigned	r = dev->d_dev->sd_data;
+
+		txstr("CMD0:    SEND_GO_IDLE\n");
+		txstr("  Cmd:     "); txhex(c); txstr("\n");
+		txstr("  Data:    "); txhex(r); txstr("\n");
+	}
 }
 // }}}
 
@@ -354,7 +384,7 @@ uint32_t sdio_send_if_cond(SDIODRV *dev, uint32_t ifcond) { // CMD8
 	r = dev->d_dev->sd_data;
 
 	if (SDDEBUG && SDINFO) {
-		txstr("CMD8:    SEND_IF_COND\n");
+		txstr("CMD8:    SEND_IF_COND ("); txhex(ifcond); txstr(")\n");
 		txstr("  Cmd:     "); txhex(c); txstr("\n");
 		txstr("  Data:    "); txhex(r); txstr("\n");
 	}
@@ -378,7 +408,7 @@ uint32_t sdio_send_op_cond(SDIODRV *dev, uint32_t opcond) { // ACMD41
 
 	dev->d_OCR = r;
 	if (SDDEBUG && SDINFO) {
-		txstr("CMD8:    SEND_OP_COND : "); txhex(opcond); txstr("\n");
+		txstr("ACMD41:  SEND_OP_COND : "); txhex(opcond); txstr("\n");
 		txstr("  Cmd:     "); txhex(c); txstr("\n");
 		txstr("  Data:    "); txhex(r); txstr("\n");
 	}
@@ -902,6 +932,7 @@ int	sdio_write_block(SDIODRV *dev, uint32_t sector, uint32_t *buf){// CMD 24
 		uint32_t	phy = dev->d_dev->sd_phy;
 		phy &= 0xf0ffffff;
 		phy |= SECTOR_512B;
+		dev->d_dev->sd_phy = phy;
 	}
 
 #ifdef	INCLUDE_DMA_CONTROLLER
@@ -949,7 +980,7 @@ int	sdio_read_block(SDIODRV *dev, uint32_t sector, uint32_t *buf){// CMD 17
 	unsigned	cmd;
 
 	if (SDDEBUG) {
-		txstr("SDIO-READ: ");
+		txstr("SDIO-READ(BLK): ");
 		txhex(sector);
 		txstr("\n");
 	}
@@ -965,6 +996,7 @@ int	sdio_read_block(SDIODRV *dev, uint32_t sector, uint32_t *buf){// CMD 17
 		uint32_t	phy = dev->d_dev->sd_phy;
 		phy &= 0xf0ffffff;
 		phy |= SECTOR_512B;
+		dev->d_dev->sd_phy = phy;
 	}
 
 	dev->d_dev->sd_data = sector;
@@ -1002,43 +1034,74 @@ int	sdio_read_block(SDIODRV *dev, uint32_t sector, uint32_t *buf){// CMD 17
 
 SDIODRV *sdio_init(SDIO *dev) {
 	// {{{
-	unsigned	ifcond, op_cond;
+	unsigned	ifcond, op_cond, hcs;
 	SDIODRV	*dv = (SDIODRV *)malloc(sizeof(SDIODRV));
+	unsigned op_cond_query;
+
 	dv->d_dev = dev;
 	dv->d_RCA = 0;
 	dv->d_sector_count = 0;
 	dv->d_block_size   = 0;
-	if (SDDEBUG) txstr("SDIO-INIT\n");
+
+	SET_SCOPE;
+
 	// NEW_MUTEX;
 	GRAB_MUTEX;
-	if (SDDEBUG) txstr("SDIO-GO-IDLE\n");
+
+	// Start by resetting the interface--in case we're being called
+	// to restart from an uncertain state.
+	dv->d_dev->sd_cmd = SDIO_RESET;
 
 	dv->d_dev->sd_phy = SPEED_SLOW | SECTOR_512B;
 	while(SPEED_SLOW != (dv->d_dev->sd_phy & 0x0ff))
 		;
 
 	sdio_go_idle(dv);
-	if (SDDEBUG) txstr("SDIO-SEND-IF\n");
 	ifcond = sdio_send_if_cond(dv,0x01a5);
-	if (0x08000 == (dv->d_dev->sd_cmd & 0x038000)) {
-		do {
-			op_cond = 0;
-			op_cond = sdio_send_op_cond(dv, op_cond);
-		} while(op_cond & 0x80000000);
-	} else {
-		if (SDDEBUG) txstr("SDIO-IFCOND\n");
-		if (0xa5 != (ifcond & 0x0ff)) {
+
+	hcs = dv->d_dev->sd_cmd;
+	if (8 != (hcs & 0x80ff)) {
+		TRIGGER_SCOPE;
+		RELEASE_MUTEX;
+
+		txstr("SDIO ERROR: IFCOND not acknowledged ");
+		txhex(hcs); txstr("\n");
+		free(dv);
+		return NULL;
+	} else if (0xa5 != (ifcond & 0x0ff)) {
+		TRIGGER_SCOPE;
+		RELEASE_MUTEX;
+
+		txstr("SDIO ERROR: IFCOND returned ");
+		txhex(ifcond); txstr("\n");
+		free(dv);
+		return NULL;
+	}
+
+	hcs = 1;
+
+	{
+		// Query potential voltage options
+		op_cond_query = 0;
+		op_cond_query = sdio_send_op_cond(dv, op_cond_query);
+
+		op_cond_query &= 0x40ff8000;
+		if (0 == (op_cond_query & 0x0ff8000)) {
+			// No compatible voltages found
+			TRIGGER_SCOPE;
 			RELEASE_MUTEX;
 
-			txstr("SDIO ERROR: IFCOND returned ");
-			txhex(ifcond); txstr("\n");
+			txstr("SDIO ERROR: SEND-OP-COND Query returned ");
+			txhex(op_cond_query); txstr("\n");
+			unsigned	dev_stat  = dv->d_dev->sd_cmd;
+			unsigned	card_stat = dv->d_dev->sd_data;
+			txstr("\t"); txhex(dev_stat); txstr(":"); txhex(card_stat); txstr("\n");
 			free(dv);
 			return NULL;
 		}
 
 		do {
-			op_cond = 0x40ff8000;
-			op_cond = sdio_send_op_cond(dv, op_cond);
+			op_cond = sdio_send_op_cond(dv, op_cond_query);
 		} while(0 == (op_cond & 0x80000000));
 	} if (SDINFO)
 		sdio_dump_ocr(dv);
@@ -1062,11 +1125,11 @@ SDIODRV *sdio_init(SDIO *dev) {
 	// LOCK_UNLOCK ?
 	// SET_BUS_WIDTH
 	if (dv->d_SCR[1] & 0x04) {
-		dv->d_dev->sd_phy |= SDIO_WBEST;
-		if (0 != (dv->d_dev->sd_phy & SDIO_WBEST)) {
+		dv->d_dev->sd_phy |= SDPHY_WBEST;
+		if (0 != (dv->d_dev->sd_phy & SDPHY_WBEST)) {
 			// Set a 4-bit bus width via ACMD6
 			sdio_set_bus_width(dv, 2);
-			dv->d_dev->sd_phy |= SDIO_W4;
+			dv->d_dev->sd_phy |= SDPHY_W4;
 			if (SDDEBUG) txstr("4b Width set\n");
 		}
 	}
@@ -1168,37 +1231,74 @@ SDIODRV *sdio_init(SDIO *dev) {
 int	sdio_write(SDIODRV *dev, const unsigned sector,
 			const unsigned count, const char *buf) {
 	// {{{
-	unsigned	st, s;
+	if (0 == count)
+		return	RES_OK;
 
-	if (1 == count || !SDMULTI) {
+	if (!SDMULTI) {
+		unsigned	st;
+
 		for(unsigned k=0; k<count; k++) {
-			st = sdio_write_block(dev, sector, (uint32_t *)buf);
+			st = sdio_write_block(dev, sector+k,
+					(uint32_t *)&buf[k*512]);
 			if (0 != st)
 				return RES_ERROR;
 		} return RES_OK;
+	}
+
+	unsigned	card_stat, dev_stat, phy, err=0;
+
+	GRAB_MUTEX;
+
+	// Make sure our device is idle
+	if(dev->d_dev->sd_cmd & SDIO_BUSY)
+		sdio_wait_while_busy(dev);
+
+	// Make sure the card's still there
+	// {{{
+	if (dev->d_dev->sd_cmd & SDIO_REMOVED) {
+		RELEASE_MUTEX;
+		txstr("SDIO ERR: SD-Card was removed\n");
+		return RES_ERROR;
+	}
+	// }}}
+
+	// Make sure we're configured for 512B sectors
+	// {{{
+	phy = dev->d_dev->sd_phy;
+	if (9 != ((phy >> 24)&0x0f)) {
+		// Here, we don't care if the clock is shut down as
+		// well, since we control the write speed.
+		phy &= 0xf0ffffff;
+		phy |= SECTOR_512B;
+		dev->d_dev->sd_phy = phy;
+	}
+	// }}}
+
+	if (dev->d_OCR & 0x40000000)
+		// High capacity card
+		dev->d_dev->sd_data = sector;
+	else
+		dev->d_dev->sd_data = sector*512;
+
+	dev->d_dev->sd_dma_length = count;
+	if (count == dev->d_dev->sd_dma_length) {
+		// {{{
+		dev->d_dev->sd_dma_addr = (char *)buf;
+		dev->d_dev->sd_cmd  = SDIO_WRDMA | SDIO_ERR;
+		// }}}
 	} else {
-		unsigned	card_stat, phy;
-
-		GRAB_MUTEX;
-
-		phy = dev->d_dev->sd_phy;
-		if (9 != ((phy >> 24)&0x0f)) {
-			// Here, we don't care if the clock is shut down as
-			// well, since we control the write speed.
-			phy &= 0xf0ffffff;
-			phy |= SECTOR_512B;
-		}
-
-		for(unsigned s=0; s<count; s++) {
+		for(unsigned s=0; s<count; s++) { // Foreach sector
+			// Load the data into alternating buffers
+			// {{{
 #ifdef	INCLUDE_DMA_CONTROLLER
 			if (SDEXTDMA && (0 == (_zip->z_dma.d_ctrl & DMA_BUSY))){
 				_zip->z_dma.d_len = 512;
-				_zip->z_dma.d_rd  = (char *)buf;
+				_zip->z_dma.d_rd  = (char *)&buf[s*512];
 				_zip->z_dma.d_wr  = (s&1)
 					? (char *)&dev->d_dev->sd_fifb
 					: (char *)&dev->d_dev->sd_fifa;
 				_zip->z_dma.d_ctrl= DMAREQUEST|DMACLEAR|DMA_SRCWIDE
-						|DMA_CONSTDST|DMA_DSTWORD;
+					|DMA_CONSTDST|DMA_DSTWORD;
 				while(_zip->z_dma.d_ctrl & DMA_BUSY)
 					;
 			} else
@@ -1215,46 +1315,32 @@ int	sdio_write(SDIODRV *dev, const unsigned sector,
 						dev->d_dev->sd_fifa = src[w];
 				}
 			}
+			// }}}
 
-			if (s == 0) { // Issue the WRITE_MULTIPLE_BLOCK cmd
+			if (s == 0) { // Issue WRITE_MULTIPLE_BLOCK cmd
 				// {{{
-				// Make sure our device is idle
-				while(dev->d_dev->sd_cmd & SDIO_BUSY)
-					;
 
 				// Issue a write-multiple command
-				if (dev->d_OCR & 0x40000000)
-					// High capacity card
-					dev->d_dev->sd_data = sector;
-				else
-					dev->d_dev->sd_data = sector*512;
-				dev->d_dev->sd_cmd  = (SDIO_CMD | SDIO_R1
-					|SDIO_ERR|SDIO_WRITE | SDIO_MEM) + 25;
+				dev->d_dev->sd_cmd  = SDIO_ERR | SDIO_WRMULTI;
 
-				while(dev->d_dev->sd_cmd & SDIO_CMDBUSY)
-					;
+				sdio_wait_while_busy(dev);
 
-				// Check if we'll have any errors with this cmd
-				if (dev->d_dev->sd_cmd & SDIO_ERR) {
-					RELEASE_MUTEX;
-					return RES_ERROR;
-				}
-
+				// Check for errors
+				dev_stat  = dev->d_dev->sd_cmd;
 				card_stat = dev->d_dev->sd_data;
-				if (card_stat & SDIO_R1ERR) {
-					RELEASE_MUTEX;
-					return RES_ERROR;
-				}
+				if (dev_stat & (SDIO_ERR|SDIO_REMOVED))
+					break;
+				if (card_stat & SDIO_R1ERR)
+					break;
 
-				// Don't wait.  Go around again and load the
-				// next block of data before checking if the
-				// write has completed.
+				// Don't wait.  Go around again and
+				// load the next block of data before
+				// checking if the write has completed.
 				// }}}
 			} else { // Send the next block
 				// {{{
-				// Wait for the previous write to complete
-				while(dev->d_dev->sd_cmd & SDIO_BUSY)
-					;
+				// Wait for the last write to complete
+				sdio_wait_while_busy(dev);
 
 				// Then send another block of data
 				dev->d_dev->sd_cmd = (SDIO_WRITE | SDIO_MEM)
@@ -1264,28 +1350,29 @@ int	sdio_write(SDIODRV *dev, const unsigned sector,
 		}
 
 		// Wait for the final write to complete
-		while(dev->d_dev->sd_cmd & SDIO_BUSY)
-			;
+		sdio_wait_while_busy(dev);
 
-		// Send a STOP_TRANSMISSION request
+		// Send a (final) STOP_TRANSMISSION request
 		dev->d_dev->sd_data = 0;
 		dev->d_dev->sd_cmd  = (SDIO_CMD | SDIO_R1b |SDIO_ERR) + 12;
-		while(dev->d_dev->sd_cmd & SDIO_BUSY)
-			;
-
-		if (dev->d_dev->sd_cmd & SDIO_ERR) {
-			RELEASE_MUTEX;
-			return RES_ERROR;
-		}
-
-		card_stat = dev->d_dev->sd_data;
-		RELEASE_MUTEX;
-
-		if (card_stat & SDIO_R1ERR)
-			return RES_ERROR;
-
-		return RES_OK;
 	}
+
+	sdio_wait_while_busy(dev);
+
+	RELEASE_MUTEX;
+
+	dev_stat  = dev->d_dev->sd_cmd;
+	card_stat = dev->d_dev->sd_data;
+
+	if (dev_stat & (SDIO_ERR|SDIO_REMOVED|SDIO_RXERR)) {
+		if (SDDEBUG)
+			printf("SDIO-WRITE -> ERR\n");
+		return	RES_ERROR;
+	} else if (card_stat & SDIO_R1ERR) {
+		if (SDDEBUG)
+			printf("SDIO-WRITE -> R1 ERR\n");
+		return	RES_ERROR;
+	} return RES_OK;
 }
 // }}}
 
@@ -1293,8 +1380,18 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 				const unsigned count, char *buf) {
 	// {{{
 	unsigned	st = 0;
+	unsigned	err=0, dev_stat, card_stat, phy, cmd;
 
-	if (1 == count || !SDMULTI) {
+
+	if (SDDEBUG) {
+		printf("SDIO-READ.M(%08x, %08x, %08x): [DEV %08x]\n",
+			sector, count, buf, dev->d_dev->sd_cmd);
+	}
+
+	if (0 == count)
+		return RES_OK;
+
+	if (!SDMULTI) {
 		for(unsigned k=0; k<count; k++) {
 			st = sdio_read_block(dev, sector+k,
 						(uint32_t *)(&buf[k*512]));
@@ -1302,37 +1399,51 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 				return RES_ERROR;
 			}
 		} return RES_OK;
+	}
+
+	GRAB_MUTEX;
+
+	// Make sure our PHY is set up properly
+	// {{{
+	phy = dev->d_dev->sd_phy;
+	if ((0 == (phy & SDIOCK_SHUTDN)) || (9 != ((phy >> 24)&0x0f))) {
+		// Read multiple *requires* the clock be shut down
+		// between pages, to make sure the device doesn't try
+		// to produce data before we are ready for it.
+		phy &= 0xf0ffffff;
+		phy |= SECTOR_512B | SDIOCK_SHUTDN;
+		dev->d_dev->sd_phy = phy;
+	}
+	// }}}
+
+	// Set the data sector
+	// {{{
+	if (dev->d_OCR & 0x40000000)
+		// High capacity card
+		dev->d_dev->sd_data = sector;
+	else
+		dev->d_dev->sd_data = sector*512;
+	// }}}
+
+	dev->d_dev->sd_dma_length = count;
+	if (count == dev->d_dev->sd_dma_length) {
+		// Activate the SDIO DMA
+		// {{{
+		dev->d_dev->sd_dma_addr = buf;
+		dev->d_dev->sd_dma_length = count;
+		dev->d_dev->sd_cmd = SDIO_ERR | SDIO_READDMA;
+		// }}}
 	} else {
-		unsigned	err, card_stat, phy, cmd;
-txstr("READ-MULTI!  N="); txhex(count); txstr("\n");
-		GRAB_MUTEX;
-
-		phy = dev->d_dev->sd_phy;
-		if ((0 == (phy & SDIOCK_SHUTDN)) || (9 != ((phy >> 24)&0x0f))) {
-			// Read multiple *requires* the clock be shut down
-			// between pages, to make sure the device doesn't try
-			// to produce data before we are ready for it.
-			phy &= 0xf0ffffff;
-			phy |= SECTOR_512B | SDIOCK_SHUTDN;
-		}
-
-		err = 0;
 		// Issue the read multiple command
 		// {{{
-		if (dev->d_OCR & 0x40000000)
-			// High capacity card
-			dev->d_dev->sd_data = sector;
-		else
-			dev->d_dev->sd_data = sector*512;
-		dev->d_dev->sd_cmd  = (SDIO_CMD|SDIO_R1b|SDIO_MEM|SDIO_ERR)+18;
+		dev->d_dev->sd_cmd  = SDIO_ERR | SDIO_RDMULTI;
 		// }}}
 
 		// Read each sector
 		// {{{
 		for(unsigned s=0; s<count; s++) {
 			// Wait until we have a block to read
-			while((cmd = dev->d_dev->sd_cmd) & SDIO_BUSY)
-				;
+			sdio_wait_while_busy(dev);
 
 			// Send the next (or last) command
 			// {{{
@@ -1340,8 +1451,8 @@ txstr("READ-MULTI!  N="); txhex(count); txstr("\n");
 				err = 1;
 			} if (s +1 < count && !err) {
 				// Immediately start the next read request
-				dev->d_dev->sd_cmd  = SDIO_MEM + 18
-						+ ((s&1) ? 0 : SDIO_FIFO);
+				dev->d_dev->sd_cmd  = SDIO_MEM
+					+ ((s&1) ? 0 : SDIO_FIFO);
 			} else {
 				// Send a STOP_TRANSMISSION request
 				dev->d_dev->sd_data = 0;
@@ -1357,55 +1468,62 @@ txstr("READ-MULTI!  N="); txhex(count); txstr("\n");
 				_zip->z_dma.d_rd  = (s&1)
 					? (char *)&dev->d_dev->sd_fifb
 					: (char *)&dev->d_dev->sd_fifa;
-				_zip->z_dma.d_wr  = (char *)buf;
+				_zip->z_dma.d_wr  = (char *)&buf[s*512];
 				_zip->z_dma.d_ctrl= DMAREQUEST|DMACLEAR|DMA_DSTWIDE
-							| DMA_CONSTSRC|DMA_SRCWORD;
+						| DMA_CONSTSRC|DMA_SRCWORD;
 				while(_zip->z_dma.d_ctrl & DMA_BUSY)
 					;
 			} else
 #endif
-				{
-					unsigned *dst;
-					dst = (unsigned *)&buf[s*512];
+			{
+				unsigned *dst;
+				dst = (unsigned *)&buf[s*512];
 
-					if (s&1) {
-						for(int w=0; w<512/sizeof(uint32_t); w++)
-							dst[w] = dev->d_dev->sd_fifb;
-					} else {
-						for(int w=0; w<512/sizeof(uint32_t); w++)
-							dst[w] = dev->d_dev->sd_fifa;
-					}
+				if (s&1) {
+					for(int w=0; w<512/sizeof(uint32_t); w++)
+						dst[w] = dev->d_dev->sd_fifb;
+				} else {
+					for(int w=0; w<512/sizeof(uint32_t); w++)
+						dst[w] = dev->d_dev->sd_fifa;
 				}
+			}
 			// }}}
 		}
 		// }}}
-
-		// Check the results of the STOP_TRANSMISSION request
-		while((cmd = dev->d_dev->sd_cmd) & SDIO_BUSY)
-			;
-
-		if (err) {
-			// If we had any read failures along the way, return
-			// an error status
-			RELEASE_MUTEX;
-			return RES_ERROR;
-		}
-
-		// If the stop transmission command didn't receive a proper
-		// response, return an error status
-		if (cmd & SDIO_ERR) {
-			RELEASE_MUTEX;
-			return RES_ERROR;
-		}
-
-		// If the card has an error, return an error status
-		card_stat = dev->d_dev->sd_data;
-		RELEASE_MUTEX;
-		if (card_stat & SDIO_R1ERR)
-			return RES_ERROR;
-
-		return RES_OK;
 	}
+
+	// Check the results of the STOP_TRANSMISSION request
+	sdio_wait_while_busy(dev);
+	dev_stat  = dev->d_dev->sd_cmd;
+	card_stat = dev->d_dev->sd_data;
+
+	RELEASE_MUTEX;
+	CLEAR_DCACHE;
+
+	if (err) {
+		// If we had any read failures along the way, return
+		// an error status
+	} else if (dev_stat & (SDIO_ERR|SDIO_REMOVED)) {
+		TRIGGER_SCOPE;
+		err = 1;
+		if (SDDEBUG)
+			printf("\tSDIO-ERR: %08x:%08x\n", dev_stat, card_stat);
+		// If the stop transmission command didn't receive
+		// a proper response, return an error status
+	} else if (card_stat & SDIO_R1ERR) {
+		TRIGGER_SCOPE;
+		if (SDDEBUG)
+			printf("\tR1-ERR\n");
+		// If the card has an error, return an error status
+		err = 1;
+	}
+
+	if (err) {
+		TRIGGER_SCOPE;
+		if (SDDEBUG)
+			printf("SDIO-READ -> ERR\n");
+		return RES_ERROR;
+	} return RES_OK;
 }
 // }}}
 
@@ -1422,7 +1540,9 @@ int	sdio_ioctl(SDIODRV *dev, char cmd, char *buf) {
 
 	switch(cmd) {
 	case CTRL_SYNC: {
+			GRAB_MUTEX;
 			sdio_wait_while_busy(dev);
+			RELEASE_MUTEX;
 			return	RES_OK;
 		} break;
 	case GET_SECTOR_COUNT:

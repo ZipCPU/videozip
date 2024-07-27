@@ -79,10 +79,10 @@ int	TMDSENCODER::ctldata(int ctl) {
 	int	word = 0;
 
 	switch(ctl&3) {
-	case 0: word = bitreverse(0x354); break;
-	case 1: word = bitreverse(0x0ab); break;
-	case 2: word = bitreverse(0x154); break;
-	case 3: word = bitreverse(0x2ab); break;
+	case 0: word = bitreverse(0x354); break;	// = 0x00 1010 1011/0AB
+	case 1: word = bitreverse(0x0ab); break;	// = 0x11 0101 0100/354
+	case 2: word = bitreverse(0x154); break;	// = 0x00 1010 1010/0AA
+	case 3: word = bitreverse(0x2ab); break;	// = 0x11 0101 0101/355
 	}
 
 	return word;
@@ -174,7 +174,10 @@ int	TMDSENCODER::apply(int dtype, int ctl, int aux, int data) {
 
 
 void	HDMISOURCE::init(void) {
+fprintf(stderr, "Getting root window\n");
 	m_root_window = gdk_get_default_root_window();
+fprintf(stderr, "Root = 0x%016lx\n", (unsigned long)(m_root_window));
+assert(m_root_window != 0l);
 	m_xoffset = m_yoffset = 0;
 
 	m_bytes_per_pixel = 3;
@@ -189,12 +192,6 @@ void	HDMISOURCE::init(void) {
 }
 
 void	HDMISOURCE::get_screenshot(void) {
-	// Glib::RefPtr<Gdk::Pixbuf> image = Gdk::Pixbuf::... ??
-	// Gdk::Cairo::set_source_pixbuf(cr, image, ?, ?);
-	//
-
-	// m_image = new Gdk::Pixbuf(m_root_window, m_xoffset, m_yoffset, m_mode.width(), m_mode.height());
-
 	m_image = gdk_pixbuf_get_from_window(m_root_window,
 			m_xoffset, m_yoffset, m_mode.width(), m_mode.height());
 	g_assert( gdk_pixbuf_get_n_channels(m_image) == 3);
@@ -275,7 +272,7 @@ void	HDMISOURCE::operator()(int &blu, int &grn, int &red) {
 				||(m_ypos == m_mode.raw_height() - 1))) {
 			// Video data preamble
 			blu = tmdsblu.ctldata(0);
-			grn = tmdsgrn.ctldata(2);
+			grn = tmdsgrn.ctldata(1);
 			red = tmdsred.ctldata(0);
 		} else {
 			int	control = (vsync << 1) | hsync;

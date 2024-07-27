@@ -285,7 +285,7 @@ public:
 			m_core->i_sdio_ad_data);
 		m_core->i_sdio_cmd_strb = (tmp >> 30) & 3;
 		m_core->i_sdio_cmd_data = (tmp >> 28) & 3;
-		m_core->i_sdio_rx_strb  = (tmp >> 26) & 3;
+		m_core->i_sdio_rx_strb  = (tmp >> 24) & 3;
 		m_core->i_sdio_rx_data  =  tmp & 0x0ffff;
 		m_core->i_sdio_ac_valid = (tmp_async & 2) ? 1:0;
 		m_core->i_sdio_ad_valid =  tmp_async & 1;
@@ -376,10 +376,12 @@ public:
 			int	r, g, b;
 
 			// HDMI input received by the design
-			(*m_hdmirx)(r, g, b);
+			(*m_hdmirx)(b, g, r);
 			m_core->i_hdmi_blu = b;
 			m_core->i_hdmi_grn = g;
 			m_core->i_hdmi_red = r;
+
+			m_core->i_pxpll_locked = 1;
 
 			// HDMI output, transmitted from the design
 			(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn,

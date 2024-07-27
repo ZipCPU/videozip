@@ -287,6 +287,13 @@ module	vidpipe #(
 	// Verilator lint_off UNUSED
 	wire	[31:0]	src_debug, tx_debug, alph_debug, pip_debug, vga_debug;
 	// Verilator lint_on  UNUSED
+
+	wire		ipkt_valid, ipkt_hdr, ipkt_last;
+	wire	[7:0]	ipkt_data;
+
+	wire		opkt_valid, opkt_ready, opkt_hdr, opkt_last;
+	wire	[7:0]	opkt_data;
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -469,6 +476,7 @@ module	vidpipe #(
 				end
 				// }}}
 			ADR_CAPTURE: begin
+				// {{{
 				if (i_wb_sel[3])
 				begin
 					cfg_capmode <= i_wb_data[30:29];
@@ -480,6 +488,7 @@ module	vidpipe #(
 						&&(cfg_capbase != 0);
 					cfg_capcount <= i_wb_data[LGDIM-1:0];
 				end end
+				// }}}
 			ADR_CAPBASE: begin
 				// cfg_capen <= (&i_wb_sel)
 				//		&& (i_wb_data[WBLSB +: AW]!=0);
@@ -748,6 +757,12 @@ module	vidpipe #(
 			.o_vsync(vga_vsync), .o_hsync(vga_hsync),
 			.o_vga_red(vga_red), .o_vga_green(vga_grn),
 				.o_vga_blue(vga_blu),
+			//
+			.M_DI_VALID(ipkt_valid),
+			.M_DI_HDR(  ipkt_hdr),
+			.M_DI_DATA( ipkt_data),
+			.M_DI_LAST( ipkt_last),
+			//
 			.o_sync_word(sync_word),
 			.o_debug(vga_debug)
 			// }}}
@@ -1600,6 +1615,92 @@ module	vidpipe #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
+	// HDMI packet processing
+	// {{{
+	localparam [0:0]	OPT_DATA_ISLAND = 1'b0;
+
+	generate if (OPT_DATA_ISLAND)
+	begin : GEN_DATA_ISLAND
+		// {{{
+		wire		pktdec_valid, pktdec_hdr, pktdec_last;
+		wire	[7:0]	pktdec_data;
+
+		wire		di_valid, di_ready, di_last;
+		wire	[7:0]	di_data;
+
+		hdmibchdec
+		u_bch_decode (
+		// {{{
+		.i_clk(i_pixclk), .i_reset(pix_reset),
+		//
+		.S_VALID(ipkt_valid),
+		.S_HDR(  ipkt_hdr),
+		.S_DATA( ipkt_data),
+		.S_LAST( ipkt_last),
+		//
+		.M_VALID(pktdec_valid),
+		.M_DATA( pktdec_data),
+		.M_LAST( pktdec_last)
+		// }}}
+		);
+
+		hdmigate #(
+			.LGFLEN(6)
+		) u_gate (
+		// {{{
+		.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(!pix_reset),
+		.S_AXIN_VALID(pktdec_valid),
+		.S_AXIN_DATA( pktdec_data),
+		.S_AXIN_LAST( pktdec_last),
+		//
+		.M_AXIN_VALID(di_valid),
+		.M_AXIN_READY(di_ready),
+		.M_AXIN_DATA( di_data),
+		.M_AXIN_LAST( di_last)
+		// }}}
+		);
+
+		hdmigenpkt
+		u_gen_pkt (
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			//
+			.S_VALID(di_valid),
+			.S_READY(di_ready),
+			.S_DATA( di_data),
+			.S_LAST( di_last),
+			// .S_ABORT(1'b0),
+			//
+			.M_VALID(opkt_valid),
+			.M_READY(opkt_ready),
+			.M_HDR(  opkt_hdr),
+			.M_DATA( opkt_data),
+			.M_LAST( opkt_last)
+			// }}}
+		);
+
+		// }}}
+	end else begin : NO_DATA_ISLAND_SUPPORT
+		// {{{
+		assign	opkt_valid = 1'b0;
+		assign	opkt_hdr   = 1'b0;
+		assign	opkt_data  = 8'h0;
+		assign	opkt_last  = 1'b0;
+
+		// Keep Verilator happy
+		// {{{
+		// Verilator lint_off UNUSED
+		wire	unused_di;
+		assign	unused_di = &{ 1'b0, opkt_ready, ipkt_valid, ipkt_hdr,
+				ipkt_data, ipkt_last };
+		// Verilator lint_on  UNUSED
+		// }}}
+		// }}}
+	end endgenerate
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
 	// axis2hdmi: Convert our AXI Video stream to HDMI
 	// {{{
 
@@ -1613,6 +1714,14 @@ module	vidpipe #(
 		// {{{
 		.i_valid(out_valid), .o_ready(out_ready),
 		.i_hlast(out_hlast), .i_vlast(out_vlast), .i_rgb_pix(out_data),
+		// }}}
+		// Incoming packet stream
+		// {{{
+		.i_pkt_valid(opkt_valid),
+		.o_pkt_ready(opkt_ready),
+		.i_pkt_hdr(  opkt_hdr),
+		.i_pkt_data( opkt_data),
+		.i_pkt_last( opkt_last),
 		// }}}
 		// Video mode information
 		// {{{

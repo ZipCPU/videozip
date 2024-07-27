@@ -162,7 +162,10 @@ module	main(i_clk, i_reset,
 		// The Universal QSPI Flash
 		o_qspi_cs_n, o_qspi_sck, o_qspi_dat, i_qspi_dat, o_qspi_mod,
 		// HDMI control ports
-		i_hdmiclk, i_pixclk,
+`ifndef	VERILATOR
+		i_hdmiclk,
+`endif
+		i_pixclk,
 		i_hdmi_red, i_hdmi_grn, i_hdmi_blu,
 		o_hdmi_red, o_hdmi_grn, o_hdmi_blu,
 		o_hdmi_iodelay, i_hdmi_iodelay,
@@ -350,7 +353,10 @@ module	main(i_clk, i_reset,
 	output	wire	[1:0]	o_qspi_mod;
 	// hdmi declarations
 	// {{{
-	input	wire		i_hdmiclk, i_pixclk;
+`ifndef	VERILATOR
+	input	wire		i_hdmiclk;
+`endif
+	input	wire		i_pixclk;
 	input	wire	[9:0]	i_hdmi_red, i_hdmi_grn, i_hdmi_blu;
 	output	wire	[9:0]	o_hdmi_red, o_hdmi_grn, o_hdmi_blu;
 	output	wire	[14:0]	o_hdmi_iodelay;
@@ -560,6 +566,9 @@ module	main(i_clk, i_reset,
 	reg	r_genclkfb_ack;
 	// Verilator lint_on  UNUSED
 	// Verilator lint_off UNUSED
+`ifdef	VERILATOR
+	wire		i_hdmiclk;
+`endif
 	wire	[31:0]	hdmiclr_debug;
 	// Verilator lint_on  UNUSED
 	////////////////////////////////////////////////////////////////////////
@@ -2588,6 +2597,9 @@ module	main(i_clk, i_reset,
 	//
 	// HDMI Video processing pipeline
 	// {{{
+`ifdef	VERILATOR
+	assign	i_hdmiclk = i_pixclk;
+`endif
 
 	vidpipe #(
 		.AW(26),

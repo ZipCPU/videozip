@@ -11,7 +11,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2015-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -35,7 +35,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////
 //
-//
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -44,6 +43,7 @@
 #include <string.h>
 #include <signal.h>
 #include <assert.h>
+// }}}
 
 #include "regdefs.h"
 #include "port.h"
@@ -57,9 +57,9 @@ void	usage(void) {
 
 #define	NV	32
 int main(int argc, char **argv) {
-#ifdef	R_HDMI
-	unsigned	buf[NV], nc, raww, rawh, w, h;
-	double	pixclk_hz, framerate_hz, linerate_hz;
+#ifdef	R_VIDPIPE
+	unsigned	buf[NV];
+	// double		pixclk_hz, framerate_hz, linerate_hz;
 
 	m_fpga = connect_devbus(NULL);
 
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	m_fpga->readi(R_HDMI, NV, buf);
+	m_fpga->readi(R_VIDPIPE, NV, buf);
 
 	if (0 != buf[1] && 0 != buf[4]) { // Incoming video
 		// {{{
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 	}
 
 	for(int i=0; i<NV; i++) {
-		printf("RD[%04x = %04x] = %08x\n", i*4+R_HDMI, i, buf[i]);
+		printf("RD[%04x = %04x] = %08x\n", i*4+R_VIDPIPE, i, buf[i]);
 	}
 
  // 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync 

@@ -213,7 +213,7 @@ void	HDMISIM::operator()(const int blu, const int grn, const int red) {
 	// Set some default decode values
 	//
 	s = ctldata(brblu);
-	if ((s&~0x0f) == 0) {
+	if ((s&~0x03) == 0) {
 		hsync = s & 1;
 		vsync = (s & 2) ? 1:0;
 	}
@@ -347,9 +347,10 @@ void	HDMISIM::operator()(const int blu, const int grn, const int red) {
 				// If we've got too many of them, then
 				// declare us to be out of synch.
 				if (!m_out_of_sync) {
-					m_out_of_sync = true;
-					printf("%30s (%d, %d)\n", "V-RESYNC (TOO MANY)",
+					// m_out_of_sync = true;
+					printf("%30s (%d, %d * %d / %d)\n", "V-RESYNC (TOO MANY)",
 					m_vsync_count,
+					m_mode.raw_width(), m_mode.sync_lines(),
 					m_mode.raw_width() * m_mode.sync_lines()-1);
 				}
 				m_vsync_count = m_mode.sync_lines()*m_mode.raw_width() - 1;

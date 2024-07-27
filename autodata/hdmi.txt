@@ -167,7 +167,10 @@
 		w_pxclk_sel
 @MAIN.PORTLIST=
 		// HDMI control ports
-		i_hdmiclk, i_pixclk,
+`ifndef	VERILATOR
+		i_hdmiclk,
+`endif
+		i_pixclk,
 		i_hdmi_red, i_hdmi_grn, i_hdmi_blu,
 		o_hdmi_red, o_hdmi_grn, o_hdmi_blu,
 		o_hdmi_iodelay, i_hdmi_iodelay,
@@ -176,7 +179,10 @@
 @MAIN.IODECL=
 	// @$(PREFIX) declarations
 	// {{{
-	input	wire		i_hdmiclk, i_pixclk;
+`ifndef	VERILATOR
+	input	wire		i_hdmiclk;
+`endif
+	input	wire		i_pixclk;
 	input	wire	[9:0]	i_hdmi_red, i_hdmi_grn, i_hdmi_blu;
 	output	wire	[9:0]	o_hdmi_red, o_hdmi_grn, o_hdmi_blu;
 	output	wire	[14:0]	o_hdmi_iodelay;
@@ -187,6 +193,9 @@
 	// }}}
 @MAIN.DEFNS=
 	// Verilator lint_off UNUSED
+`ifdef	VERILATOR
+	wire		i_hdmiclk;
+`endif
 	wire	[31:0]	hdmiclr_debug;
 	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
@@ -194,6 +203,9 @@
 	//
 	// HDMI Video processing pipeline
 	// {{{
+`ifdef	VERILATOR
+	assign	i_hdmiclk = i_pixclk;
+`endif
 
 	vidpipe #(
 		.AW(@$(MASTER.BUS.AWID)),
@@ -320,10 +332,12 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 			int	r, g, b;
 
 			// HDMI input received by the design
-			(*m_hdmirx)(r, g, b);
+			(*m_hdmirx)(b, g, r);
 			m_core->i_hdmi_blu = b;
 			m_core->i_hdmi_grn = g;
 			m_core->i_hdmi_red = r;
+
+			m_core->i_pxpll_locked = 1;
 
 			// HDMI output, transmitted from the design
 			(*m_hdmitx)(m_core->o_hdmi_blu, m_core->o_hdmi_grn,

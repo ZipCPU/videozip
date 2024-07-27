@@ -68,10 +68,10 @@ public:
 		m_count = 0;
 
 		switch(channel) {
-		case 0: m_guard = 0x2cc;	break;
-		case 1: m_guard = 0x133;	break;
+		case 0: m_guard = 0x2cc;	break;	// = 0x00 1100 1101/0CD
+		case 1: m_guard = 0x133;	break;	// = 0x11 0011 0010/332
 		default:
-			m_guard = 0x2cc;
+			m_guard = 0x2cc;		// = 0x00 1100 1101/0CD
 		}
 	}
 
