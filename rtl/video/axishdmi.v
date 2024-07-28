@@ -60,7 +60,7 @@ module	axishdmi #(
 		// AXI Stream packet interface
 		// {{{
 		input	wire		i_pkt_valid,
-		output	reg		o_pkt_ready,
+		output	wire		o_pkt_ready,
 		input	wire		i_pkt_hdr,
 		input	wire [7:0]	i_pkt_data,
 		input	wire		i_pkt_last,

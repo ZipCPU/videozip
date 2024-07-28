@@ -47,7 +47,7 @@ SIMD  := sim
 # Could also depend upon load, if desired, but not necessary
 BENCH := # `find bench -name Makefile` `find bench -name "*.cpp"` `find bench -name "*.h"`
 SIM   := `find sim -name Makefile` `find sim -name "*.cpp"` `find sim -name "*.h"` `find sim -name "*.c"`
-RTL   := `find rtl -name "*.v"` `find rtl -name Makefile`
+RTL   := `find rtl -name "*.v"` `find rtl -name Makefile` `find bench -name "*.sby"`
 NOTES := `find . -name "*.txt"` `find . -name "*.html"`
 SW    := `find sw -name "*.cpp"` `find sw -name "*.c"`	\
 	`find sw -name "*.h"`	`find sw -name "*.sh"`	\

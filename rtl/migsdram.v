@@ -73,7 +73,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	//
 	input	wire		i_clk, i_clk_200mhz, i_rst;
 	output	wire		o_sys_clk;
-	output	reg		o_sys_reset;
+	output	wire		o_sys_reset;
 	//
 	input	wire		i_wb_cyc, i_wb_stb, i_wb_we;
 	input	wire	[(AW-1):0]	i_wb_addr;

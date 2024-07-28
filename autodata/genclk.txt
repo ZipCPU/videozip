@@ -65,7 +65,7 @@
 		// {{{
 		s_clksync, s_clk_400mhz,
 			w_@$(PREFIX)_ce, w_@$(PREFIX)_word,
-			o_genclk,
+			o_unused_fan_pwm,
 			s_@$(PREFIX)_clk, w_@$(PREFIX)_pll_locked
 		// }}}
 	);
@@ -147,3 +147,7 @@
 @CLOCK.NAME=mclk
 @CLOCK.WIRE=i_genclk_clk
 @CLOCK.FREQUENCY=24576000
+@XDC.INSERT=
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clk@$(PREFIX)ctr/avgs*}]    -to [get_cells -hier -filter {NAME =~ *clk@$(PREFIX)ctr/q_v*}] 10.0;
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *thedesign/r_genclk_data*}]    -to [get_cells -hier -filter {NAME =~ *lowserdes*}] 10.0;
+

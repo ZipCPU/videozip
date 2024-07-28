@@ -76,7 +76,7 @@ module	vid_wbcamera #(
 		input	wire			i_wb_en,
 		// output	wire			o_overflow,
 		output	reg			o_err,
-		output	reg			o_done,
+		output	wire			o_done,
 		input	wire	[LGFRAME-1:0]	i_height, i_mem_words,
 		input	wire	[AW-1:0]	i_baseaddr,
 		//
@@ -106,8 +106,8 @@ module	vid_wbcamera #(
 	wire			s_valid, s_hlast, s_vlast, s_ready;
 	wire	[PW-1:0]	s_data;
 
-	reg				sr_valid, sr_last, sr_vlast;
-	reg	[SRWIDTH-1:0]		sr_data;
+	wire				sr_valid, sr_last, sr_vlast;
+	wire	[SRWIDTH-1:0]		sr_data;
 	wire	[SRWIDTH-1:0]		wide_sdata;
 	reg	[$clog2(SRWIDTH+1)-1:0]	sr_fill;
 
@@ -121,8 +121,9 @@ module	vid_wbcamera #(
 	wire	[LGFIFO:0]	sfifo_fill;
 
 	// wb_eol and wb_eof are both error conditions.
-	reg			wb_eol, wb_eof, wb_clr, wb_hlast, wb_vlast,
+	reg			wb_eol, wb_eof, wb_hlast, wb_vlast,
 				wb_zero, wb_syncd;
+	wire			wb_clr;
 	wire			wb_done, wb_flush;
 	reg	[LGFRAME-1:0]	wb_ypos, wb_word;
 	reg	[AW-1:0]	line_addr;
@@ -170,20 +171,23 @@ module	vid_wbcamera #(
 	generate if (PW != DW)
 	begin : GEN_SREG
 		// {{{
+		reg		r_valid, r_last, r_vlast;
+		reg	[7:0]	r_data;
+
 		always @(posedge i_pixclk)
 		if (pix_reset)
 		begin
-			sr_valid <= 1'b0;
+			r_valid <= 1'b0;
 			sr_fill <= 0;
-			{ sr_last, sr_vlast } <= 2'b00;
+			{ r_last, r_vlast } <= 2'b00;
 		end else if (pix_clearing)
 		begin
-			sr_valid <= 0;
+			r_valid <= 0;
 			sr_fill  <= 0;
-			{ sr_last, sr_vlast } <= 2'b00;
+			{ r_last, r_vlast } <= 2'b00;
 		end else if (s_valid && s_ready)
 		begin
-			if (sr_valid)
+			if (r_valid)
 			begin
 				// ASSUME !afifo_fill
 				//	Otherwise we have an overflow error to be
@@ -194,51 +198,57 @@ module	vid_wbcamera #(
 					sr_fill <= sr_fill - DW + PW;
 				else
 					sr_fill <= PW;
-				sr_valid <= 1'b0;
+				r_valid <= 1'b0;
 			end else begin
 				sr_fill <= sr_fill + PW;
-				sr_valid <= (sr_fill + PW) >= DW;
+				r_valid <= (sr_fill + PW) >= DW;
 				// Verilator lint_on  WIDTH
 			end
 
-			{ sr_last, sr_vlast } <= 2'b00;
+			{ r_last, r_vlast } <= 2'b00;
 			if (s_hlast)
 			begin
-				sr_last  <= s_hlast;
-				sr_vlast <= s_vlast;
+				r_last  <= s_hlast;
+				r_vlast <= s_vlast;
 			end
 
-		end else if (sr_valid && !afifo_full)
+		end else if (r_valid && !afifo_full)
 		begin
 			if (sr_fill >= DW)
 				sr_fill <= sr_fill - DW;
 			else
 				sr_fill <= 0;
-			sr_valid <= 0;
-			{ sr_last, sr_vlast } <= 2'b00;
+			r_valid <= 0;
+			{ r_last, r_vlast } <= 2'b00;
 		end
+
+		assign	sr_valid = r_valid;
+		assign	sr_last  = r_last;
+		assign	sr_vlast = r_vlast;
 
 		assign	wide_sdata = { {(SRWIDTH-PW){1'b0}}, s_data };
 
 		always @(posedge i_pixclk)
 		if (pix_reset)
-			sr_data <= 0;
+			r_data <= 0;
 		else if (pix_clearing)
-			sr_data <= 0;
+			r_data <= 0;
 		else case({ (s_valid && s_ready), (sr_valid && !afifo_full) })
 		2'b00: begin end
 				// Verilator lint_off WIDTH
-		2'b10: sr_data <= sr_data | (wide_sdata << (SRWIDTH-PW-sr_fill));
+		2'b10: r_data <= sr_data | (wide_sdata << (SRWIDTH-PW-sr_fill));
 				// Verilator lint_on  WIDTH
-		2'b01: sr_data <= sr_data << DW;
+		2'b01: r_data <= sr_data << DW;
 		2'b11: if (sr_last)
-				sr_data <= wide_sdata << (SRWIDTH-PW);
+				r_data <= wide_sdata << (SRWIDTH-PW);
 			else
 				// Verilator lint_off WIDTH
-				sr_data <= (sr_data << DW)
+				r_data <= (sr_data << DW)
 					|(wide_sdata << (SRWIDTH+DW-PW-sr_fill));
 				// Verilator lint_on  WIDTH
 		endcase
+
+		assign	sr_data = r_data;
 
 		// Verilator lint_off WIDTH
 		assign	s_ready = (sr_fill <= SRWIDTH) || !afifo_full;

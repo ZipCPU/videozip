@@ -73,7 +73,7 @@ module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
 		//
 		.CLKOUT1_DIVIDE(10),
 		.CLKOUT1_PHASE(0.0)
-		) genclki(
+	) genclki(
 		.CLKIN1(i_hdmi_raw_input_clk),	// Variable rate, from HDMI input
 		.CLKOUT0(hs_clk_unbuffered),
 		.CLKOUT1(logic_clk_unbuffered),	// REMOVE THIS CLOCK:UNUSED
@@ -86,7 +86,7 @@ module	xhdmiiclk(i_sys_clk, i_hdmi_raw_input_clk, i_ce, o_hs_clk,
 		.CLKFBOUT(clock_feedback),
 		.CLKFBIN(clock_feedback_buffered),
 		.LOCKED(o_locked)
-		);
+	);
 
 	// The buffer is necessary so that the output then compensates for the
 	// feedback associated with the buffer

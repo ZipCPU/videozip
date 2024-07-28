@@ -231,7 +231,7 @@ module	main(i_clk, i_reset,
 			i_sdram_stall, i_sdram_ack, i_sdram_data,
 			i_sdram_err,
 		// Extra clocks
-		i_clk_200mhz, i_clk_125mhz,
+		i_clk_125mhz,
 		// EDID RX definitions
 		i_edidslv_scl, i_edidslv_sda,
 		o_edidslv_scl, o_edidslv_sda
@@ -445,7 +445,7 @@ module	main(i_clk, i_reset,
 	// }}}
 	// Extra clocks
 	// Verilator lint_off UNUSED
-	input	wire		i_clk_200mhz, i_clk_125mhz;
+	input	wire		i_clk_125mhz;
 	// Verilator lint_on  UNUSED
 	// EDID RX definitions
 	input	wire	i_edidslv_scl, i_edidslv_sda;

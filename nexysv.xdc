@@ -127,8 +127,8 @@ create_clock -period 10.000 -name INCLK -waveform {0.000 5.000} -add [get_ports 
 #set_property -dict { PACKAGE_PIN U6    IOSTANDARD LVCMOS33 } [get_ports { o_i2s_mclk }]; #IO_L16P_T2_34 Sch=ac_mclk
 
 ## I2C Audio configuration
-#set_property -dict { PACKAGE_PIN V5	IOSTANDARD LVCMOS33 } [get_ports { io_i2c_sda }]; #IO_L16N_T2_34 Sch=sda
-#set_property -dict { PACKAGE_PIN W5	IOSTANDARD LVCMOS33 } [get_ports { io_i2c_scl }]; #IO_L15N_T2_DQS_34 Sch=scl
+#set_property -dict { PACKAGE_PIN V5	IOSTANDARD LVCMOS33 } [get_ports { io_sda }]; #IO_L16N_T2_34 Sch=sda
+#set_property -dict { PACKAGE_PIN W5	IOSTANDARD LVCMOS33 } [get_ports { io_scl }]; #IO_L15N_T2_DQS_34 Sch=scl
 ## }}}
 
 ## Pmod header JA -- We'll use the bottom for GPS
@@ -256,13 +256,13 @@ create_clock -period 10.000 -name INCLK -waveform {0.000 5.000} -add [get_ports 
 
 ## SD card
 ## {{{
-#set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports { o_sd_sck }]; #IO_L12P_T1_MRCC_14 Sch=sd_cclk
+#set_property -dict { PACKAGE_PIN W19   IOSTANDARD LVCMOS33 } [get_ports { o_sd_clk }]; #IO_L12P_T1_MRCC_14 Sch=sd_cclk
 #set_property -dict {PACKAGE_PIN T18 IOSTANDARD LVCMOS33} [get_ports i_sd_cd_n]
 #set_property -dict { PACKAGE_PIN W20   IOSTANDARD LVCMOS33 } [get_ports { io_sd_cmd }]; #IO_L12N_T1_MRCC_14 Sch=sd_cmd
-#set_property -dict { PACKAGE_PIN V19   IOSTANDARD LVCMOS33 } [get_ports { io_sd[0] }]; #IO_L14N_T2_SRCC_14 Sch=sd_d[0]
-#set_property -dict { PACKAGE_PIN T21   IOSTANDARD LVCMOS33 } [get_ports { io_sd[1] }]; #IO_L4P_T0_D04_14 Sch=sd_d[1]
-#set_property -dict { PACKAGE_PIN T20   IOSTANDARD LVCMOS33 } [get_ports { io_sd[2] }]; #IO_L6N_T0_D08_VREF_14 Sch=sd_d[2]
-#set_property -dict { PACKAGE_PIN U18   IOSTANDARD LVCMOS33 } [get_ports { io_sd[3] }]; #IO_L18N_T2_A11_D27_14 Sch=sd_d[3]
+#set_property -dict { PACKAGE_PIN V19   IOSTANDARD LVCMOS33 } [get_ports { io_sd_dat[0] }]; #IO_L14N_T2_SRCC_14 Sch=sd_d[0]
+#set_property -dict { PACKAGE_PIN T21   IOSTANDARD LVCMOS33 } [get_ports { io_sd_dat[1] }]; #IO_L4P_T0_D04_14 Sch=sd_d[1]
+#set_property -dict { PACKAGE_PIN T20   IOSTANDARD LVCMOS33 } [get_ports { io_sd_dat[2] }]; #IO_L6N_T0_D08_VREF_14 Sch=sd_d[2]
+#set_property -dict { PACKAGE_PIN U18   IOSTANDARD LVCMOS33 } [get_ports { io_sd_dat[3] }]; #IO_L18N_T2_A11_D27_14 Sch=sd_d[3]
 #set_property -dict {PACKAGE_PIN V20 IOSTANDARD LVCMOS33} [get_ports o_sd_reset]
 ## }}}
 
@@ -348,9 +348,6 @@ set_property -dict { PACKAGE_PIN V14   IOSTANDARD LVCMOS25 } [get_ports { o_vadj
 #set_property -dict { PACKAGE_PIN F14   IOSTANDARD LVCMOS12 } [get_ports { fmc_la_n[33] }]; #IO_L1N_T0_16 Sch=fmc_la_n[33]
 #set_property -dict { PACKAGE_PIN F13   IOSTANDARD LVCMOS12 } [get_ports { fmc_la_p[33] }]; #IO_L1P_T0_16 Sch=fmc_la_p[33]
 ## }}}
-
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *avgs_reg*}]    -to [get_cells -hier -filter {NAME =~ *clkgenclk_testctr*q_v*}] 10.0;
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *r_ce_reg[1]*}]    -to [get_cells -hier -filter {NAME =~ *lowserdes*}] 10.0;
 
 set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 set_property BITSTREAM.CONFIG.CONFIGRATE 50 [current_design]

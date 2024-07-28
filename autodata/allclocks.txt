@@ -54,6 +54,7 @@
 	// {{{
 	wire	s_clk_200mhz,  s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback, sysclk_feedback_buffered,
+		s_clk_250mhz,  s_clk_250_unbuffered,
 		s_clk_125mhz,  s_clk_125_unbuffered,
 		s_clk_125d,    s_clk_125d_unbuffered,
 		s_clksync,     s_clksync_unbuffered,
@@ -62,7 +63,7 @@
 		netclk_locked, netclk_feedback, netclk_feedback_buffered;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
-	reg	[3:0]	sysclk_stable, netclk_stable,
+	reg	[3:0]	sysclk_stable,
 			upper_plls_stable;
 	reg	[4:0]	pll_reset_sreg;
 	reg		pll_reset;
@@ -71,7 +72,7 @@
 @TOP.IODECL=
 @TOP.MAIN=
 		// PLL generated clocks
-		s_clk_200mhz, s_clk_125mhz
+		s_clk_125mhz
 @TOP.INSERT=
 	// Buffer the incoming clock
 	BUFG @$(PREFIX)clkbufi(.I(i_clk), .O(i_clk_buffered));
@@ -138,9 +139,9 @@
 	//   
 	PLLE2_BASE #(
 		// {{{
-		.CLKFBOUT_MULT(5),
+		.CLKFBOUT_MULT(10),
 		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(5),
+		.CLKIN1_PERIOD(10),
 		.CLKOUT0_DIVIDE(8),	// 125 MHz
 		.CLKOUT0_PHASE(0),
 		.CLKOUT1_DIVIDE(4),	// 250 MHz
@@ -148,7 +149,7 @@
 		// }}}
 	) gen_netclk(
 		// {{{
-		.CLKIN1(i_clk200_buffered),
+		.CLKIN1(i_clk_buffered),
 		.CLKOUT0(s_clk_125_unbuffered),
 		.CLKOUT1(s_clk_250_unbuffered),
 		// .CLKOUT2(),
@@ -169,21 +170,34 @@
 	assign	clocks_locked = (netclk_locked && sysclk_locked);
 
 	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// IDELAYCTRL
+	IDELAYCTRL
+	u_delay_control (
+		.REFCLK(s_clk_200mhz),
+		.RST(pll_reset),
+		.RDY()
+	);
+
 @MAIN.PORTLIST=
 		// Extra clocks
-		i_clk_200mhz, i_clk_125mhz
+		i_clk_125mhz
 @MAIN.IODECL=
 	// Extra clocks
 	// Verilator lint_off UNUSED
-	input	wire		i_clk_200mhz, i_clk_125mhz;
+	input	wire		i_clk_125mhz;
 	// Verilator lint_on  UNUSED
 @MAIN.DEFNS=
 	wire	i_net_tx_clk;
 @MAIN.INSERT=
 	assign	i_net_tx_clk = i_clk_125mhz;
-@CLOCK.WIRE=i_clk_200mhz i_clk_125mhz
-@CLOCK.NAME=clk_200mhz clk_125mhz
-@CLOCK.FREQUENCY=200000000 125000000
+@CLOCK.WIRE=i_clk_125mhz
+@CLOCK.NAME=clk_125mhz
+@CLOCK.FREQUENCY=125000000
 @CLOCK.TOP=
 @MAIN.IODECL=
-	input	wire		i_clk_200mhz, i_net_tx_clk;
+	input	wire		i_net_tx_clk;
+@XDC.INSERT=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ pll_reset_sreg*}] -to [get_cells -hier -filter {NAME=~ */reset_pipe*}] 7.5
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ pll_reset_sreg*}] -to [get_cells -hier -filter {NAME=~ */sync_reset*}] 7.5

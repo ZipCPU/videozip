@@ -33,3 +33,7 @@ vivado.log
 lastbuild.v
 sdcard.img
 /refs
+*.log
+/vivado*pid*
+/vivado*jou*
+/vivado*str*

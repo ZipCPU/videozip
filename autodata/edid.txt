@@ -93,14 +93,16 @@
 		io_hdmirx_scl, io_hdmirx_sda
 @TOP.IODECL=
 	// EDID RX definitions
-	inout	wire	io_@$(PREFIX)_scl, io_@$(PREFIX)_sda;
+	inout	wire	io_hdmirx_scl, io_hdmirx_sda;
+@TOP.DEFNS=
+	wire	w_@$(PREFIX)_scl, w_@$(PREFIX)_sda;
 @TOP.INSERT=
-	assign	io_@$(PREFIX)_scl = w_@$(PREFIX)_scl ? 1'bz : 1'b0;
-	assign	io_@$(PREFIX)_sda = w_@$(PREFIX)_sda ? 1'bz : 1'b0;
+	assign	io_hdmirx_scl = w_@$(PREFIX)_scl ? 1'bz : 1'b0;
+	assign	io_hdmirx_sda = w_@$(PREFIX)_sda ? 1'bz : 1'b0;
 @TOP.MAIN=
 	// EDID RX definitions
-	io_@$(PREFIX)_scl, io_@$(PREFIX)_sda,
-	w_@$(PREFIX)_scl,  w_@$(PREFIX)_sda,
+	io_hdmirx_scl, io_hdmirx_sda,
+	w_@$(PREFIX)_scl,  w_@$(PREFIX)_sda
 @MAIN.PORTLIST=
 		// EDID RX definitions
 		i_@$(PREFIX)_scl, i_@$(PREFIX)_sda,

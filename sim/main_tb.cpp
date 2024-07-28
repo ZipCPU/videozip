@@ -224,7 +224,7 @@ public:
 	}
 
 	void	tick(void) {
-		TESTB<Vmain>::tick(); // Clock.size = 6
+		TESTB<Vmain>::tick(); // Clock.size = 5
 	}
 
 
@@ -390,18 +390,6 @@ public:
 #endif	// VIDPIPE_ACCESS
 	}
 
-	// Evaluating clock clk_200mhz
-
-	// sim_clk_200mhz_tick() will be called from TESTB<Vmain>::tick()
-	//   following any falling edge of clock clk_200mhz
-	virtual	void	sim_clk_200mhz_tick(void) {
-		//
-		// SIM.TICK tags go here for SIM.CLOCK=clk_200mhz
-		//
-		// No SIM.TICK tags defined
-		m_changed = false;
-	}
-
 	// Evaluating clock clk_125mhz
 
 	// sim_clk_125mhz_tick() will be called from TESTB<Vmain>::tick()
@@ -448,15 +436,6 @@ public:
 		do {
 			tick();
 		} while(!m_pixclk.rising_edge());
-	}
-
-	//
-	// Step until clock clk_200mhz ticks
-	//
-	virtual	void	tick_clk_200mhz(void) {
-		do {
-			tick();
-		} while(!m_clk_200mhz.rising_edge());
 	}
 
 	//

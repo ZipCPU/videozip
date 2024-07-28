@@ -124,14 +124,14 @@ module	fftavg #(
 	begin : GEN_SKIDBUFFER
 
 		skidbuffer #(
-			.OPT_LOWPOWER(0), .OPT_OUTREG(0), .DW(DW)
+			.OPT_LOWPOWER(0), .OPT_OUTREG(0), .DW(2*IW+1)
 		) ibuf(
 			// {{{
 			.i_clk(S_AXI_ACLK), .i_reset(!S_AXI_ARESETN),
-			.i_valid(S_AXI_TVALID), .o_ready(S_AXI_TREADY),
+			.i_valid(S_AXIS_TVALID), .o_ready(S_AXIS_TREADY),
 				.i_data({ S_AXIS_TLAST, S_AXIS_TDATA }),
 			.o_valid(skd_valid), .i_ready(skd_ready),
-				.i_data({ skd_last, skd_data }),
+				.i_data({ skd_last, skd_data })
 			// }}}
 		);
 
@@ -198,8 +198,8 @@ module	fftavg #(
 		begin
 			sqr_valid =  pipe[3];
 			sqr_last  = lpipe[3];
-			sqr_busy  =  pipe[0];
 		end
+		assign	sqr_busy  =  pipe[0];
 
 		always @(posedge S_AXI_ACLK)
 		if (!S_AXI_ARESETN)

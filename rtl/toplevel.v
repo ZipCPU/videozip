@@ -73,17 +73,17 @@ module	toplevel(i_clk,
 		o_hdmitx_p, o_hdmitx_n,
 		// SDIO SD Card
 
-o_sdcard_clk,
-i_sdcard_cd_n,
+o_sd_clk,
+i_sd_cd_n,
 
-		io_sdcard_cmd, io_sdcard_dat,
+		io_sd_cmd, io_sd_dat,
 		// GPIO ports
 		io_hdmirx_cec,
 		o_hdmirx_hpa,	// Hotplug assert
 		o_hdmirx_txen,
 		io_hdmitx_cec,
 		i_hdmitx_hpd_n, // Hotplug detect
-		o_sd_reset_n,
+		o_sd_reset,
 		i_gps_3df,
 			io_hdmitx_scl, io_hdmitx_sda,
 		// UART/host to wishbone interface
@@ -184,7 +184,7 @@ i_sdcard_cd_n,
 	output	wire	[8-1:0]	o_led;
 	// MegaNet I/O port declarations
 	// {{{
-	// output	wire		o_net_reset_n;
+	output	wire		o_net_reset_n;
 	input	wire		i_net_rx_clk, i_net_rx_ctl;
 	input	wire [3:0]	i_net_rxd;
 	output	wire	 	o_net_tx_clk, o_net_tx_ctl;
@@ -203,13 +203,13 @@ i_sdcard_cd_n,
 	// SDIO SD Card
 	// {{{
 
-	output	wire		o_sdcard_clk;
+	output	wire		o_sd_clk;
 
 
-	input	wire		i_sdcard_cd_n;
+	input	wire		i_sd_cd_n;
 
-	inout	wire		io_sdcard_cmd;
-	inout	wire	[4-1:0]	io_sdcard_dat;
+	inout	wire		io_sd_cmd;
+	inout	wire	[4-1:0]	io_sd_dat;
 	// }}}
 	// GPIO ports
 	inout	wire	io_hdmirx_cec;
@@ -217,7 +217,7 @@ i_sdcard_cd_n,
 	output	wire	o_hdmirx_txen;
 	inout	wire	io_hdmitx_cec;
 	input	wire	i_hdmitx_hpd_n;
-	output	wire	o_sd_reset_n;
+	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 	inout	wire	io_hdmitx_scl, io_hdmitx_sda;
 	input	wire		i_wbu_uart_rx;
@@ -237,7 +237,7 @@ i_sdcard_cd_n,
 	inout	wire	[16-1:0]	ddr3_dq;
 	// }}}
 	// EDID RX definitions
-	inout	wire	io_edidslv_scl, io_edidslv_sda;
+	inout	wire	io_hdmirx_scl, io_hdmirx_sda;
 	// VADJ wires
 	output	wire		o_vadj_en;
 	output	wire [1:0]	o_vadj;
@@ -348,6 +348,7 @@ i_sdcard_cd_n,
 	// {{{
 	wire	s_clk_200mhz,  s_clk_200mhz_unbuffered,
 		sysclk_locked, sysclk_feedback, sysclk_feedback_buffered,
+		s_clk_250mhz,  s_clk_250_unbuffered,
 		s_clk_125mhz,  s_clk_125_unbuffered,
 		s_clk_125d,    s_clk_125d_unbuffered,
 		s_clksync,     s_clksync_unbuffered,
@@ -356,11 +357,12 @@ i_sdcard_cd_n,
 		netclk_locked, netclk_feedback, netclk_feedback_buffered;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
-	reg	[3:0]	sysclk_stable, netclk_stable,
+	reg	[3:0]	sysclk_stable,
 			upper_plls_stable;
 	reg	[4:0]	pll_reset_sreg;
 	reg		pll_reset;
 	// }}}
+	wire	w_edidslv_scl, w_edidslv_sda;
 	reg	[4:0]	vadj33_vadj_counter;
 
 
@@ -409,7 +411,7 @@ i_sdcard_cd_n,
 		// Reset wire for the ZipCPU
 		s_reset,
 		// SDIO SD Card
-		!i_sdcard_cd_n,
+		!i_sd_cd_n,
 		//
 		w_sdio_cfg_ddr,
 		w_sdio_cfg_ds,
@@ -452,10 +454,10 @@ i_sdcard_cd_n,
 			sdram_stall, sdram_ack, sdram_rdata,
 			sdram_err,
 		// PLL generated clocks
-		s_clk_200mhz, s_clk_125mhz,
+		s_clk_125mhz,
 	// EDID RX definitions
-	io_edidslv_scl, io_edidslv_sda,
-	w_edidslv_scl,  w_edidslv_sda,);
+	io_hdmirx_scl, io_hdmirx_sda,
+	w_edidslv_scl,  w_edidslv_sda);
 
 
 	//
@@ -506,7 +508,7 @@ i_sdcard_cd_n,
 		// {{{
 		s_clksync, s_clk_400mhz,
 			w_genclk_ce, w_genclk_word,
-			o_genclk,
+			o_unused_fan_pwm,
 			s_genclk_clk, w_genclk_pll_locked
 		// }}}
 	);
@@ -638,8 +640,8 @@ i_sdcard_cd_n,
 		//
 		.i_hdmirx_clk_p(i_hdmirx_clk_p),	// HDMI RX input clock
 		.i_hdmirx_clk_n(i_hdmirx_clk_n),
-		.i_lcl_pixclk(s_lcl_pixclk_nobuf),	// Locally generated clk
-		.i_siclk(s_siclk),			// Si5324 clock
+		.i_lcl_pixclk(s_clk_40mhz_unbuffered),	// Locally generated clk
+		.i_siclk(s_clk_40mhz_unbuffered),		// Si5324 clock
 		//
 		.o_hdmick_locked(pxrx_locked),
 		.o_hdmirx_clk(hdmirx_clk),	// Clk for measurement only
@@ -754,14 +756,14 @@ i_sdcard_cd_n,
 		// IO ports
 		.o_ck(w_sdio_ck),
 		.i_ds(w_sdio_ds),
-		.io_cmd(io_sdcard_cmd),
-		.io_dat(io_sdcard_dat),
+		.io_cmd(io_sd_cmd),
+		.io_dat(io_sd_dat),
 		.o_debug(w_sdio_debug)
 		// }}}
 	);
 
 
-	assign	o_sdcard_clk = w_sdio_ck;
+	assign	o_sd_clk = w_sdio_ck;
 
 	assign	w_sdio_ds    = 1'b0;
 
@@ -794,9 +796,9 @@ i_sdcard_cd_n,
 	assign	o_hdmirx_txen = o_gpio[2];
 	assign	o_hdmirx_hpa  = o_gpio[2];	// Hotplug assert
 `ifdef	SDIO_ACCESS
-	assign	o_sd_reset_n  = w_sdio_hwreset_n;
+	assign	o_sd_reset  = !w_sdio_hwreset_n;
 `else
-	assign	o_sd_reset_n  = !o_gpio[3];
+	assign	o_sd_reset  = o_gpio[3];
 `endif
 	// These two pins are only used in simulation, and only within the
 	// MAIN RTL component.
@@ -936,9 +938,9 @@ i_sdcard_cd_n,
 	//   
 	PLLE2_BASE #(
 		// {{{
-		.CLKFBOUT_MULT(5),
+		.CLKFBOUT_MULT(10),
 		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(5),
+		.CLKIN1_PERIOD(10),
 		.CLKOUT0_DIVIDE(8),	// 125 MHz
 		.CLKOUT0_PHASE(0),
 		.CLKOUT1_DIVIDE(4),	// 250 MHz
@@ -946,7 +948,7 @@ i_sdcard_cd_n,
 		// }}}
 	) gen_netclk(
 		// {{{
-		.CLKIN1(i_clk200_buffered),
+		.CLKIN1(i_clk_buffered),
 		.CLKOUT0(s_clk_125_unbuffered),
 		.CLKOUT1(s_clk_250_unbuffered),
 		// .CLKOUT2(),
@@ -967,9 +969,19 @@ i_sdcard_cd_n,
 	assign	clocks_locked = (netclk_locked && sysclk_locked);
 
 	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// IDELAYCTRL
+	IDELAYCTRL
+	u_delay_control (
+		.REFCLK(s_clk_200mhz),
+		.RST(pll_reset),
+		.RDY()
+	);
 
-	assign	io_edidslv_scl = w_edidslv_scl ? 1'bz : 1'b0;
-	assign	io_edidslv_sda = w_edidslv_sda ? 1'bz : 1'b0;
+
+	assign	io_hdmirx_scl = w_edidslv_scl ? 1'bz : 1'b0;
+	assign	io_hdmirx_sda = w_edidslv_sda ? 1'bz : 1'b0;
 
 	assign	o_vadj = 2'b11;
 	initial	vadj33_vadj_counter = 0;

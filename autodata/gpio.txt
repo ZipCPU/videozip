@@ -52,7 +52,7 @@
 		o_hdmirx_txen,
 		io_hdmitx_cec,
 		i_hdmitx_hpd_n, // Hotplug detect
-		o_sd_reset_n,
+		o_sd_reset,
 		i_gps_3df
 @TOP.IODECL=
 	// @$(DEVID) ports
@@ -61,7 +61,7 @@
 	output	wire	o_hdmirx_txen;
 	inout	wire	io_hdmitx_cec;
 	input	wire	i_hdmitx_hpd_n;
-	output	wire	o_sd_reset_n;
+	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 @TOP.DEFNS=
 	// @$(DEVID) declarations.  The two wire busses are just virtual lists
@@ -104,9 +104,9 @@
 	assign	o_hdmirx_txen = o_gpio[2];
 	assign	o_hdmirx_hpa  = o_gpio[2];	// Hotplug assert
 `ifdef	SDIO_ACCESS
-	assign	o_sd_reset_n  = w_sdio_hwreset_n;
+	assign	o_sd_reset  = !w_sdio_hwreset_n;
 `else
-	assign	o_sd_reset_n  = !o_gpio[3];
+	assign	o_sd_reset  = o_gpio[3];
 `endif
 	// These two pins are only used in simulation, and only within the
 	// MAIN RTL component.
