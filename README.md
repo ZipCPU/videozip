@@ -8,6 +8,11 @@ baseline project from which a customer project, using the Nexys Video board,
 can then be tailored.  As a result, part of the purpose of this project is
 to demonstrate usage of all, or at least most, of the interfaces on the board.
 
+## Capabilities
+
+1. Debugging bus.  It's important to be able to interact with a board.  This
+   interaction is possible via both UART and GbE network.
+
 1. GPIO and SPIO: The first step to any board control is to be able to control
    individual bits.  Some bits can be simply bit-banged.  A set of these
    have been grouped together for control via a GPIO controller.  A second
@@ -51,29 +56,31 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    Unlike prior versions of the VideoZip project, this version is designed to
    handle subclock IO synchronization delays automatically.
 
-8. I2C: A key component of several projects has now been my I2C CPU.  This is
-   a basic I2C controller that can run off of a script in memory.  It was
+8. [I2C](rtl/wbi2c/wbi2ccpu.v): A key component of several projects has now
+   been my "[I2C CPU](https://github.com/ZipCPU/wbi2c)".  This is
+   a basic I2C controller that can run off of a script kept in memory.  It was
    initially developed for handling telemetry without CPU involvement.  With
    CPU involvement, plus one or more pre-compiled memory scripts, it's becomes
    a very capable controller.
 
    The Nexys Video board essentially has three separate I2C busses: two for
    the HDMI ports, and a third one for controlling Audio.  Using the script,
-   the CPU can run the script on any HDMI insertion to read and then forward
-   EDID data from the downstream HDMI to the upstream HDMI, before then turning
-   on the HDMI hotplug availability signal.
+   the CPU can run a basic script on any HDMI insertion to read and then
+   forward EDID data from the downstream HDMI to the upstream HDMI, before
+   then turning on the HDMI hotplug availability signal.
 
    Even though the I2C controller is meant for unattended operation, it does
    have the ability to accept manual control.  Hence, a CPU can still bit-bang
    the port if desired.
 
-9. I2S Audio.  I've got an audio capability I built for a SONAR test.  I've
-   used it, and so I know it works.  However, I'm not (yet) certain what I'll
-   do for the demo project.
+9. [I2S Audio](rtl/audio/axisi2s.v).  I've got an audio capability I built
+   for a SONAR test.  I've used it, and so I know it works.  However, I'm not
+   (yet) certain what I'll do with it for the demo project.
 
-10. ZipCPU: Because of course.  As the saying goes, if all you have is a hammer,
-   then the whole world looks like a nail.  Any problem that cannot be
-   accomplished in RTL may then be accomplished by the ZipCPU in software.
+10. [ZipCPU](https://github.com/ZipCPU/zipcpu): Because of course.  As the
+    saying goes, if all you have is a hammer, then the whole world looks like
+    a nail.  Any problem that cannot be accomplished in RTL may then be
+    accomplished by the ZipCPU in software.
 
 11. QSPI Flash controller:  This is used for both configuring the FPGA, as well
    as loading software onto the ZipCPU.
@@ -81,15 +88,17 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
 12. DDR3 SDRAM:  My intent is to use an open source DDR3 controller, although
     for now the MIG DDR3 SDRAM controller works quite nicely.
 
-13. SD Card:  I have an [SDIO based controller](rtl/sdspi/sdio.v), which will
-    replace my [SPI based controller](rtl/sdspi/sdspi.v) as of this release.
-    With the help of AutoFPGA, I should be able to maintain the ability to
-    re-enable the [SPI based controller](rtl/sdspi/sdspi.v) again if I so
-    choose.  Both will allow access to an SD Card.
+13. [SD Card](rtl/sdspi/sdio.v):  I have an
+    [SDIO based controller](rtl/sdspi/sdio.v), which will replace my
+    [SPI based controller](rtl/sdspi/sdspi.v) as of this release.  With the
+    help of [AutoFPGA](https://github.com/ZipCPU/autofpga), I should be able to
+    maintain the ability to re-enable the [SPI based
+    controller](rtl/sdspi/sdspi.v) again if I so choose.  Both will allow
+    access to an SD Card.
 
-    My plan is to also include the ZipCPU software necessary to read and write
-    the SD Card here, to the point where it may be both tested and proven as
-    part of this design.
+    My plan is to also include the ZipCPU [software necessary to read and write
+    the SD Card here](sw/fatfs/sdiodrv.c), to the point where it may be both
+    tested and proven as part of this design.
 
     Even better, I have the ability to read and load software from an SD card
     on startup.  This capability can go so far as to load a flash configuration
@@ -103,7 +112,8 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
     has been very useful for deploying FPGA designs to customers who don't have
     access to the Vivado JTAG loader.
 
-14. ICAPE2:  My ICAPE2 controller provides access to the Xilinx's internal
+14. [ICAPE2](rtl/wbicapetwo.v):  My [ICAPE2 controller](rtl/wbicapetwo.v)
+    provides access to the Xilinx's internal
     configuration access port.  I use this for two commands: setting the
     warm start address, and issuing IPROG requests to force the FPGA to reload
     itself.  This allows me to load the design once via JTAG, and ever
@@ -114,31 +124,177 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
     of the mode bits, or to know why a prior attempted FPGA configuration
     attempt failed.
 
-15. Real Time Clock.  This ... is a basic real-time clock RTL.  It doesn't
-    control an external clock, it doesn't run off of a battery, but it still
-    generates a real time clock with subsecond level precision.  Three attached
-    peripherals include a stop watch, timer, and an alarm based upon the real
+15. [Real Time Clock](rtl/rtc/rtclight.v).  This ... is a basic real-time clock
+    RTL.  It doesn't control an external clock, it doesn't run off of a
+    battery, but it still generates a real time clock with subsecond level
+    precision.  Three attached peripherals include a
+    [stop watch](rtl/rtc/rtcstopwatch.v),
+    [timer](rtl/rtc/rtctimer.v), and an
+    [alarm](rtl/rtc/rtcalarm.v) based upon the real
     time clock.
 
-    A separate real-time date component accompanies this clock.
+    A separate [real-time date](rtl/rtc/rtcdate.v) component accompanies this clock.
 
-    A separate GPS enabled real-time clock may also be used, although it
-    requires set up (not included) and external hardware.
+    A separate [GPS enabled real-time clock](rtl/rtc/rtcgps.v) may also be
+    used, although it requires set up (not included), external hardware,
+    and some software to get the actual time.
 
-16. Wishbone SCOPE(s):  I tend not to use vendor tools, such as Vivado, for
-    any debugging purposes.  If and when I need an ILA, I use my own--a
-    Wishbone scope.  Looking around, you'll find several examples of how
-    Wishbone Scopes have been used in this project to debug various interfaces
-    along the way.
+16. [Wishbone SCOPE(s)](rtl/wbscope/wbscope.v):  I tend not to use vendor
+    tools, such as Vivado, for any debugging purposes.  If and when I need an
+    ILA, I use my own--a Wishbone scope.  Looking around, you'll find several
+    examples of how Wishbone Scopes have been used in this project to debug
+    various interfaces along the way.
+
+17. [SPI CPU](rtl/wbspi/spicpu.v): Very similar to the I2C CPU is a SPI
+    CPU capability.  As with the I2C CPU, this can accept and run a script
+    from memory.  This component is currently wired up to control the OLED
+    present on the Nexys Video board.
 
 ## Capabilities not currently included:
 
 1. Mouse: A PS/2 capability to read from an attached mouse device has been
    removed, but may be added back into the design at a later time.
 
-2. OLED: The Nexys Video has a black and white OLED attached to it.  I have a
-   draft OLED control capability.  This draft capability hasn't been tested,
-   and so it should be assumed to be non-functional at present.  I would like
-   to build this capability further as time permits, since many of my
-   commercial projects have wanted to use something like this.
+## Basic Operation
+
+To reconfigure or adjust the configuration of the design, adjust the components
+used on the AutoFPGA command line.  These are found and defined in the
+[autodata/Makefile](autodata/Makefile).  This will control which components are
+currently part of the design and which are not.  To reconfigure the design for
+the new component set, simply then run:
+
+    make autodata
+
+This will recompose the bus, assign addresses as necessary, and rebuild the
+[toplevel](rtl/toplevel.v) and [main](rtl/main.v) design components.  From
+there, everything else needs to know what components are part of the board,
+which are built into the design, etc.  Hence this will also adjust the register
+mapping files in [regdefs.h](sw/host/regdefs.h) and
+[regdefs.cpp](sw/host/regdefs.cpp), rebuild the linker script(s) such as
+[board.ld](sw/host/board.ld), and rebuild a board definition file,
+[board.h](sw/host/board.h) used by the ZipCPU.
+
+From here, you can build a Verilog simulation via:
+
+    make rtl
+    make sim
+
+You can then run the simulation via:
+
+    cd sim; ./main_tb [-d] [-d] [-g] [zipcpu_program]
+
+Options include:
+
+- `-d` generates a trace file, whose output is controlled by the GPIO
+  peripheral, allowing the CPU to determine when data gets dumped and not.
+
+- `-d -d` forces the trace file generation for all cycles
+
+- `-g` turns on an active simulation of the HDMI port.
+
+- `zipcpu_program` will pre-load the flash and/or SDRAM with the given ZipCPU
+  program and run it in simulation.
+
+While the simulation is running, you can use
+
+    telnet localhost 6783
+
+to open a console port to the ZipCPU.
+
+If you wish to interact with the simulation, you'll first want to build the
+host access capabilities:
+
+    make sw-host
+
+and then set the `VIDEODEV` environment variable.  It may be set to either:
+
+    export VIDEODEV=sim://localhost
+
+or
+
+    export VIDEODEV=net://localhost
+
+depending upon whether or not you wish to access the design via the simulated
+serial port, or a simulated network port.
+
+Once done, you can use any of the programs in `sw/host` to interact with the
+design.  Most common, you would use `exregs` to read and write registers
+within the design.  For example, the followiong will read a variety of
+registers from within the design.
+
+    exregs VERSION
+    exregs BUILDTIME
+    exregs GPIO
+    exregs SDRAM
+
+The full list of named registrs can be found in
+[regdefs.cpp](sw/host/regdefs.cpp).
+
+
+If you wish to build the design and load it onto hardware, the same interface
+is available but the setup is just a touch different.
+
+To use the serial port to access the design, you'll first need to run
+[exuart](sw/host/exuart.v).  This accepts one argument specifying the
+terminal device your component is connected to, such as:
+
+    exuart /dev/ttyUSB2
+
+Once this program starts, you'll want to leave it running.  You can then
+adjust the environment to:
+
+    export VIDEODEV=uart://localhost
+
+Once done, the same access commands should then work again.
+
+While [exuart](sw/host/exuart.cpp) is running, you may access the console
+port of the ZipCPU running on the Nexys Video board the same as before:
+
+    telnet localhost 6783
+
+To interact with the design via the network port, you'll need its IP address.
+This is currently set in [autodata/meganet.txt](autodata/meganet.txt).  As of
+this writing, the IP address is fixed at `192.168.15.29`, but can easily be
+changed there.  Assuming you keep this IP address the same, you'll need to
+let the software know where to find it:
+
+    export VIDEODEV=net://192.168.15.29
+
+Once done, the host commands, such as [exbus](sw/host/exbus.cpp), should work
+again.
+
+One very useful command is the [zipload](sw/host/zipload.cpp) command.  This
+command loads ZipCPU software onto the board--whether to RAM or flash, as
+determined by the linker script used to build the program.  If given the `-r`
+option, [zipload](sw/host/zipload.cpp) will also start the ZipCPU running
+the given program as well.
+
+Particular demonstration programs include:
+
+- [cputest](sw/board/cputest.c): Simply tests the ZipCPU, making sure all the
+  instructions work.
+
+- [contest](sw/board/contest.c): Looks for all of the various peripherals that
+  have been built into the board, and attempts to verify that the CPU can reach
+  out and touch each of them.
+
+- [helloworld](sw/board/helloworld.c): A basic program, built upon the
+  C-library, that just prints "Hello, World!" to the console port.
+
+- [memtest](sw/board/memtest.c): Tests the DDR3 SDRAM memory.
+
+- [sdreadd](sw/board/sdreadd.c): Verifies that the directory of the SD card can
+  be read from.
+
+## Status
+
+The design is currently coming out of a massive rewrite.  Those simulations
+that have been built, work.  It's now time for hardware testing.  While the
+design's bit file can be built via Vivado, testing it will be next.
+
+## License
+
+This project is released under the GPL v3.  Should this license be insufficient
+for your needs, please contact Gisselquist Technology, LLC, to discuss other
+options.
 
