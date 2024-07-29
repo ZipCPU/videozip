@@ -448,7 +448,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b_req*}] 8.0
 ## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_icmp/o_ping_mac*}]        -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/valid_macaddr*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_icmp/o_ping_ipaddr*}]     -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/shift_reg*}] 8.0
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/u_icmp/o_ping_ipaddr*}]     -to [ get_cells -hier -filter {NAME =~ *u_rxsonar_ip/shift_reg*}] 8.0
 ## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/net_core/txclk_check*}]  -to [ get_cells -hier -filter {NAME =~ *net_core/net_reset_timer*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/net_core/n_rx_crcerr*}]     -to [ get_cells -hier -filter {NAME =~ *net_core/rx_crc_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_@$(PREFIX)/net_core/tfrrxspd/a*}]      -to [ get_cells -hier -filter {NAME =~ *net_core/tfrrxspd/b*}] 8.0

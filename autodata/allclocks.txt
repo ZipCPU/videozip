@@ -199,5 +199,5 @@
 @MAIN.IODECL=
 	input	wire		i_net_tx_clk;
 @XDC.INSERT=
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ pll_reset_sreg*}] -to [get_cells -hier -filter {NAME=~ */reset_pipe*}] 7.5
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ pll_reset_sreg*}] -to [get_cells -hier -filter {NAME=~ */sync_reset*}] 7.5
+set_false_path -from [get_cells -hier -filter {NAME=~ pll_reset*}] -to [get_cells -hier -filter {NAME=~ net*/reset_pipe*}]
+set_false_path -from [get_cells -hier -filter {NAME=~ pll_reset*}] -to [get_cells -hier -filter {NAME=~ net*/sync_reset*}]
