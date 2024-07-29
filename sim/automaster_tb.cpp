@@ -46,10 +46,6 @@
 #include "verilated.h"
 #include "design.h"
 
-#ifdef	OLEDBW_ACCESS
-#include "oledsim.h"
-#endif
-
 #include "testb.h"
 // #include "twoc.h"
 
@@ -107,7 +103,8 @@ void	cpu_sim_write(MAINTB *tb, unsigned addr, unsigned data) {
 int	main(int argc, char **argv) {
 	// Variable declaration and initialization
 	// {{{
-#if	defined(VIDPIPE_ACCESS) || defined(OLED_ACCESS)
+#if	defined(VIDPIPE_ACCESS)
+	// || defined(OLED_ACCESS)
 fprintf(stderr, "Video startup\n");
 	Gtk::Main	main_instance(argc, argv);
 #endif
@@ -265,7 +262,8 @@ fprintf(stderr, "Video startup\n");
 
 	// Main while(1) loop
 	// {{{
-#if	defined(VIDPIPE_ACCESS) || defined(OLED_ACCESS)
+#if	defined(VIDPIPE_ACCESS)
+	//  || defined(OLED_ACCESS)
 	if (gbl_use_gui) {
 		printf("CONNECT\n");
 
