@@ -696,7 +696,7 @@ module	sdcmd #(
 		r_busy <= 1'b0;
 	// }}}
 
-	assign	o_busy = (r_busy && !self_request) || !i_ckstb;
+	assign	o_busy = ((r_busy || r_delay) && !self_request) || !i_ckstb;
 
 	//
 	// Make verilator happy
