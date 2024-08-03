@@ -51,6 +51,9 @@
 @IOSDA=io_sda
 @IOSCL=io_scl
 @IDW=2
+@INTERRUPT=i2c_int
+@INT.I2C.WIRE=@$(INTERRUPT)
+@INT.I2C.PIC=syspic
 @TOP.PORTLIST=
 			@$(IOSCL), @$(IOSDA)
 @TOP.IODECL=
@@ -140,6 +143,7 @@
 			.M_AXIS_TID(@$(PREFIX)_id),
 		.i_sync_signal(rtc_pps),
 		//
+		.o_interrupt(@$(INTERRUPT)),
 		.o_debug(@$(PREFIX)_debug)
 		// }}}
 	);

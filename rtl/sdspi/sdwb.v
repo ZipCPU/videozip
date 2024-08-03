@@ -1690,86 +1690,6 @@ module	sdwb #(
 		assign	o_dma_sd2s = dma_sd2s;
 		assign	dma_busy = r_dma;
 		assign	dma_int  = r_dma_int;
-`ifdef	FORMAL
-		// {{{
-		always @(*)
-		if (!i_reset && !r_dma)
-			assert(!dma_sd2s && !dma_s2sd);
-
-		always @(*)
-		if (!i_reset && !o_soft_reset && !o_hwreset_n)
-			assert(!r_dma);
-
-		always @(posedge i_clk)
-		if (!i_reset && $past(r_abort))
-		begin
-			assert(!dma_sd2s);
-			assert(!dma_s2sd);
-		end
-
-		always @(*)
-		if (!i_reset && r_dma)
-		begin
-			if (r_tx)
-			begin
-				assert(!dma_sd2s); // && !f_dma_sd2s_busy);
-				assert(!o_rx_en && !r_rx_request);
-			end else begin
-				assert(!dma_s2sd); // && !f_dma_s2sd_busy);
-				assert(!o_tx_en && !r_tx_request);
-			end
-
-			if (dma_zero_len)
-			begin
-				if (!r_tx)
-				begin
-					assert(!o_rx_en && !r_rx_request);
-					assert(r_dma_loaded == 0);
-				end
-			end else if (r_block_count == 1)
-			begin
-				assert(r_tx || !(&r_dma_loaded));
-				if (r_dma_loaded != 0)
-					assert(!o_rx_en && !r_rx_request);
-			end
-
-			if (dma_sd2s)
-				assert(r_dma_loaded[dma_fifo]);
-			if (dma_s2sd)
-				assert(!r_dma_loaded[dma_fifo]);
-			if (r_tx_request || o_tx_en)
-			begin
-				if (!r_tx_sent)
-				begin
-					assert(r_dma_fifo != r_fifo
-					|| (!o_dma_s2sd && !i_dma_busy));
-
-					assert(r_dma_loaded[r_fifo] || dma_error);
-				end else begin
-					// assert(!r_dma_loaded[r_fifo]);
-					// assert(!o_dma_s2sd || dma_fifo != r_fifo);
-					// assert(!i_s2sd_valid || dma_fifo != r_fifo);
-				end
-			end
-			if (r_rx_request || o_rx_en)
-				assert(!r_dma_loaded[r_fifo]);
-		end
-
-		always @(posedge i_clk)
-		if (!f_past_valid || $past(i_reset || o_soft_reset))
-		begin
-			assert(!dma_int || !f_past_valid);
-		end else if ($past(new_dma_request))
-		begin
-			assert(dma_int || dma_busy);
-		end else if ($past(dma_busy) && !dma_busy)
-		begin
-			assert(dma_int);
-		end else begin
-			assert(!dma_int);
-		end
-		// }}}
-`endif
 		// }}}
 
 		// r_dma_addr
@@ -1879,58 +1799,6 @@ module	sdwb #(
 
 		assign	o_dma_len = r_dma_len;
 		assign	dma_last = r_dma_last;
-`ifdef	FORMAL
-		// {{{
-		wire	[LGFIFOW-1:0]	f_dma_rdaddr;
-
-		always @(*)
-		if (!i_reset && dma_busy && r_dma_loaded[dma_fifo] == r_tx && !dma_error)
-		begin
-			assert(!r_dma_last);
-			assert(r_subblock == blk_words);
-		end
-
-		always @(*)
-		if (!i_reset && dma_busy && !dma_error)
-		begin
-			assert(r_dma_last == (r_subblock == 0));
-			assert(r_subblock <= f_blocksz-1);
-			if (!r_tx && !r_read_active)
-				assert(r_subblock == f_blocksz-1);
-		end
-
-		assign	f_dma_rdaddr = f_blocksz-1 + (pre_dma_valid ? 1:0)
-					+ (r_sd2s_valid ? 1:0) - r_subblock;
-		always @(*)
-		if (!i_reset && dma_busy && !dma_error)
-		begin
-			if (r_tx)
-			begin
-				assert(!o_sd2s_valid);
-				assert(!dma_read_fifo);
-				assert(fif_wraddr ==(f_blocksz- r_subblock-1));
-			end else begin
-				if (!r_sd2s_valid && !r_dma_err)
-				begin
-					assert(r_subblock == f_blocksz-1);
-					assert(!dma_last || lgblk == 2);
-				end
-
-				if (r_read_active)
-					assert(fif_rdaddr == f_dma_rdaddr
-						|| r_dma_err);
-				else begin
-					assert(!pre_dma_valid);
-					assert(!r_sd2s_valid);
-					if (!dma_last)
-						assert(r_subblock==f_blocksz-1);
-				end
-				if (r_sd2s_valid && !dma_last)
-					assert(pre_dma_valid);
-			end
-		end
-		// }}}
-`endif
 		// }}}
 
 		// r_dma_fifo
@@ -2030,20 +1898,6 @@ module	sdwb #(
 
 		assign	dma_zero_len = r_dma_zero_len;
 		assign	dma_len_return = r_block_count;
-`ifdef	FORMAL
-		always @(*)
-		if (!i_reset)
-			assert(r_last_block == (r_block_count <= 1));
-		always @(*)
-		if (!i_reset)
-			assert(dma_zero_len == (r_block_count == 0));
-		always @(*)
-		if (f_past_valid && dma_zero_len && r_tx)
-		begin
-			assume(!i_dma_busy);
-			assert(!o_dma_s2sd);
-		end
-`endif
 		// }}}
 
 		// dma_cmd_fifo
@@ -2064,11 +1918,6 @@ module	sdwb #(
 				dma_cmd_fifo <= !bus_wdata[FIFO_ID_BIT];
 		end else if (dma_write)
 			dma_cmd_fifo <= !dma_cmd_fifo;
-`ifdef	FORMAL
-		always @(*)
-		if (!i_reset && !o_soft_reset && !o_hwreset_n)
-			assert(!dma_write);
-`endif
 		// }}}
 
 		// dma_write, dma_command, dma_stopped
@@ -2138,30 +1987,6 @@ module	sdwb #(
 		assign	dma_write   = r_dma_write;
 		assign	dma_command = r_dma_command;
 		assign	dma_stopped = r_dma_stopped;
-`ifdef	FORMAL
-		// {{{
-		always @(*)
-		if (!i_reset && !o_soft_reset && !o_hwreset_n)
-			assert(dma_stopped == 1'b0);
-
-		always @(posedge i_clk)
-		if (!i_reset && !$past(i_reset) && $rose(r_dma_stopped))
-		begin
-			assert(dma_write);
-			assert(dma_command[FIFO_ID_BIT-1:0]
-				== DMA_STOP_TRANSMISSION[FIFO_ID_BIT-1:0]);
-			assert(dma_command[31:FIFO_ID_BIT+1]
-				== DMA_STOP_TRANSMISSION[31:FIFO_ID_BIT+1]);
-		end else if (!i_reset && dma_write)
-		begin
-			if (r_tx)
-			begin
-				assert(dma_command[FIFO_ID_BIT-1:0] == DMA_NULL_WRITE[FIFO_ID_BIT-1:0]);
-			end else
-				assert(dma_command[FIFO_ID_BIT-1:0] == DMA_NULL_READ[FIFO_ID_BIT-1:0]);
-		end
-		// }}}
-`endif
 		// }}}
 
 		// o_sd2s_valid, pre_dma_valid
@@ -2174,15 +1999,6 @@ module	sdwb #(
 		else if (dma_read_fifo)
 			{ r_sd2s_valid, pre_dma_valid } <= { pre_dma_valid, 1'b1 };
 		assign	o_sd2s_valid = r_sd2s_valid;
-`ifdef	FORMAL
-		always @(*)
-		if (i_reset) begin
-		end else if (!dma_busy || r_tx || r_dma_zero_len)
-			// No receive outputs allowed while transmitting
-			assert(!r_sd2s_valid && !pre_dma_valid);
-		else if (!r_dma_loaded[dma_fifo])
-			assert(!r_sd2s_valid && !pre_dma_valid);
-`endif
 		// }}}
 
 		// o_sd2s_data
@@ -2200,11 +2016,6 @@ module	sdwb #(
 		end
 
 		assign	o_sd2s_data = r_sd2s_data;
-`ifdef	FORMAL
-		always @(*)
-		if (OPT_LOWPOWER && !i_reset && !r_sd2s_valid)
-			assert(r_sd2s_data == 0);
-`endif
 		// }}}
 
 		// r_read_active
@@ -2234,305 +2045,6 @@ module	sdwb #(
 		assign	unused_dma = &{ 1'b0, wide_dma_addr[63:DMA_AW] };
 		// Verilator lint_on  UNUSED
 		// }}}
-`ifdef	FORMAL
-		// {{{
-		reg	[31:0]	f_rx_blocks, f_tx_blocks;
-		reg		f_cfg_fifo;
-		reg[DMA_AW-1:0]	f_cfg_addr;
-		reg	[31:0]	f_cfg_len;
-
-		// assumptions about i_dma_busy
-		// {{{
-		// Busy only rises when requested
-		always @(posedge i_clk)
-		if (!$past(o_dma_s2sd) && !$past(o_dma_sd2s))
-			assume(!$rose(i_dma_busy));
-
-		always @(posedge i_clk)
-		if (!i_reset && !dma_busy)
-			// i_dma_busy can't start without a request
-			assert(!i_dma_busy);
-
-		always @(posedge i_clk)
-		if (i_reset || $past(i_reset)
-				|| $past(o_soft_reset) || $past(o_dma_abort))
-		begin
-			assume(!i_dma_busy);
-		end else if ($past(i_s2sd_valid && o_s2sd_ready && dma_last))
-		begin // Busy always falls after last on TX
-			assume($fell(i_dma_busy));
-		end else if ($past(o_sd2s_valid && i_sd2s_ready && dma_last))
-		begin // Busy always falls after last on RX
-			assume($fell(i_dma_busy));
-		end else if ($past(o_dma_s2sd) || $past(o_dma_sd2s))
-		begin // Busy always rises on request
-			assume(i_dma_busy);
-		end else if ($past(i_dma_err))
-		begin // Busy always falls following an error
-			assume(!i_dma_busy);
-		end else
-			assume($stable(i_dma_busy));
-
-	//	always @(posedge i_clk)
-	//	if (!r_dma_last && r_subblock != ((1<<(lgblk-2))-1))
-	//		assume(i_dma_busy);
-
-		always @(posedge i_clk)
-		if (!i_dma_busy)
-			// Valid only rises if the DMA is busy
-			assume(!i_s2sd_valid);
-		// }}}
-
-		// f_cfg_* configuration copy
-		// {{{
-		always @(posedge i_clk)
-		if (!dma_busy)
-		begin
-			if (bus_cmd_stb && bus_wstrb[FIFO_ID_BIT/8])
-				f_cfg_fifo <= bus_wdata[FIFO_ID_BIT];
-			f_cfg_addr <= o_dma_addr;
-			f_cfg_len  <= r_block_count;
-		end
-		// }}}
-
-		// f_rx_blocks
-		// {{{
-		always @(posedge i_clk)
-		if (i_reset || !dma_busy || !o_hwreset_n)
-			f_rx_blocks <= 0;
-		else if (r_tx && i_s2sd_valid && o_s2sd_ready && dma_last)
-			f_rx_blocks <= f_rx_blocks + 1;
-		else if (!r_tx && o_rx_en && i_rx_done)
-			f_rx_blocks <= f_rx_blocks + 1;
-		// }}}
-
-		// f_tx_blocks
-		// {{{
-		always @(posedge i_clk)
-		if (i_reset || !dma_busy || !o_hwreset_n)
-			f_tx_blocks <= 0;
-		else if (r_tx && o_tx_mem_valid && i_tx_mem_ready
-							&& o_tx_mem_last)
-			f_tx_blocks <= f_tx_blocks + 1;
-		else if (!r_tx && o_sd2s_valid && i_sd2s_ready && dma_last)
-			f_tx_blocks <= f_tx_blocks + 1;
-		// }}}
-
-		// AXI Stream properties
-		// {{{
-		always @(posedge i_clk)
-		if (!f_past_valid || $past(i_reset) || $past(o_soft_reset)
-			|| $past(r_abort))
-		begin
-			assume(!i_s2sd_valid);
-		end else if ($past(i_s2sd_valid && !o_s2sd_ready))
-		begin
-			assume(i_s2sd_valid);
-			assume($stable(i_s2sd_data));
-		end
-
-		always @(posedge i_clk)
-		if (!f_past_valid || $past(i_reset) || $past(o_soft_reset)
-			|| $past(r_abort))
-		begin
-			assert(!o_sd2s_valid || !f_past_valid);
-		end else if ($past(o_sd2s_valid && !i_sd2s_ready))
-		begin
-			assert(o_sd2s_valid);
-			assert($stable(o_sd2s_data));
-			assert($stable(o_sd2s_last));
-		end
-		// }}}
-
-		// DMA Error/Abort properties
-		// {{{
-		always @(posedge i_clk)
-		if (!i_reset && !$past(dma_busy))
-			assume(!i_dma_err);
-
-		always @(posedge i_clk)
-		if (i_reset || $past(i_reset))
-			assume(!i_dma_err);
-		else if (!$past(i_dma_busy))
-			assume(!i_dma_err);
-
-		always @(posedge i_clk)
-		if (!i_reset && $past(r_abort))
-			assert(!r_abort);
-
-		always @(posedge i_clk)
-		if (!i_reset && r_abort && !$past(o_soft_reset))
-			assert(r_dma_err);
-
-		always @(posedge i_clk)
-		if (!i_reset && !$rose(r_dma_err) && !$past(o_soft_reset))
-			assert(!$rose(r_abort));
-
-		always @(posedge i_clk)
-		if (!i_reset && !r_dma_err)
-		begin
-			if (!$past(o_soft_reset))
-				assert(!r_abort);
-		end
-
-		always @(posedge i_clk)
-		if (!i_reset && $past(!i_reset && i_dma_busy && !card_present))
-		begin
-			// Abort on any card removal
-			assert(r_dma_err || $past(o_soft_reset));
-			assert(r_abort || $past(r_abort));
-		end
-
-		always @(posedge i_clk)
-		if (!i_reset && r_dma_err)
-		begin
-			assert(!o_dma_sd2s || r_abort);
-			assert(!o_dma_s2sd || r_abort);
-			assert(!i_dma_busy || r_abort);
-		end
-		// }}}
-
-		always @(posedge i_clk)
-		if (!f_past_valid || $past(i_reset)
-				|| $past(o_soft_reset) || $past(!o_hwreset_n))
-		begin
-			assert(!r_dma);
-		end else if ($past(w_release_dma))
-		begin
-			assert(!r_dma);
-		end else if (dma_error && $past(dma_error)
-			&& !$past(cmd_busy || r_mem_busy || r_abort) && !dma_write)
-		begin
-			if (!i_dma_busy && !r_mem_busy && !cmd_busy && !r_abort)
-				assert(!r_dma);
-		end
-
-		always @(*)
-		if (!i_reset && dma_busy && !dma_error)
-		begin
-			if (r_tx)
-			begin
-				assert(dma_fifo==(f_rx_blocks[0] ^ f_cfg_fifo));
-				if (r_dma_stopped)
-				begin
-					assert(!r_tx_request);
-					assert(!o_tx_en || r_tx_sent);
-					assert(!r_rx_request);
-					assert(!o_rx_en);
-				end else if (r_dma_err)
-				begin
-				end else if ((r_tx_request || o_tx_en) && (!r_tx_sent))
-				begin
-					assert(dma_cmd_fifo==(f_tx_blocks[0]
-						^ f_cfg_fifo ^ 1));
-				end else begin
-					assert(dma_cmd_fifo==(f_tx_blocks[0]
-						^ f_cfg_fifo));
-				end
-
-				if (f_tx_blocks == 0)
-					assert(!r_tx_sent);
-				if (r_dma_err)
-				begin
-				end else if (f_tx_blocks == 0 && (!o_tx_en && !r_tx_request))
-				begin
-					assert(dma_cmd_fifo == r_fifo);
-				end else begin
-					assert(dma_cmd_fifo != r_fifo);
-				end
-				// r_fifo
-				// dma_cmd_fifo
-			end else if (!r_dma_err)
-			begin
-				assert(dma_fifo==(f_tx_blocks[0] ^ f_cfg_fifo));
-				assert(dma_cmd_fifo != r_fifo);
-			end
-		end
-
-		always @(*)
-		if (!i_reset && dma_busy && !dma_error)
-		begin
-			assert(f_rx_blocks   <= f_cfg_len);
-			assert(f_tx_blocks   <= f_cfg_len);
-			assert(r_block_count <= f_cfg_len);
-			assert(f_tx_blocks <= f_rx_blocks);
-			if (r_tx)
-			begin
-				assert(f_rx_blocks + r_block_count== f_cfg_len); // !!!
-
-				assert((f_tx_blocks + (r_dma_loaded[0] ? 1:0)
-					+ (r_dma_loaded[1] ? 1:0)) == f_rx_blocks);
-				if (dma_zero_len)
-					assert(!o_s2sd_ready);
-				if (r_dma_stopped && !r_dma_err && !r_abort)
-				begin
-					assert(r_dma_loaded == 0);
-					assert(f_tx_blocks == f_rx_blocks);
-					assert(f_tx_blocks == f_cfg_len);
-					assert(!o_tx_en && !r_tx_request);
-				end
-			end else begin
-				assert(f_tx_blocks + r_block_count == f_cfg_len);
-
-				assert((f_tx_blocks + (r_dma_loaded[0] ? 1:0)
-					+ (r_dma_loaded[1] ? 1:0)) == f_rx_blocks);
-				if (r_dma_stopped && !r_dma_err && !r_abort)
-				begin
-					// assert(f_tx_blocks == f_rx_blocks);
-					assert(f_tx_blocks == f_cfg_len);
-					assert(!o_rx_en && !r_rx_request);
-				end
-			end
-		end
-
-		////////////////////////////////////////////////////////////////
-		//
-		// Cover checks
-		// {{{
-		always @(posedge i_clk)
-		if (f_past_valid)
-			cover($fell(o_soft_reset));
-
-		always @(posedge i_clk)
-		if (f_past_valid && !$past(i_reset) && !$past(o_soft_reset))
-		begin
-			cover(i_wb_stb);
-			cover(i_wb_stb && i_wb_we);
-			cover(i_wb_stb && i_wb_we && !o_wb_stall);
-			cover(bus_write);
-			cover(bus_write && bus_wstrb);
-			cover(bus_write && bus_wstrb == 4'hf
-					&& bus_wdata[15:0] == 16'ha850);
-			cover(bus_write && bus_wstrb == 4'hf
-					&& bus_wdata[15:0] == 16'haa50);
-			cover(dma_busy);
-			cover(dma_busy && r_dma &&  r_tx && dma_last_beat);
-			cover(dma_busy && r_dma && !r_tx && dma_last_beat);
-			if (!$past(r_dma_err) && !$past(r_abort) && $past(dma_busy))
-			begin
-				cover(!dma_busy &&  r_tx);	// Step 23
-				cover(!dma_busy && !r_tx);	// Step 23
-				cover(!dma_busy &&  r_tx && f_cfg_len > 1); //30
-				cover(!dma_busy && !r_tx && f_cfg_len > 1); //29
-				cover(!dma_busy &&  r_tx && f_cfg_len > 2); //37
-				cover(!dma_busy && !r_tx && f_cfg_len > 2); //35
-				cover(!dma_busy &&  r_tx && f_cfg_len > 1 && lgblk == 3);
-				cover(!dma_busy && !r_tx && f_cfg_len > 1 && lgblk == 3);
-			end
-		end
-		// }}}
-		////////////////////////////////////////////////////////////////
-		//
-		// "Careless" assumptions
-		// {{{
-		// always @(*)
-		// if (dma_busy) assume(r_tx);
-		always @(*)
-		if (dma_busy)
-			assume(lgblk > 2);
-		// }}}
-		// }}}
-`endif
 		// }}}
 	end else begin : NO_DMA
 		// {{{
@@ -2574,27 +2086,6 @@ module	sdwb #(
 				};
 		// Verilator lint_on  UNUSED
 		// }}}
-`ifdef	FORMAL
-		// {{{
-		always @(*)
-		begin
-			assert(!dma_busy);
-			assert(!dma_int);
-			assert(dma_stopped);
-
-			// With no DMA, we shouldn't be getting DMA signals
-			assume(!i_s2sd_valid);
-			assume(!i_dma_busy);
-			assume(!i_dma_err);
-
-			assert(!o_dma_sd2s);
-			assert(!o_sd2s_valid);
-
-			assert(!o_dma_s2sd);
-			// assert(!o_sd2s_valid);
-		end
-		// }}}
-`endif
 		// }}}
 	end endgenerate
 	// }}}

@@ -44,7 +44,7 @@
 @NUMOUTPUT=9
 @NUMINPUT=7
 @INT.GPIO.WIRE=gpio_int
-@INT.GPIO.PIC=altpic
+@INT.GPIO.PIC=syspic
 @TOP.PORTLIST=
 		// @$(DEVID) ports
 		io_hdmirx_cec,

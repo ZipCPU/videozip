@@ -397,8 +397,6 @@ int main(int argc, char **argv) {
 	}
 	// }}}
 
-	txstr("GBL_FAIL    : "); txhex(gbl_fail); txstr("\r\n");
-
 	if (1) { // MDIO check
 		// {{{
 #ifdef	_BOARD_HAS_NETMDIO
@@ -424,8 +422,9 @@ int main(int argc, char **argv) {
 #endif
 	}
 	// }}}
+
 	// Check for ... GENCLKFB
-	txstr("GBL_FAIL    : "); txhex(gbl_fail); txstr("\r\n");
+
 	// Check for ... SPIO
 	// {{{
 #ifdef	SPIO_ACCESS
@@ -459,7 +458,6 @@ int main(int argc, char **argv) {
 	}
 #endif
 	// }}}
-	txstr("GBL_FAIL    : "); txhex(gbl_fail); txstr("\r\n");
 
 	// Check for ... SDIO
 	// {{{
@@ -484,7 +482,6 @@ int main(int argc, char **argv) {
 	txstr("SDIO        : (Not installed)\r\n");
 #endif
 	// }}}
-	txstr("GBL_FAIL    : "); txhex(gbl_fail); txstr("\r\n");
 
 #ifdef	_BOARD_HAS_SDSCOPE
 	// scopecheck("SD-SCOPE    : ", (unsigned *)&_scope_sdcard->s_ctrl);

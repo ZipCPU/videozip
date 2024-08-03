@@ -45,6 +45,11 @@
 @INCLUDEFILE=i2ccpu.txt
 @IOSDA=io_hdmitx_sda
 @IOSCL=io_hdmitx_scl
+@INTERRUPT=edid_int
+@INT.I2C.WIRE=
+@INT.I2C.PIC=
+@INT.EDID.WIRE=@$(INTERRUPT)
+@INT.EDID.PIC=syspic
 @BDEF.DEFN=
 @BDEF.IONAME=_@$(PREFIX)
 @BDEF.IOTYPE= I2CCPU
@@ -72,6 +77,7 @@
 			.M_AXIS_TID(@$(PREFIX)_id),
 		.i_sync_signal(rtc_pps),
 		//
+		.o_interrupt(@$(INTERRUPT)),
 		.o_debug(@$(PREFIX)_debug)
 		// }}}
 	);

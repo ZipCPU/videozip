@@ -1383,11 +1383,6 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 	unsigned	err=0, dev_stat, card_stat, phy, cmd;
 
 
-	if (SDDEBUG) {
-		printf("SDIO-READ.M(%08x, %08x, %08x): [DEV %08x]\n",
-			sector, count, buf, dev->d_dev->sd_cmd);
-	}
-
 	if (0 == count)
 		return RES_OK;
 
@@ -1399,6 +1394,11 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 				return RES_ERROR;
 			}
 		} return RES_OK;
+	}
+
+	if (SDDEBUG) {
+		printf("SDIO-READ.M(%08x, %08x, %08x): [DEV %08x]\n",
+			sector, count, buf, dev->d_dev->sd_cmd);
 	}
 
 	GRAB_MUTEX;

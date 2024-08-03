@@ -298,8 +298,8 @@ i_sd_cd_n,
 	wire		w_sdio_cfg_ddr;
 	wire		w_sdio_cfg_ds, w_sdio_cfg_dscmd;
 	wire	[4:0]	w_sdio_cfg_sample_shift;
-	wire		w_sdio_pp_cmd;
-	wire		w_sdio_pp_data;
+	wire		w_sdio_cmd_tristate;
+	wire		w_sdio_data_tristate;
 		//
 	wire	[7:0]	w_sdio_sdclk;
 	wire		w_sdio_cmd_en;
@@ -427,8 +427,8 @@ i_sd_cd_n,
 		w_sdio_cfg_ds,
 		w_sdio_cfg_dscmd,
 		w_sdio_cfg_sample_shift,
-		w_sdio_pp_cmd,
-		w_sdio_pp_data,
+		w_sdio_cmd_tristate,
+		w_sdio_data_tristate,
 		//
 		w_sdio_sdclk,
 		w_sdio_cmd_en,
@@ -733,7 +733,7 @@ i_sd_cd_n,
 	// }}}
 
 	sdfrontend #(
-		.OPT_SERDES(1'b1),
+		.OPT_SERDES(1'b0),
 		.OPT_DDR(1'b1),
 		.NUMIO(4)
 	) u_sdio_frontend (
@@ -744,8 +744,8 @@ i_sd_cd_n,
 		.i_cfg_ds(w_sdio_cfg_ds),
 		.i_cfg_dscmd(w_sdio_cfg_dscmd),
 		.i_sample_shift(w_sdio_cfg_sample_shift),
-		.i_pp_cmd(w_sdio_pp_cmd),
-		.i_pp_data(w_sdio_pp_data),
+		.i_cmd_tristate(w_sdio_cmd_tristate),
+		.i_data_tristate(w_sdio_data_tristate),
 		// Run-time inputs
 		.i_sdclk(w_sdio_sdclk),
 		.i_cmd_en(w_sdio_cmd_en),

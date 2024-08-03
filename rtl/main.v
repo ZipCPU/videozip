@@ -196,8 +196,8 @@ module	main(i_clk, i_reset,
 		o_sdio_cfg_ds,
 		o_sdio_cfg_dscmd,
 		o_sdio_cfg_sample_shift,
-		o_sdio_pp_cmd,
-		o_sdio_pp_data,
+		o_sdio_cmd_tristate,
+		o_sdio_data_tristate,
 		//
 		o_sdio_sdclk,
 		o_sdio_cmd_en,
@@ -394,8 +394,8 @@ module	main(i_clk, i_reset,
 	output	wire		o_sdio_cfg_ds;
 	output	wire		o_sdio_cfg_dscmd;
 	output	wire	[4:0]	o_sdio_cfg_sample_shift;
-	output	wire		o_sdio_pp_cmd;
-	output	wire		o_sdio_pp_data;
+	output	wire		o_sdio_cmd_tristate;
+	output	wire		o_sdio_data_tristate;
 		//
 	output	wire	[7:0]	o_sdio_sdclk;
 	output	wire		o_sdio_cmd_en;
@@ -474,7 +474,9 @@ module	main(i_clk, i_reset,
 	// These declarations come from the various components values
 	// given under the @INT.<interrupt name>.WIRE key.
 	//
+	wire	i2c_int;	// i2c.INT.I2C.WIRE
 	wire	zipscope_int;	// zipscope.INT.CPUSCOPE.WIRE
+	wire	oled_int;	// oled.INT.OLED.WIRE
 	wire	spio_int;	// spio.INT.SPIO.WIRE
 	wire	uartrxf_int;	// uart.INT.UARTRXF.WIRE
 	wire	uarttx_int;	// uart.INT.UARTTX.WIRE
@@ -483,6 +485,7 @@ module	main(i_clk, i_reset,
 	wire	zip_cpu_int;	// zip.INT.ZIP.WIRE
 	wire	sdio_int;	// sdio.INT.SDCARD.WIRE
 	wire	gpio_int;	// gpio.INT.GPIO.WIRE
+	wire	edid_int;	// edid.INT.EDID.WIRE
 	wire	rtc_int;	// rtc.INT.RTC.WIRE
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -1940,9 +1943,9 @@ module	main(i_clk, i_reset,
 		1'b0,
 		1'b0,
 		rtc_int,
-		gpio_int,
 		uartrx_int,
 		uarttx_int,
+		zipscope_int,
 		1'b0,
 		1'b0,
 		1'b0,
@@ -1954,14 +1957,14 @@ module	main(i_clk, i_reset,
 	};
 	assign	sys_int_vector = {
 		1'b0,
-		1'b0,
-		1'b0,
-		1'b0,
+		edid_int,
+		gpio_int,
 		sdio_int,
 		uarttxf_int,
 		uartrxf_int,
 		spio_int,
-		zipscope_int,
+		oled_int,
+		i2c_int,
 		1'b0,
 		1'b0,
 		1'b0,
@@ -2022,6 +2025,7 @@ module	main(i_clk, i_reset,
 			.M_AXIS_TID(i2c_id),
 		.i_sync_signal(rtc_pps),
 		//
+		.o_interrupt(i2c_int),
 		.o_debug(i2c_debug)
 		// }}}
 	);
@@ -2044,6 +2048,10 @@ module	main(i_clk, i_reset,
 	assign	o_i2c_sda = 1'b1;
 	// Null bus master
 	// {{{
+	// }}}
+	// Null interrupt definitions
+	// {{{
+	assign	i2c_int = 1'b0;	// i2c.INT.I2C.WIRE
 	// }}}
 	// }}}
 `endif	// I2CCPU_ACCESS
@@ -2148,6 +2156,7 @@ module	main(i_clk, i_reset,
 		.M_AXIS_TLAST( ign_oled_last),
 		.M_AXIS_TID(   ign_oled_id),
 		//
+		.o_interrupt(oled_int),
 		.i_sync_signal(rtc_pps)
 		// }}}
 	);
@@ -2162,6 +2171,10 @@ module	main(i_clk, i_reset,
 
 	// Null bus master
 	// {{{
+	// }}}
+	// Null interrupt definitions
+	// {{{
+	assign	oled_int = 1'b0;	// oled.INT.OLED.WIRE
 	// }}}
 	// }}}
 `endif	// OLEDBW_ACCESS
@@ -2992,7 +3005,7 @@ module	main(i_clk, i_reset,
 		.MW(32),
 		.ADDRESS_WIDTH(26+$clog2(128/8)),
 		.DMA_DW(128),
-		.OPT_SERDES(1'b1),
+		.OPT_SERDES(1'b0),
 		.OPT_EMMC(1'b0),
 		.OPT_DMA(1'b1),
 		.OPT_DDR(1'b1),
@@ -3040,8 +3053,8 @@ module	main(i_clk, i_reset,
 		.o_cfg_ds(o_sdio_cfg_ds),
 		.o_cfg_dscmd(o_sdio_cfg_dscmd),
 		.o_cfg_sample_shift(o_sdio_cfg_sample_shift),
-		.o_pp_cmd(o_sdio_pp_cmd),
-		.o_pp_data(o_sdio_pp_data),
+		.o_cmd_tristate(o_sdio_cmd_tristate),
+		.o_data_tristate(o_sdio_data_tristate),
 		//
 		.o_sdclk(   o_sdio_sdclk),
 		.o_cmd_en(  o_sdio_cmd_en),
@@ -3178,6 +3191,7 @@ module	main(i_clk, i_reset,
 			.M_AXIS_TID(edid_id),
 		.i_sync_signal(rtc_pps),
 		//
+		.o_interrupt(edid_int),
 		.o_debug(edid_debug)
 		// }}}
 	);
@@ -3190,6 +3204,10 @@ module	main(i_clk, i_reset,
 	assign	o_edid_sda = 1'b1;
 	// Null bus master
 	// {{{
+	// }}}
+	// Null interrupt definitions
+	// {{{
+	assign	edid_int = 1'b0;	// edid.INT.EDID.WIRE
 	// }}}
 	// }}}
 `endif	// EDID_ACCESS

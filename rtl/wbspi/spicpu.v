@@ -230,6 +230,8 @@ module	spicpu #(
 	wire	[31:0]	bus_write_data;
 	wire	[3:0]	bus_write_strb;
 
+	reg	[31:0]	w_control_word;
+
 	reg	[15:0]		ovw_data;
 	reg	[7:0]		ovw_cmd;
 

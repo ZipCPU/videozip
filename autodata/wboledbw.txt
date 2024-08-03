@@ -35,7 +35,7 @@
 ##
 ################################################################################
 ##
-##
+## }}}
 @PREFIX=oled
 @NADDR=4
 @DEVID=OLEDBW
@@ -46,6 +46,8 @@
 @MASTER.BUS=wbwide
 @MASTER.PREFIX=@$(MASTER.BUS.NAME)_@$(PREFIX)m
 @MASTER.ANSPREFIX=pf_
+@INT.OLED.WIRE=oled_int
+@INT.OLED.PIC=syspic
 @MAIN.PORTLIST=
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn
@@ -84,6 +86,7 @@
 		.M_AXIS_TLAST( ign_@$(PREFIX)_last),
 		.M_AXIS_TID(   ign_@$(PREFIX)_id),
 		//
+		.o_interrupt(oled_int),
 		.i_sync_signal(rtc_pps)
 		// }}}
 	);

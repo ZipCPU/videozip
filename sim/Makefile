@@ -107,9 +107,15 @@ sdcard.img:
 	@bash -c "if [ ! -e $@ ]; then dd if=/dev/zero of=$@ bs=512 count=131072; mkfs.dat -F 16 $@; fi"
 
 .PHONY: mount
+## {{{
+## To put files into or read files out of the sdcard.img, you'll need to first
+## "mount" it.  This requires administrative access.  This script (requiring
+## admin access) will mount the image to a subdirectory named "sdmount".  Once
+## complete, be sure to "unmount" the image via: "umount sdmount".
 mount: sdcard.img
 	@mkdir -p sdmount
 	mount -o uid=1000,loop sdcard.img sdmount
+## }}}
 #
 # The "clean" target, removing any and all remaining build products
 #
