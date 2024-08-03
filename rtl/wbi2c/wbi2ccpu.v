@@ -181,6 +181,7 @@ module	wbi2ccpu #(
 		// OPT output wire		M_AXIS_TABORT,
 		// }}}
 		input	wire		i_sync_signal,
+		output	wire		o_interrupt,
 		output	wire	[31:0]	o_debug
 		// }}}
 	);
@@ -718,6 +719,8 @@ module	wbi2ccpu #(
 		end
 	end
 	// }}}
+
+	assign	o_interrupt = r_halted;
 
 	// r_aborted
 	// {{{
