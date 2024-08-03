@@ -185,7 +185,6 @@ module	xsdserdes8x #(
 
 		assign	o_wide = 8'h0;
 		assign	o_raw  = fabric_return;
-		assign	o_mine = i_data;
 
 		// Keep Verilator happy
 		// {{{

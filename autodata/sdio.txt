@@ -52,7 +52,7 @@
 @INT.SDCARD.WIRE= @$(PREFIX)_int
 @INT.SDCARD.PIC= syspic
 @CARD_DETECT=1'b1
-@OPT_SERDES=1'b0
+@OPT_SERDES=1'b1
 @OPT_DMA=1'b1
 @OPT_DDR=1'b1
 @OPT_EMMC=1'b0
@@ -98,8 +98,8 @@
 	wire		w_@$(PREFIX)_cfg_ddr;
 	wire		w_@$(PREFIX)_cfg_ds, w_@$(PREFIX)_cfg_dscmd;
 	wire	[4:0]	w_@$(PREFIX)_cfg_sample_shift;
-	wire		w_@$(PREFIX)_pp_cmd;
-	wire		w_@$(PREFIX)_pp_data;
+	wire		w_@$(PREFIX)_cmd_tristate;
+	wire		w_@$(PREFIX)_data_tristate;
 		//
 	wire	[7:0]	w_@$(PREFIX)_sdclk;
 	wire		w_@$(PREFIX)_cmd_en;
@@ -111,6 +111,8 @@
 	wire	[1:0]	w_@$(PREFIX)_cmd_strb;
 	wire	[1:0]	w_@$(PREFIX)_cmd_idata;
 	wire		w_@$(PREFIX)_cmd_collision;
+	wire		w_@$(PREFIX)_crcack,
+			w_@$(PREFIX)_crcnak;
 	wire		w_@$(PREFIX)_card_busy;
 	wire	[1:0]	w_@$(PREFIX)_rx_strb;
 	wire	[15:0]	w_@$(PREFIX)_rx_data;
@@ -139,8 +141,8 @@
 		.i_cfg_ds(w_@$(PREFIX)_cfg_ds),
 		.i_cfg_dscmd(w_@$(PREFIX)_cfg_dscmd),
 		.i_sample_shift(w_@$(PREFIX)_cfg_sample_shift),
-		.i_pp_cmd(w_@$(PREFIX)_pp_cmd),
-		.i_pp_data(w_@$(PREFIX)_pp_data),
+		.i_cmd_tristate(w_@$(PREFIX)_cmd_tristate),
+		.i_data_tristate(w_@$(PREFIX)_data_tristate),
 		// Run-time inputs
 		.i_sdclk(w_@$(PREFIX)_sdclk),
 		.i_cmd_en(w_@$(PREFIX)_cmd_en),
@@ -152,6 +154,8 @@
 		.o_cmd_strb(w_@$(PREFIX)_cmd_strb),
 		.o_cmd_data(w_@$(PREFIX)_cmd_idata),
 		.o_cmd_collision(w_@$(PREFIX)_cmd_collision),
+		.o_crcack(w_@$(PREFIX)_crcack),
+		.o_crcnak(w_@$(PREFIX)_crcnak),
 		.o_data_busy(w_@$(PREFIX)_card_busy),
 		.o_rx_strb( w_@$(PREFIX)_rx_strb),
 		.o_rx_data( w_@$(PREFIX)_rx_data),
@@ -181,8 +185,8 @@
 		w_@$(PREFIX)_cfg_ds,
 		w_@$(PREFIX)_cfg_dscmd,
 		w_@$(PREFIX)_cfg_sample_shift,
-		w_@$(PREFIX)_pp_cmd,
-		w_@$(PREFIX)_pp_data,
+		w_@$(PREFIX)_cmd_tristate,
+		w_@$(PREFIX)_data_tristate,
 		//
 		w_@$(PREFIX)_sdclk,
 		w_@$(PREFIX)_cmd_en,
@@ -194,6 +198,8 @@
 		w_@$(PREFIX)_cmd_strb,
 		w_@$(PREFIX)_cmd_idata,
 		w_@$(PREFIX)_cmd_collision,
+		w_@$(PREFIX)_crcack,
+		w_@$(PREFIX)_crcnak,
 		w_@$(PREFIX)_card_busy,
 		w_@$(PREFIX)_rx_strb,
 		w_@$(PREFIX)_rx_data,
@@ -214,8 +220,8 @@
 		o_@$(PREFIX)_cfg_ds,
 		o_@$(PREFIX)_cfg_dscmd,
 		o_@$(PREFIX)_cfg_sample_shift,
-		o_@$(PREFIX)_pp_cmd,
-		o_@$(PREFIX)_pp_data,
+		o_@$(PREFIX)_cmd_tristate,
+		o_@$(PREFIX)_data_tristate,
 		//
 		o_@$(PREFIX)_sdclk,
 		o_@$(PREFIX)_cmd_en,
@@ -227,6 +233,8 @@
 		i_@$(PREFIX)_cmd_strb,
 		i_@$(PREFIX)_cmd_data,
 		i_@$(PREFIX)_cmd_collision,
+		i_@$(PREFIX)_crcack,
+		i_@$(PREFIX)_crcnak,
 		i_@$(PREFIX)_card_busy,
 		i_@$(PREFIX)_rx_strb,
 		i_@$(PREFIX)_rx_data,
@@ -246,8 +254,8 @@
 	output	wire		o_@$(PREFIX)_cfg_ds;
 	output	wire		o_@$(PREFIX)_cfg_dscmd;
 	output	wire	[4:0]	o_@$(PREFIX)_cfg_sample_shift;
-	output	wire		o_@$(PREFIX)_pp_cmd;
-	output	wire		o_@$(PREFIX)_pp_data;
+	output	wire		o_@$(PREFIX)_cmd_tristate;
+	output	wire		o_@$(PREFIX)_data_tristate;
 		//
 	output	wire	[7:0]	o_@$(PREFIX)_sdclk;
 	output	wire		o_@$(PREFIX)_cmd_en;
@@ -259,6 +267,8 @@
 	input	wire	[1:0]	i_@$(PREFIX)_cmd_strb;
 	input	wire	[1:0]	i_@$(PREFIX)_cmd_data;
 	input	wire		i_@$(PREFIX)_cmd_collision;
+	input	wire		i_@$(PREFIX)_crcack;
+	input	wire		i_@$(PREFIX)_crcnak;
 	input	wire		i_@$(PREFIX)_card_busy;
 	input	wire	[1:0]	i_@$(PREFIX)_rx_strb;
 	input	wire	[15:0]	i_@$(PREFIX)_rx_data;
@@ -343,8 +353,8 @@
 		.o_cfg_ds(o_@$(PREFIX)_cfg_ds),
 		.o_cfg_dscmd(o_@$(PREFIX)_cfg_dscmd),
 		.o_cfg_sample_shift(o_@$(PREFIX)_cfg_sample_shift),
-		.o_pp_cmd(o_@$(PREFIX)_pp_cmd),
-		.o_pp_data(o_@$(PREFIX)_pp_data),
+		.o_cmd_tristate(o_@$(PREFIX)_cmd_tristate),
+		.o_data_tristate(o_@$(PREFIX)_data_tristate),
 		//
 		.o_sdclk(   o_@$(PREFIX)_sdclk),
 		.o_cmd_en(  o_@$(PREFIX)_cmd_en),
@@ -356,6 +366,8 @@
 		.i_cmd_strb( i_@$(PREFIX)_cmd_strb),
 		.i_cmd_data( i_@$(PREFIX)_cmd_data),
 		.i_cmd_collision( i_@$(PREFIX)_cmd_collision),
+		.i_crcack( i_@$(PREFIX)_crcack),
+		.i_crcnak( i_@$(PREFIX)_crcnak),
 		.i_card_busy(i_@$(PREFIX)_card_busy),
 		.i_rx_strb(  i_@$(PREFIX)_rx_strb),
 		.i_rx_data(  i_@$(PREFIX)_rx_data),

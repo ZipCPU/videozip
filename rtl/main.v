@@ -209,6 +209,8 @@ module	main(i_clk, i_reset,
 		i_sdio_cmd_strb,
 		i_sdio_cmd_data,
 		i_sdio_cmd_collision,
+		i_sdio_crcack,
+		i_sdio_crcnak,
 		i_sdio_card_busy,
 		i_sdio_rx_strb,
 		i_sdio_rx_data,
@@ -405,6 +407,8 @@ module	main(i_clk, i_reset,
 	input	wire	[1:0]	i_sdio_cmd_strb;
 	input	wire	[1:0]	i_sdio_cmd_data;
 	input	wire		i_sdio_cmd_collision;
+	input	wire		i_sdio_crcack;
+	input	wire		i_sdio_crcnak;
 	input	wire		i_sdio_card_busy;
 	input	wire	[1:0]	i_sdio_rx_strb;
 	input	wire	[15:0]	i_sdio_rx_data;
@@ -2988,7 +2992,7 @@ module	main(i_clk, i_reset,
 		.MW(32),
 		.ADDRESS_WIDTH(26+$clog2(128/8)),
 		.DMA_DW(128),
-		.OPT_SERDES(1'b0),
+		.OPT_SERDES(1'b1),
 		.OPT_EMMC(1'b0),
 		.OPT_DMA(1'b1),
 		.OPT_DDR(1'b1),
@@ -3049,6 +3053,8 @@ module	main(i_clk, i_reset,
 		.i_cmd_strb( i_sdio_cmd_strb),
 		.i_cmd_data( i_sdio_cmd_data),
 		.i_cmd_collision( i_sdio_cmd_collision),
+		.i_crcack( i_sdio_crcack),
+		.i_crcnak( i_sdio_crcnak),
 		.i_card_busy(i_sdio_card_busy),
 		.i_rx_strb(  i_sdio_rx_strb),
 		.i_rx_data(  i_sdio_rx_data),

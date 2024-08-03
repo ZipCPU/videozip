@@ -311,6 +311,8 @@ i_sd_cd_n,
 	wire	[1:0]	w_sdio_cmd_strb;
 	wire	[1:0]	w_sdio_cmd_idata;
 	wire		w_sdio_cmd_collision;
+	wire		w_sdio_crcack,
+			w_sdio_crcnak;
 	wire		w_sdio_card_busy;
 	wire	[1:0]	w_sdio_rx_strb;
 	wire	[15:0]	w_sdio_rx_data;
@@ -438,6 +440,8 @@ i_sd_cd_n,
 		w_sdio_cmd_strb,
 		w_sdio_cmd_idata,
 		w_sdio_cmd_collision,
+		w_sdio_crcack,
+		w_sdio_crcnak,
 		w_sdio_card_busy,
 		w_sdio_rx_strb,
 		w_sdio_rx_data,
@@ -729,7 +733,7 @@ i_sd_cd_n,
 	// }}}
 
 	sdfrontend #(
-		.OPT_SERDES(1'b0),
+		.OPT_SERDES(1'b1),
 		.OPT_DDR(1'b1),
 		.NUMIO(4)
 	) u_sdio_frontend (
@@ -753,6 +757,8 @@ i_sd_cd_n,
 		.o_cmd_strb(w_sdio_cmd_strb),
 		.o_cmd_data(w_sdio_cmd_idata),
 		.o_cmd_collision(w_sdio_cmd_collision),
+		.o_crcack(w_sdio_crcack),
+		.o_crcnak(w_sdio_crcnak),
 		.o_data_busy(w_sdio_card_busy),
 		.o_rx_strb( w_sdio_rx_strb),
 		.o_rx_data( w_sdio_rx_data),
