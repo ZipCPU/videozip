@@ -196,8 +196,8 @@ module	spicpu #(
 					M_AXIS_TID,
 		// output reg		M_AXIS_TABORT,
 		// }}}
-		// output wire		o_interrupt,
-		input	wire		i_sync_signal
+		input	wire		i_sync_signal,
+		output wire		o_interrupt
 		// }}}
 	);
 
@@ -245,7 +245,7 @@ module	spicpu #(
 	wire			dcd_ready;
 	reg			dcd_active, dcd_last, dcd_send, dcd_keep,
 				dcd_byte;
-	reg			r_stopped, r_wait;
+	reg			r_stopped, r_wait, r_err;
 	reg	[NCE-1:0]	dcd_csn;
 	reg	[9:0]		dcd_command;
 	reg	[LGNCHAN-1:0]	dcd_channel;
@@ -305,6 +305,29 @@ module	spicpu #(
 		o_wb_ack <= i_wb_stb && !o_wb_stall;
 	// }}}
 
+	always @(*)
+	begin
+		w_control_word = 0;
+		//
+		w_control_word[23:16] = next_insn;
+		//
+		w_control_word[10] = M_AXIS_TVALID;
+		w_control_word[ 9] = M_AXIS_TVALID && M_AXIS_TREADY;
+		w_control_word[ 8] = M_AXIS_TLAST;
+		//
+		w_control_word[7] = next_valid;
+		w_control_word[5] = dcd_send;
+		w_control_word[4] = imm_cycle;
+		w_control_word[3] = manual_mode;
+		w_control_word[2] = r_err;
+		w_control_word[1] = r_wait;
+		w_control_word[0] = r_stopped && !next_valid;
+	end
+
+	// o_interrupt is true if the CPU may send a command w/o interrupting
+	// anything
+	assign	o_interrupt = r_stopped && !next_valid;
+
 	// o_wb_data
 	// {{{
 	always @(posedge i_clk)
@@ -314,7 +337,7 @@ module	spicpu #(
 	begin
 		o_wb_data <= 0;
 		case(bus_read_addr)
-		ADR_CONTROL:  begin end
+		ADR_CONTROL:  o_wb_data <= w_control_word;
 		ADR_OVERRIDE: o_wb_data <= { ovw_data, manual_data, ovw_cmd };
 		ADR_ADDRESS:  o_wb_data[BAW-1:0] <= pf_insn_addr;
 		ADR_CKCOUNT:  o_wb_data[12:1] <= ckcount;
@@ -509,6 +532,23 @@ module	spicpu #(
 
 		if (i_reset)
 			r_stopped <= OPT_START_HALTED;
+	end
+	// }}}
+
+	// r_err
+	// {{{
+	always @(posedge i_clk)
+	begin
+		if (!r_stopped)
+		begin
+			r_err <= 1'b0;
+			if (next_valid && next_illegal)
+				r_err <= 1'b1;
+		end else if (bus_jump)
+			r_err <= 1'b0;
+
+		if (i_reset)
+			r_err <= 1'b0;
 	end
 	// }}}
 
