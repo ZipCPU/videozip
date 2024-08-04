@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 		printf("RX:\tlink is down\n");
 	else
 		printf("RX:\tlink is up\n");
-	
+
 	////////////////////////////////
 	//
 	v = m_fpga->readio(R_MEGANET_TXCMD);

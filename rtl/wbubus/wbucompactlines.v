@@ -135,7 +135,7 @@ module	wbucompactlines(i_clk, i_stb, i_nl_hexbits, o_stb, o_nl_hexbits,
 
 	/*
 	output	wire	[27:0]	o_dbg;
-	assign o_dbg = { o_stb, o_nl_hexbits, o_busy, r_busy, full_line, 
+	assign o_dbg = { o_stb, o_nl_hexbits, o_busy, r_busy, full_line,
 			i_bus_busy, linelen, i_tx_busy, i_stb, i_nl_hexbits };
 	*/
 endmodule

@@ -52,11 +52,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
-#include <assert.h> 
-#include <strings.h> 
-#include <poll.h> 
-#include <ctype.h> 
+#include <arpa/inet.h>
+#include <assert.h>
+#include <strings.h>
+#include <poll.h>
+#include <ctype.h>
 
 #include "udpsocket.h"
 #include "devbus.h"
@@ -577,7 +577,7 @@ void	NEXBUS::readv(const NEXBUS::BUSW a, const int inc, const int len, NEXBUS::B
 	try {
 		while(cmdrd < len) {
 			int	nrd;
-			ptr = begin_packet(a + (inc ? (cmdrd<<2) : 0), inc); 
+			ptr = begin_packet(a + (inc ? (cmdrd<<2) : 0), inc);
 
 			nrd = len-cmdrd;
 			if (nrd > READBLOCK)

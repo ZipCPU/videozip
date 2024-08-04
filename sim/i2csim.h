@@ -109,7 +109,7 @@ public:
 
 		m_tick = m_last_change_tick = 0;
 		m_speed= 20;
-		
+
 		m_devaddr = ADDRESS;
 		m_daddr = 0;
 

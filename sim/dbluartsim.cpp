@@ -280,7 +280,7 @@ void	DBLUARTSIM::poll_read(void) {
 						// printf("< %s\n", m_cmdline);
 						m_cllen = 0;
 					}
-					
+
 					m_rxbuf[j+m_ilen] |= 0x80;
 				} m_cmdline[m_cllen] = '\0';
 

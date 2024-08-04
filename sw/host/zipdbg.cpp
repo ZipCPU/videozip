@@ -370,7 +370,7 @@ public:
 				printw("Supervisor mode ");
 			if (v& 0x0200) {
 				v = m_state.m_sR[15];
-				
+
 			} else printw("Stalled ");
 			// if (v & 0x008000)
 				// printw("Break-Enabled ");

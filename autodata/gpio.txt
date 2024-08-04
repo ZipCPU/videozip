@@ -41,7 +41,7 @@
 @ACCESS=@$(DEVID)_ACCESS
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb32
-@NUMOUTPUT=9
+@NUMOUTPUT=10
 @NUMINPUT=7
 @INT.GPIO.WIRE=gpio_int
 @INT.GPIO.PIC=syspic
@@ -104,16 +104,16 @@
 	assign	io_hdmirx_cec = o_gpio[0] ? 1'bz : 1'b0;
 	assign	io_hdmitx_cec = o_gpio[1] ? 1'bz : 1'b0;
 	assign	o_hdmirx_txen = o_gpio[2];
-	assign	o_hdmirx_hpa  = o_gpio[2];	// Hotplug assert
+	assign	o_hdmirx_hpa  = o_gpio[3];	// Hotplug assert
 `ifdef	SDIO_ACCESS
 	assign	o_sd_reset  = !w_sdio_hwreset_n;
 `else
-	assign	o_sd_reset  = o_gpio[3];
+	assign	o_sd_reset  = o_gpio[4];
 `endif
 `ifdef	OLEDBW_ACCESS
-	assign	o_oled_reset_n  = !o_gpio[4];
-	assign	o_oled_panel_en =  o_gpio[5];
-	assign	o_oled_logic_en =  o_gpio[6];
+	assign	o_oled_reset_n  = !o_gpio[5];
+	assign	o_oled_panel_en =  o_gpio[6];
+	assign	o_oled_logic_en =  o_gpio[7];
 `else
 	assign	o_oled_reset_n  = 1'b0;
 	assign	o_oled_panel_en = 1'b0;
@@ -121,8 +121,8 @@
 `endif
 	// These two pins are only used in simulation, and only within the
 	// MAIN RTL component.
-	// assign o_trace     = o_gpio[7];
-	// assign o_halt      = o_gpio[8];
+	// assign o_trace     = o_gpio[8];
+	// assign o_halt      = o_gpio[9];
 
 @MAIN.PORTLIST=
 		// @$(DEVID) ports
@@ -174,9 +174,9 @@
 
 `ifdef	VERILATOR
 	wire	verilator_halt;
-	assign	o_trace = o_@$(PREFIX)[7];
+	assign	o_trace = o_@$(PREFIX)[8];
 
-	assign	verilator_halt = o_@$(PREFIX)[8];
+	assign	verilator_halt = o_@$(PREFIX)[9];
 	assign	o_halt = verilator_halt;
 	always @(posedge verilator_halt)
 		$finish;
@@ -206,13 +206,14 @@
 #define	GPIO_HDMITX_CEC_SET	0x000020002
 #define	GPIO_HDMITX_CEC_CLR	0x000020000
 //
-#define	GPIO_HDMIRX_HPA		0x000000004	// Also enables TX when set
-#define	GPIO_SD_RESET		0x000000008
-#define	GPIO_OLED_RESET		0x000000010
-#define	GPIO_OLED_PANELEN	0x000000020
-#define	GPIO_OLED_LOGICEN	0x000000040
-#define	GPIO_TRACE		0x000000080
-#define	GPIO_TESTHALT		0x000000100
+#define	GPIO_HDMITX_EN		0x000000004
+#define	GPIO_HDMIRX_HPA		0x000000008
+#define	GPIO_SD_RESET		0x000000010
+#define	GPIO_OLED_RESET		0x000000020
+#define	GPIO_OLED_PANELEN	0x000000040
+#define	GPIO_OLED_LOGICEN	0x000000080
+#define	GPIO_TRACE		0x000000100
+#define	GPIO_TESTHALT		0x000000200
 //
 #define	GPIO_EDID_SCL_SET	GPIO_SET(GPIO_EDID_SCL)
 #define	GPIO_EDID_SCL_CLR	GPIO_CLR(GPIO_EDID_SCL)

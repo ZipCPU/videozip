@@ -59,7 +59,7 @@
 		s_clk_125d,    s_clk_125d_unbuffered,
 		s_clksync,     s_clksync_unbuffered,
 		s_clk_400mhz,  s_clk_400mhz_unbuffered,	// Pixclk * 10
-		s_clk_40mhz_unbuffered,	// 40MHz
+		s_clk_80mhz_unbuffered,	// 80MHz
 		netclk_locked, netclk_feedback, netclk_feedback_buffered;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
@@ -84,7 +84,7 @@
 
 	////////////////////////////////////////////////////////////////////////
 	//
-	// PLL #1: 100MHz, 200MHz, 400MHz, and 40MHz
+	// PLL #1: 100MHz, 200MHz, 400MHz, and 80MHz
 	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -101,7 +101,7 @@
 		.CLKOUT0_DIVIDE(4),	// 200 MHz
 		.CLKOUT1_DIVIDE(2),	// 400 MHz
 		.CLKOUT2_DIVIDE(8),	// 100 MHz
-		.CLKOUT3_DIVIDE(20)	//  40 MHz
+		.CLKOUT3_DIVIDE(10)	//  80 MHz
 		// }}}
 	) gen_sysclk(
 		// {{{
@@ -109,7 +109,7 @@
 		.CLKOUT0(s_clk_200mhz_unbuffered),
 		.CLKOUT1(s_clk_400mhz_unbuffered),
 		.CLKOUT2(s_clksync_unbuffered),
-		.CLKOUT3(s_clk_40mhz_unbuffered),
+		.CLKOUT3(s_clk_80mhz_unbuffered),
 		// .CLKOUT4(),
 		// .CLKOUT5(),
 		.PWRDWN(1'b0), .RST(pll_reset),
@@ -136,7 +136,7 @@
 	// The ethernet MAC requires a 125MHz clock
 	//   We can't trust the RX 125MHz clock for this, since there's a
 	//   possibility the RX 125MHz clock might arrive at a different rate.
-	//   
+	//
 	PLLE2_BASE #(
 		// {{{
 		.CLKFBOUT_MULT(10),

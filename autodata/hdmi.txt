@@ -46,6 +46,8 @@
 @MASTER.BUS=wbwide
 @MASTER.TYPE=DMA
 @MASTER.ANSPREFIX=dma_
+@INT.VIDFRAME.WIRE=@$(PREFIX)_int
+@INT.VIDFRAME.PIC=syspic
 @TOP.PORTLIST=
 		i_hdmirx_clk_p, i_hdmirx_clk_n,
 		i_hdmirx_p, i_hdmirx_n,
@@ -78,8 +80,8 @@
 		//
 		.i_hdmirx_clk_p(i_hdmirx_clk_p),	// HDMI RX input clock
 		.i_hdmirx_clk_n(i_hdmirx_clk_n),
-		.i_lcl_pixclk(s_clk_40mhz_unbuffered),	// Locally generated clk
-		.i_siclk(s_clk_40mhz_unbuffered),		// Si5324 clock
+		.i_lcl_pixclk(s_clk_80mhz_unbuffered),	// Locally generated clk
+		.i_siclk(s_clk_80mhz_unbuffered),
 		//
 		.o_hdmick_locked(pxrx_locked),
 		.o_hdmirx_clk(hdmirx_clk),	// Clk for measurement only
@@ -226,6 +228,7 @@
 		.o_pxclk_sel(o_pxclk_sel),
 		.o_iodelay(o_hdmi_iodelay),
 		.i_iodelay(i_hdmi_iodelay),
+		.o_interrupt(@$(INT.VIDFRAME.WIRE)),
 		//
 		.o_pixdebug(hdmiclr_debug)
 	);
@@ -347,6 +350,14 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 @XDC.INSERT=
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/pix_reset_reg}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/pix_reset_pipe*}] 5.0
+##
+## set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_data*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/o_b_data*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_pipe*}] 5.0
+##
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_data*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 5.0
 ##
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray_cross*}] 7.0

@@ -8,7 +8,7 @@
 //		from the qflexpress module, and stored in the (compressed)
 //	Wishbone Scope device.  The result is placed on the screen output, so
 //	you can see what is going on internal to the device.
-//		
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC

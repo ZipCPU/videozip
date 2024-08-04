@@ -158,12 +158,13 @@ set_property -dict {PACKAGE_PIN Y21  IOSTANDARD LVCMOS33} [get_ports i_gps_3df]
 ## }}}
 
 
-## Pmod header JC  -- We'll use the bottom for the PModMIC
+## Pmod header JC  -- We'll use the top for the rotary, bottom for the PModMIC
 ## {{{
-#set_property -dict { PACKAGE_PIN Y6    IOSTANDARD LVCMOS33 } [get_ports { jc[0] }]; #IO_L18P_T2_34 Sch=jc_p[1]
-#set_property -dict { PACKAGE_PIN AA6   IOSTANDARD LVCMOS33 } [get_ports { jc[1] }]; #IO_L18N_T2_34 Sch=jc_n[1]
+set_property -dict { PACKAGE_PIN Y6    IOSTANDARD LVCMOS33 } [get_ports { i_rotary_a }]; #IO_L18P_T2_34 Sch=jc_p[1]
+set_property -dict { PACKAGE_PIN AA6   IOSTANDARD LVCMOS33 } [get_ports { i_rotary_b }]; #IO_L18N_T2_34 Sch=jc_n[1]
 #set_property -dict { PACKAGE_PIN AA8   IOSTANDARD LVCMOS33 } [get_ports { jc[2] }]; #IO_L22P_T3_34 Sch=jc_p[2]
 #set_property -dict { PACKAGE_PIN AB8   IOSTANDARD LVCMOS33 } [get_ports { jc[3] }]; #IO_L22N_T3_34 Sch=jc_n[2]
+##
 #set_property -dict { PACKAGE_PIN R6    IOSTANDARD LVCMOS33 } [get_ports { o_mic_csn }]; #IO_L17P_T2_34 Sch=jc_p[3]
 ## set_property -dict { PACKAGE_PIN T6    IOSTANDARD LVCMOS33 } [get_ports { jc[5] }]; #IO_L17N_T2_34 Sch=jc_n[3]
 #set_property -dict { PACKAGE_PIN AB7   IOSTANDARD LVCMOS33 } [get_ports { i_mic_din }]; #IO_L20P_T3_34 Sch=jc_p[4]
@@ -446,6 +447,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/net_c
 ## No XDC.INSERT tag in mdio
 ## No XDC.INSERT tag in REGDEFS
 ## No XDC.INSERT tag in zip_alt_mtc
+## No XDC.INSERT tag in rotary
 ## No XDC.INSERT tag in DEFAULT
 ## No XDC.INSERT tag in flash
 ## From genclkfb
@@ -455,6 +457,11 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *thedesign/r
 ## From hdmi
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_reg}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_data*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_pipe*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray_cross*}] 7.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/wgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/wgray_cross*}] 7.0

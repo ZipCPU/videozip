@@ -151,7 +151,7 @@ void	FLASHDRVR::place_online(void) {
 void	FLASHDRVR::take_offline(DEVBUS *fpga) {
 #ifdef	R_FLASHCFG
 	DEVBUS::BUSW	dprog[10], *dp;
-	
+
 	dp = dprog;
 	*dp++ = F_END;
 	*dp++ = F_RESET;
@@ -196,7 +196,7 @@ void	FLASHDRVR::restore_quadio(DEVBUS *fpga) {
 	static	const	uint32_t	QUAD_IO_READ     = CFG_USERMODE
 			|(OPT_ADDR32 ? 0xec : 0xeb);
 	DEVBUS::BUSW	dprog[40], *dp;
-	
+
 	dp = dprog;
 
 	*dp++ = F_END;
@@ -223,7 +223,7 @@ void	FLASHDRVR::restore_quadio(DEVBUS *fpga) {
 	// 4 address bytes if in 32bit mode
 	if (OPT_ADDR32)
 		*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR;
-	
+
 	// Mode byte
 	*dp++ = CFG_USERMODE | CFG_QSPEED | CFG_WEDIR | 0xa0;
 	// Read NDUMMY clocks worth
@@ -307,7 +307,7 @@ bool	FLASHDRVR::erase_sector(const unsigned sector, const bool verify_erase){
 			for(int j=0; j<SZPAGEW; j++)
 				if (page[j] != 0xffffffff) {
 					unsigned rdaddr = R_FLASH+flashaddr+i*SZPAGEB;
-					
+
 					if (m_debug)
 						printf("FLASH[%07x] = %08x, not 0xffffffff as desired (%06x + %d)\n",
 							R_FLASH+flashaddr+i*SZPAGEB+(j<<2),
@@ -413,7 +413,7 @@ bool	FLASHDRVR::page_program(const unsigned addr, const unsigned len,
 		for(unsigned i=0; i<(len>>2); i++) {
 			if (buf[i] != bswapd[i]) {
 				printf("\nVERIFY FAILS[%d]: %08x\n", i, (i<<2)+addr);
-				printf("\t(Flash[%d]) %08x != %08x (Goal[%08x])\n", 
+				printf("\t(Flash[%d]) %08x != %08x (Goal[%08x])\n",
 					(i<<2), buf[i], bswapd[i], (i<<2)+addr);
 				passed = false;
 			}
@@ -505,7 +505,7 @@ bool	FLASHDRVR::write(const unsigned addr, const unsigned len,
 			for(unsigned i=0; i<ln; i++) {
 				if ((sbuf[i]&dp[i]) != dp[i]) {
 					if (m_debug) {
-						printf("\nNEED-ERASE @0x%08x ... 0x%02x != 0x%02x (Goal)\n", 
+						printf("\nNEED-ERASE @0x%08x ... 0x%02x != 0x%02x (Goal)\n",
 							i+base-addr,
 							sbuf[i] & 0x0ff,
 							dp[i] & 0x0ff);

@@ -19,7 +19,7 @@
 //	console -> TCP/IP	/			\ -> wbuconsole
 //
 //	Doing this, however, also entails stripping the 8th bit from the UART
-//	port, so the serial port so contrived can only handle 7-bit data. 
+//	port, so the serial port so contrived can only handle 7-bit data.
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC
@@ -51,7 +51,7 @@
 //
 `default_nettype	none
 // }}}
-module	wbuconsole(i_clk, i_rx_stb, i_rx_data, 
+module	wbuconsole(i_clk, i_rx_stb, i_rx_data,
 		o_wb_cyc, o_wb_stb, o_wb_we, o_wb_addr, o_wb_data,
 		i_wb_stall, i_wb_ack, i_wb_err, i_wb_data,
 		i_interrupt,
@@ -103,12 +103,12 @@ module	wbuconsole(i_clk, i_rx_stb, i_rx_data,
 		always @(posedge i_clk)
 		if (i_rx_stb && i_rx_data[7])
 			cmd_port_active <= 1'b1;
-		
+
 	end else begin
 
 		always @(*)
 			cmd_port_active = 1'b1;
-		
+
 	end endgenerate
 
 	// Decode ASCII input requests into WB bus cycle requests

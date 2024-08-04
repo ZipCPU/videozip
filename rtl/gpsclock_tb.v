@@ -76,7 +76,7 @@ module	gpsclock_tb #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	initial	r_jump = 0; 
+	initial	r_jump = 0;
 	initial	r_maxcount = CLOCK_FREQUENCY_HZ;
 	always @(posedge i_clk)
 	if ((i_wb_stb)&&(i_wb_we))

@@ -806,7 +806,7 @@ module	axishdmi #(
 				begin
 					if (vpos < f_height-1)
 					begin
-						assert(vpos + 1== f_ypos);	
+						assert(vpos + 1== f_ypos);
 					end else begin
 						assert(f_ypos == 0);
 					end

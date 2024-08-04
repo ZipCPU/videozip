@@ -246,7 +246,7 @@ module	exwb #(
 	// The bus WE (write enable) line, governing wishbone direction
 	//
 	// We'll never change direction mid bus-cycle--at least not in this
-	// implementation (atomic accesses may require it at a later date). 
+	// implementation (atomic accesses may require it at a later date).
 	// Hence, if CYC is low we can set the direction.
 	always @(posedge i_clk)
 	if (!o_wb_cyc && !o_cmd_busy && (!OPT_LOWPOWER || i_cmd_bus))

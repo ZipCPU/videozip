@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
 		scope->decode(WBSCOPEDATA);
 		printf("\n");
 	} else {
-		// The scope has been primed, triggered, the holdoff wait 
+		// The scope has been primed, triggered, the holdoff wait
 		// period has passed, and the scope has now stopped.
 		//
 		// Hence we can read from our scope the values we need.

@@ -15,7 +15,7 @@
 //	the data word for the device is only ever 16-bits long.
 //
 //	The device control, outlined below, is also colored by two facts:
-//	1. There is no means to read from the device.  Sure, the chip on the 
+//	1. There is no means to read from the device.  Sure, the chip on the
 //		PMod has a full read/write bus, but it hasn't been entirely
 //		wired to the PMod pins.  This was probably done so that the
 //		interface could handle the paucity of pins available, but for
@@ -109,10 +109,10 @@
 //			it.
 //		32'h020002 sets the vcc bit, whereas 32'h010000 clears it.
 //
-//		Multiple of the power bits can be changed at once.  Each 
+//		Multiple of the power bits can be changed at once.  Each
 //		respective bit is only changed if it's change enable bit is
 //		also high.
-//		
+//
 //
 //
 // Creator:	Dan Gisselquist, Ph.D.
@@ -172,7 +172,7 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 	wire	[31:0]	wb_data;
 	wire	[1:0]	wb_addr;
 
-	// I've thought about bumping this from a clock at <= 100MHz up to a 
+	// I've thought about bumping this from a clock at <= 100MHz up to a
 	// clock near 200MHz.  Doing so requires an extra clock to come off
 	// the bus--the bus fanout is just too wide otherwise.  However,
 	// if you don't need to ... why take the extra clock cycle?  Hence
@@ -229,7 +229,7 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 		end
 
 	//
-	// Handle reads from our device.  These really aren't all that 
+	// Handle reads from our device.  These really aren't all that
 	// interesting, but ... we can do them anyway.  We attempt to provide
 	// some sort of useful value here.  For example, upon reading r_a or
 	// r_b, you can read the current value(s) of those register(s).
@@ -255,7 +255,7 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 	initial	r_pstb = 1'b0;
 	initial	r_pre_busy = 1'b0; // Used to clear the interrupt a touch earlier
 
-	// The control strobe.  This will be true if we need to command a 
+	// The control strobe.  This will be true if we need to command a
 	// control interaction.
 	always @(posedge i_clk)
 		r_cstb <= (wb_stb)&&(wb_we)&&(wb_addr[1:0]==2'b00);
@@ -290,8 +290,8 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 			o_pwr <= ((o_pwr)&(~r_data[18:16]))
 				|((r_data[2:0])&(r_data[18:16]));
 
-	// Sadly, because our commands can have a whole slew of different 
-	// lengths, and because these lengths can be ... difficult to 
+	// Sadly, because our commands can have a whole slew of different
+	// lengths, and because these lengths can be ... difficult to
 	// decipher from the command (especially the first two lengths),
 	// this quick case statement is needed to decode the amount of bytes
 	// that will be sent.
@@ -315,10 +315,10 @@ module	wboledbw(i_clk, i_cyc, i_stb, i_we, i_addr, i_data,
 	//
 	// On the next clock, we're going to set our data register to
 	// whatever's in register A, and B, and ... something of the data
-	// written to the control register.  Because this must all be 
+	// written to the control register.  Because this must all be
 	// written on the most-significant bits of a word, we pause a moment
 	// here to move the control word that was writen to our bus up
-	// by an amount given by the length of our message.  That way, you 
+	// by an amount given by the length of our message.  That way, you
 	// can write to the bottom bits of the register, and yet still end
 	// up in the top several bits of the following register.
 	//

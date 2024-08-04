@@ -55,7 +55,7 @@ public:
 	virtual int	read(char *buf, int len);
 	virtual	bool	poll(unsigned ms);
 
-	// Tests whether or not bytes are available to be read, returns a 
+	// Tests whether or not bytes are available to be read, returns a
 	// count of the bytes that may be immediately read
 	virtual	int	available(void); // { return 0; };
 };

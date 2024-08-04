@@ -35,7 +35,7 @@
 //	bits, and hence 8kB slaves may be aliased to many places in memory.
 //	Bus composition and address assignment, however, are both outside of
 //	the scope of the operation of this module.
-//	
+//
 //
 // Creator:	Dan Gisselquist, Ph.D.
 //		Gisselquist Technology, LLC

@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd # hdmistart
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd hdmistart
 all:	$(PROGRAMS)
 #
 #
@@ -120,9 +120,9 @@ memtest: $(OBJDIR)/memtest.o $(OBJDIR)/txfns.o bkram.ld $(ZLIBD)/$(ZIPLIB)
 HDMISTARTOBJS:= $(addprefix $(OBJDIR)/,hdmistart.o txfns.o)
 $(OBJDIR)/hdmistart.o: hdmistart.c
 	$(mk-objdir)
-	$(CC) -c $(CFLAGS) -fno-builtin $< -o $@
-hdmistart: $(HDMISTARTOBJS) bkram.ld $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LBKRAM) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
+hdmistart: $(HDMISTARTOBJS)
+	$(CC) $(CFLAGS) $(LFLAGS) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
 
 SDREADD:= $(addprefix $(OBJDIR)/,sdreadd.o txfns.o)
 $(OBJDIR)/sdreadd.o: sdreadd.c

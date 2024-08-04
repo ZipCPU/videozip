@@ -52,11 +52,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
-#include <assert.h> 
-#include <strings.h> 
-#include <poll.h> 
-#include <ctype.h> 
+#include <arpa/inet.h>
+#include <assert.h>
+#include <strings.h>
+#include <poll.h>
+#include <ctype.h>
 
 #include "exbus.h"
 // }}}

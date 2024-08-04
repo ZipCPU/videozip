@@ -78,7 +78,7 @@ unsigned MOUSESIM::operator()(const unsigned i_ps2) {
 			clk = 1;
 			if (0 == --m_datbits) {
 				// Now done transmitting
-				// m_datcounter = 0; 
+				// m_datcounter = 0;
 				dat = 1;
 			} else
 				m_datcounter = TICKS_PER_BAUD;
@@ -105,7 +105,7 @@ unsigned MOUSESIM::operator()(const unsigned i_ps2) {
 			printf("MOUSE: DATA-BYTE-RX: %02lx, parity %d, stop %d\n",
 				m_datbuf & 0x0ff, (m_datbuf&0x100)?1:0,
 				(m_datbuf&0x0200)?1:0);
-				
+
 			printf("DATF = %03lx, TXB = %03lx\n",
 				m_datbuf, ((txbyte(m_datbuf&0x0ff)&0x07ff)>>1));
 			assert(m_datbuf == ((txbyte(m_datbuf&0x0ff)&0x07ff)>>1));

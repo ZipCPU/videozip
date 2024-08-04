@@ -8,7 +8,7 @@
 //
 // Registers:	
 //
-// O/S Operations:	
+// O/S Operations:
 //	read()	- Copies either incoming or outgoing video frame data to memory
 //		(if supported)
 //	write()	- (If framebuffer), writes data tot he frame buffer, clipped
@@ -71,7 +71,6 @@ module	vidpipe #(
 		output	reg		o_wb_ack,
 		output	reg	[31:0]	o_wb_data,
 		//
-		// output	wire		o_int,
 		// }}}
 		// Incoming HDMI Video (if present)
 		// {{{
@@ -101,6 +100,7 @@ module	vidpipe #(
 		output	reg	[1:0]	o_pxclk_sel,
 		output	wire	[14:0]	o_iodelay,
 		input	wire	[14:0]	i_iodelay,
+		output	reg		o_interrupt,
 		output	reg	[31:0]	o_pixdebug
 		// }}}
 	);
@@ -218,7 +218,6 @@ module	vidpipe #(
 
 	reg	[8:0]	frame_counter;
 	reg	[7:0]	frames_per_second;
-	wire		new_frame_sys;
 
 	reg	[CWID-1:0]	pps_counter;
 	reg			sys_pps;
@@ -239,7 +238,7 @@ module	vidpipe #(
 	wire	[LGDIM-1:0]	cfg_ovly_vpos, cfg_ovly_hpos;
 	reg	[LGDIM-1:0]	cfg_ovly_vpos_sys, cfg_ovly_hpos_sys;
 
-	wire		px2sys_valid, ign_px2sys_ready;
+	wire		px2sys_valid, px2sys_ready;
 	wire		ign_sys2px_valid, sys2px_ready;
 	wire		ign_frame_ready;
 
@@ -294,6 +293,9 @@ module	vidpipe #(
 	wire		opkt_valid, opkt_ready, opkt_hdr, opkt_last;
 	wire	[7:0]	opkt_data;
 
+	reg	last_pll_locked, last_sync;
+	reg	new_frame;
+	wire	rx_frame_sys, new_frame_sys;
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -720,6 +722,32 @@ module	vidpipe #(
 	else
 		{ o_wb_ack, pre_ack } <= { pre_ack, i_wb_stb && !o_wb_stall };
 	// }}}
+
+	// o_interrupt
+	// {{{
+	always @(posedge i_clk)
+	if (i_reset || pix_reset_sys)
+		{ last_sync, last_pll_locked } <= 2'b00;
+	else begin
+		last_sync <= in_locked_sys;
+		last_pll_locked <= pxpll_locked_sys;
+	end
+
+	always @(posedge i_clk)
+	if (i_reset)
+		o_interrupt <= 1'b0;
+	else begin
+		o_interrupt <= 1'b0;
+
+		if (last_pll_locked != pxpll_locked_sys)
+			o_interrupt <= 1'b1;
+		if (last_sync != in_locked_sys)
+			o_interrupt <= 1'b1;
+		if (px2sys_valid && new_frame_sys)
+			o_interrupt <= 1'b1;
+	end
+	// }}}
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -834,14 +862,22 @@ module	vidpipe #(
 	//
 	// Move the image meta data to (and from) the bus clock
 	// {{{
+	always @(posedge i_pixclk)
+	if (pix_reset)
+		new_frame <= 1'b0;
+	else if (!in_locked)
+		new_frame <= 1'b0;
+	else if (!new_frame || px2sys_ready)
+		new_frame <= out_valid && out_ready && out_hlast && out_vlast;
 
 	tfrvalue #(
-		.W(LGDIM*8+4+15)
+		.W(LGDIM*8+5+15)
 	) u_px2sys (
 		// {{{
 		.i_a_clk(i_pixclk), .i_a_reset_n(pix_reset_n),
-		.i_a_valid(1'b1), .o_a_ready(ign_px2sys_ready),
+		.i_a_valid(1'b1), .o_a_ready(px2sys_ready),
 			.i_a_data({
+				new_frame,			//  1b
 				ovly_err,			//  1b
 				in_locked,			//  1b
 				i_iodelay,			// 15b
@@ -855,6 +891,7 @@ module	vidpipe #(
 		.i_b_clk(i_clk), .i_b_reset_n(!pix_reset_sys),
 		.o_b_valid(px2sys_valid), .i_b_ready(1'b1),
 			.o_b_data({
+				new_frame_sys,			//  1b
 				ovly_err_sys,			//  1b
 				in_locked_sys,			//  1b
 				iodelay_actual_sys,		// 15b
@@ -987,7 +1024,7 @@ module	vidpipe #(
 			.o_a_ready(ign_frame_ready),
 		//
 		.i_b_clk(i_clk), .i_b_reset_n(!pix_reset_sys),
-		.o_b_valid(new_frame_sys), .i_b_ready(1'b1)
+		.o_b_valid(rx_frame_sys), .i_b_ready(1'b1)
 		// }}}
 	);
 	// }}}
@@ -998,8 +1035,8 @@ module	vidpipe #(
 	if (pix_reset_sys)
 		frame_counter <= 0;
 	else if (sys_pps)
-		frame_counter <= (new_frame_sys) ? 1:0;
-	else if (new_frame_sys && !frame_counter[8])
+		frame_counter <= (rx_frame_sys) ? 1:0;
+	else if (rx_frame_sys && !frame_counter[8])
 		frame_counter <= frame_counter + 1;
 	// }}}
 
@@ -1116,8 +1153,10 @@ module	vidpipe #(
 		) u_framebuf (
 			// {{{
 			.i_clk(i_clk), .i_pixclk(i_pixclk), .i_reset(pix_reset_sys),
-			.i_cfg_en(cfg_ovly_enable_sys),
+			.i_wb_en(cfg_ovly_enable_sys),
+			.i_pix_en(1'b1),
 			.i_height(cfg_mem_height), .i_mem_words(cfg_mem_words),
+			.i_width(cfg_mem_width_sys),
 			.i_baseaddr(cfg_framebase),
 			// Wishbone (DMA) bus master
 			// {{{
@@ -1432,7 +1471,7 @@ module	vidpipe #(
 			.M_VLAST(crop_vlast)
 			// }}}
 		);
-	
+
 		pix2stream #(
 			.BUS_DATA_WIDTH(DW)
 		) u_pix2memword (
@@ -1453,7 +1492,7 @@ module	vidpipe #(
 			.i_mode(pxcap_mode)
 			// }}}
 		);
-	
+
 		vid_wbcamera #(
 			.DW(DW), .AW(AW), .PW(24), .LGFIFO(5),
 			.LGFRAME(LGDIM), .OPT_ASYNC_CLOCKS(1'b1),
@@ -1757,7 +1796,7 @@ module	vidpipe #(
 	wire	unused;
 	assign	unused = &{ 1'b0,
 			src_debug, alph_debug, pip_debug,
-			ign_sys2px_valid, ign_frame_ready, ign_px2sys_ready,
+			ign_sys2px_valid, ign_frame_ready,
 			i_wb_data };
 	// }}}
 endmodule

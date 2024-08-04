@@ -249,7 +249,7 @@ module	exidle #(
 	// o_stb, o_word, r_busy, o_null
 	// {{{
 	assign	o_null = { 2'b11, i_aux, 1'b1, !cts_flag, r_int };
-	
+
 	initial	{ o_stb, o_word, r_busy } = 0;
 	always @(posedge i_clk)
 	if (i_reset)
@@ -321,7 +321,7 @@ module	exidle #(
 		assume(i_stb);
 		assume($stable(i_word));
 	end
-	
+
 	always @(posedge i_clk)
 	if (!f_past_valid || $past(i_reset))
 	begin

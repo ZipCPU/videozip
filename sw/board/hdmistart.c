@@ -47,31 +47,12 @@
 #include "zipcpu.h"
 #include "zipsys.h"
 #include "txfns.h"
+#include "getedid.c"
 // }}}
 
-asm("\t.section\t.start\n"
-	"\t.global\t_start\n"
-	"\t.type\t_start,@function\n"
-"_start:\n"
-	"\tLDI\t_top_of_stack,SP\n"
-	"\tCLR\tCC\n"
-	"\tMOV\tbusy_failure(PC),R0\n"
-	"\tBRA\tentry\n"
-"busy_failure:\n"
-	"\tBUSY\n"
-	"\t.section\t.text\n");
-
-__attribute__((noinline))
-void	wait_while_edout_busy(void) {
-#ifdef	_BOARD_HAS_HDMI_SRC_EDID
-	int	this_edcmd;
-	while(_edout->o_cmd & EDID_SRC_BUSY)
-		;
-#endif
-}
-
+/*
 void	wait_ms(int ms) {
-	const	int	CLOCKS_PER_MS = CLKFREQHZ / 1000;
+	constexpr	int	CLOCKS_PER_MS = CLKFREQHZ / 1000;
 
 	while(ms > 0) {
 		_zip->z_tma = CLOCKS_PER_MS;
@@ -83,44 +64,116 @@ void	wait_ms(int ms) {
 		ms--;
 	}
 }
+*/
 
-#if	defined(_BOARD_HAS_HDMI_SRC_EDID) && defined(HDMIIN_ACCESS)
+#ifdef	_BOARD_HAS_VIDPIPE
 #else
 #define	NO_HDMI_PORT
 #endif
 
-void entry(void) {
+int
+main(int argc, char ** argv) {
 #ifdef	NO_HDMI_PORT
 	txstr("No HDMI port within this repository\n");
 #else
 	unsigned	v;
 	int		valid_edid = 0;
 
-	txstr("\n\nHDMISTART\n\n");
-	txstr("De-asserting the HDMI detect flag on the HDMI sink\n");
-	v = GPIO_HDMI_IN_HPA_CLR
-		| GPIO_HDMI_IN_ENB_CLR
-		| GPIO_HDMI_OUT_EN_CLR;
+	txstr("+--------------------------------------+\n"
+		"|             HDMI Startup             |\n"
+		"+--------------------------------------+\n");
+
+	txstr("\n"
+		"De-asserting the upstream HDMI detect flag, and the\n"
+		"downstream TX enable\n");
+
+	v = GPIO_HDMIRX_CEC_SET | GPIO_HDMITX_CEC_SET
+		| GPIO_HDMIRX_HPA_CLR | GPIO_HDMITX_EN_CLR;
 	txstr("Setting GPIO to "); txhex(v); txstr("\n");
 	*_gpio = v;
 
-	if (0 == (*_gpio & GPIO_HDMI_OUT_DETECT)) {
-		int	cnt = 0;
-		txstr("No HDMI output (monitor) detected.\n");
-		txstr("Waiting until one is plugged in.\n");
-		while(0 == (*_gpio & GPIO_HDMI_OUT_DETECT)) {
-			wait_ms(10);
-			if (cnt++ > 100) {
-				txstr(" -- Still waiting\n");
-				cnt = 0;
-			}
-		}
+	// Wait for 200ms or so
+	_zip->z_tmb = 20000000;
+	while(_zip->z_tmb)
+		;
+
+	*_spio = 0x0ff00;	// Turn off all LEDs
+	while(0 == (*_gpio & GPIO_HDMITX_DETECT)) {
+		while(0 == (*_gpio & GPIO_HDMITX_DETECT))
+			;
+
+		// Wait for another 200ms or so
+		_zip->z_tmb = 20000000;
+		while(_zip->z_tmb)
+			;
 	}
 
+	*_spio = 0x0101;
+
+	// Read EDID
+	// {{{
 	txstr("HDMI output (monitor) detected.\n");
 	txstr("Attempting to read EDID.\n");
-	_edout->o_spd = 1000;
 
+	_edid->ic_address = (unsigned)get_edid_script;
+
+	while(0 == (_edid->ic_control & I2CC_STOPPED))
+		;
+	// }}}
+
+	*_spio = 0x0101;
+
+	// DUMP the EDID
+	// {{{
+	txstr("EDID:\n  ");
+	for(int k=0; k<256; k++) {
+		unsigned	v, hx;
+
+		v = _edidslv[k];
+		txstr("0x");
+
+		hx = (v >> 4) & 0x0f;
+		if (hx >= 10)
+			txchr(hx - 10 + 'A');
+		else
+			txchr(hx + '0');
+
+		hx = v & 0x0f;
+		if (hx >= 10)
+			txchr(hx - 10 + 'A');
+		else
+			txchr(hx + '0');
+		if (k == 255)
+			txchr('\n');
+		else if (0x0f == k & 0x0f)
+			txstr("\n  ");
+		else if (7 == k & 0x7)
+			txstr("  ");
+		else
+			txchr(' ');
+	}
+	// }}}
+
+	// EDID is automatically forwarded
+
+	// Assert the upstream hotplug
+	*_gpio = GPIO_HDMIRX_HPA_SET;
+	// Select 16b pixels (internally)
+	//	external video source
+	//	HDMI clock (comes externally)
+	_hdmi->v_control = 0x0661;	// External video source, HDMI clock
+
+	// Wait for the upstream video to be valid
+	while(0 == (_hdmi->v_control & 0x010000)) {
+		while(0 == (_hdmi->v_control & 0x010000))
+			;
+		// Wait for another 200ms or so
+		_zip->z_tmb = 20000000;
+		while(_zip->z_tmb)
+			;
+	}
+
+	/*
 	do {
 		for(int i=0; i<4; i++) {
 			_edout->o_cmd = READ_EDID((i<<6),(1<<6));
@@ -150,23 +203,14 @@ void entry(void) {
 			zip_halt();
 		}
 	} while(valid_edid == 0);
+	*/
 
-	txstr("Copying the EDID to the HDMI sink port\n");
-
-	for(int i=0; i<256/4; i++)
-		_edin[i] = _edout->o_data[i];
-
-	txstr("Enabling the HDMI sink port\n");
-	v = GPIO_HDMI_IN_HPA_SET
-		| GPIO_HDMI_IN_ENB_SET;
-	txstr("Setting GPIO to "); txhex(v); txstr("\n");
-	*_gpio = GPIO_HDMI_IN_HPA_SET
-		| GPIO_HDMI_IN_ENB_SET;
 	txstr("Enabling the HDMI source port\n");
-	v = GPIO_HDMI_OUT_EN_SET;
-	txstr("Setting GPIO to "); txhex(v); txstr("\n");
-	*_gpio = GPIO_HDMI_OUT_EN_SET;
+	*_gpio = GPIO_HDMITX_EN_SET;
+
 	txstr("\n\n* * All done! * *\n");
 	zip_halt();
+
+	return 0;
 #endif
 }

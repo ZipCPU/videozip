@@ -79,7 +79,7 @@ module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 	assign	w_eow    = (w_accept)&&(i_codword[35:30] == 6'h2e);
 	// assign	w_newrd  = (w_accept)&&(i_codword[35:34] == 2'b11);
 	wire	[31:0]	w_cod_data;
-	assign	w_cod_data={ i_codword[32:31], i_codword[29:0] }; 
+	assign	w_cod_data={ i_codword[32:31], i_codword[29:0] };
 	assign	w_new_err = ((w_accept)
 				&&(i_codword[35:33] != 3'h3)
 				&&(i_codword[35:30] != 6'h2e));
@@ -130,14 +130,14 @@ module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 			// starting a write.  Hence, let's always set it as
 			// though we were about to start a write.
 			//
-			o_wb_data <= w_cod_data; 
+			o_wb_data <= w_cod_data;
 			//
 			if (i_stb)
 			begin
 				// Default is not to send any codewords
 				// Do we need to broadcast a new address?
 				// r_new_addr <= 1'b0;
-				// 
+				//
 				casez(i_codword[35:32])
 				4'b0000: begin // Set a new (arbitrary) address
 					// r_new_addr <= 1'b1;
@@ -181,7 +181,7 @@ module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 			if (i_wb_err) // Bus Error
 				o_codword <= { 6'h5, i_wb_data[29:0] };
 			else // Read data on ack
-				o_codword <= { 3'h7, i_wb_data[31:30], r_inc, 
+				o_codword <= { 3'h7, i_wb_data[31:30], r_inc,
 					i_wb_data[29:0] };
 
 			if ((r_inc)&&(!i_wb_stall))
@@ -241,7 +241,7 @@ module	wbuexec(i_clk, i_rst, i_stb, i_codword, o_busy,
 			if (i_wb_err) // Bus error
 				o_codword <= { 6'h5, i_wb_data[29:0] };
 			else // Read data
-				o_codword <= { 3'h7, i_wb_data[31:30], r_inc, 
+				o_codword <= { 3'h7, i_wb_data[31:30], r_inc,
 					i_wb_data[29:0] };
 
 			// Return a read result, or (possibly) an error

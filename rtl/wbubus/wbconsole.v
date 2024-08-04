@@ -131,7 +131,7 @@ module	wbconsole(i_clk, i_rst,
 	assign	o_uart_rx_int = rxf_status[0];
 
 	// If the bus requests that we read from the receive FIFO, we need to
-	// tell this to the receive FIFO.  Note that because we are using a 
+	// tell this to the receive FIFO.  Note that because we are using a
 	// clock here, the output from the receive FIFO will necessarily be
 	// delayed by an extra clock.
 	initial	rxf_wb_read = 1'b0;
@@ -178,8 +178,8 @@ module	wbconsole(i_clk, i_rst,
 	// Unlike the receiver which goes from RXUART -> UFIFO -> WB, the
 	// transmitter basically goes WB -> UFIFO -> TXUART.  Hence, to build
 	// support for the transmitter, we start with the command to write data
-	// into the FIFO.  In this case, we use the act of writing to the 
-	// UART_TXREG address as our indication that we wish to write to the 
+	// into the FIFO.  In this case, we use the act of writing to the
+	// UART_TXREG address as our indication that we wish to write to the
 	// FIFO.  Here, we create a write command line, and latch the data for
 	// the extra clock that it'll take so that the command and data can be
 	// both true on the same clock.
@@ -214,7 +214,7 @@ module	wbconsole(i_clk, i_rst,
 	//	position within it.
 	assign	o_uart_tx_int = txf_status[0];
 	//	The second will be true any time the FIFO is less than half
-	//	full, allowing us a change to always keep it (near) fully 
+	//	full, allowing us a change to always keep it (near) fully
 	//	charged.
 	assign	o_uart_txfifo_int = txf_status[1];
 
@@ -239,28 +239,28 @@ module	wbconsole(i_clk, i_rst,
 	// This port is different from reading from the receive port, since
 	// there are no side effects.  (Reading from the receive port advances
 	// the receive FIFO, here only writing to the transmit port advances the
-	// transmit FIFO--hence the read values are free for ... whatever.)  
+	// transmit FIFO--hence the read values are free for ... whatever.)
 	// We choose here to provide information about the transmit FIFO
 	// (txf_err, txf_half_full, txf_full_n), information about the current
 	// voltage on the line (o_uart_tx)--and even the voltage on the receive
 	// line (ck_uart), as well as our current setting of the break and
 	// whether or not we are actively transmitting.
 	wire	[31:0]	wb_tx_data;
-	assign	wb_tx_data = { 16'h00, 
+	assign	wb_tx_data = { 16'h00,
 				1'b0, txf_status[1:0], txf_err,
 				1'b0, o_uart_stb, 1'b0,
 				(i_uart_busy|tx_empty_n),
 				1'b0,(i_uart_busy|tx_empty_n)?txf_wb_data:7'h0};
 
 	// Each of the FIFO's returns a 16 bit status value.  This value tells
-	// us both how big the FIFO is, as well as how much of the FIFO is in 
+	// us both how big the FIFO is, as well as how much of the FIFO is in
 	// use.  Let's merge those two status words together into a word we
 	// can use when reading about the FIFO.
 	wire	[31:0]	wb_fifo_data;
 	assign	wb_fifo_data = { txf_status, rxf_status };
 
 	// You may recall from above that reads take two clocks.  Hence, we
-	// need to delay the address decoding for a clock until the data is 
+	// need to delay the address decoding for a clock until the data is
 	// ready.  We do that here.
 	reg	[1:0]	r_wb_addr;
 	always @(posedge i_clk)

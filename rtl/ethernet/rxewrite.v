@@ -5,14 +5,14 @@
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	The purpose of this module is quite simple: to simplify the
-//		receive process.  By running the receive data through a 
+//		receive process.  By running the receive data through a
 //	series of "filter" processes (of which this is one), I hope to reduce
 //	the complexity of the filter design.  This particular filter determines
 //	if/when to write to memory, and at what address to write to.  Further,
 //	because nibbles come into the interface in LSB order, and because we
 //	are storing the first byte in the MSB, we need to shuffle bytes around
 //	in this interface.  Therefore, this interface is also design to make
-//	certain that, no matter how many bytes come in, we have always 
+//	certain that, no matter how many bytes come in, we have always
 //	written a complete word to the output.  Hence, each word may be
 //	written 8-times (once for each nibble) ... but that be as it may.
 //

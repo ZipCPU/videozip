@@ -369,7 +369,6 @@ int	SDSPISIM::operator()(const int csn, const int sck, const int mosi) {
 					// and start initialization sequence
 					assert((m_reset_state == SDSPI_RCVD_CMD8)||(m_reset_state == SDSPI_RCVD_ACMD41)||(m_reset_state == SDSPI_RESET_COMPLETE));
 					if((unsigned)m_powerup_busy>tRESET)
-						
 						m_powerup_busy = tRESET;
 					assert((arg&0x0bfffffff) == 0);
 					m_rspbuf[0] = (m_powerup_busy)?1:0;

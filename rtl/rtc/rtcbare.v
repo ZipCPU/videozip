@@ -60,7 +60,7 @@ module	rtcbare #(
 		// not valid BCD on a bytewise level.
 		parameter [0:0]	OPT_PREVALIDATED_INPUT = 1'b0
 		// }}}
-	) (	
+	) (
 		// {{{
 		input	wire		i_clk, i_reset,
 		// Wishbone interface

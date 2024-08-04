@@ -101,7 +101,6 @@ module	bigsmpy #(
 				o_r <= w_ua * w_ub;
 		end
 
-	
 	end else // if (NCLOCKS == 5)
 	begin : GEN_MULTICLOCK
 		//

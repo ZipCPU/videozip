@@ -227,7 +227,7 @@ ssize_t	UDPSOCKET::write(size_t len, const void *buf) const {
 		*/
 		nw = send(m_skt, buf, len, flags);
 	} else {
-		nw = sendto(m_skt, buf, len, flags, (struct sockaddr *)&m_addr, 
+		nw = sendto(m_skt, buf, len, flags, (struct sockaddr *)&m_addr,
 			sizeof(m_addr));
 	}
 	return nw;

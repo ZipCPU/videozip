@@ -583,7 +583,7 @@ module	wbi2cdma #(
 			assert(f_shifted[SW-1:0] == fc_data);
 	end else begin : GEN_BIG_ENDIAN_CONTRACT
 		always @(*)
-			f_shifted = o_dma_data << subaddr*SW; 
+			f_shifted = o_dma_data << subaddr*SW;
 
 		always @(posedge i_clk)
 		if (o_dma_stb && s_count == fc_count+1)

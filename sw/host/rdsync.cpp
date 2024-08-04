@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
 		printf("RD[%04x = %04x] = %08x\n", i*4+R_VIDPIPE, i, buf[i]);
 	}
 
- // 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync 
+ // 148.50 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync
 	printf("  %12s : %6.2f ", "ModeLine", (double)buf[1]/1.e6);
 	printf("%d %d %d %d ", (buf[4] &0x0ffff), buf[ 5] & 0x0ffff,
 		(buf[ 6]&0x0ffff), (buf[7] & 0x0ffff));

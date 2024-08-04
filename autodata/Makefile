@@ -60,7 +60,7 @@ SDCARD  := sdio.txt # sdspi.txt
 GFX     := hdmi.txt edid.txt wboledbw.txt
 SCOPES  := cpuscope.txt # sdscope.txt flashscope.txt mdioscope.txt
 CLOCKS  := allclocks.txt genclk.txt netclockctr.txt
-OTHER   := xdc.txt clkcounter.txt i2ccpu.txt # wbmouse.txt wbpmic.txt
+OTHER   := xdc.txt clkcounter.txt i2ccpu.txt wbrotary.txt # wbmouse.txt wbpmic.txt
 LDSCRIPT:= mem_bkram_only.txt mem_flash_bkram.txt
 DATA := $(CLOCKS) $(BASE) $(AUX) $(IO) $(RTC)				\
 	$(DBGBUS) $(MEMORY) $(CPU) $(NETWORK) $(GPS) $(SDCARD) $(GFX)	\

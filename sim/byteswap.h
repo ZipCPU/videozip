@@ -75,7 +75,7 @@ extern	void	byteswapbuf(int ln, uint32_t *buf);
  * Given a pointer within an array of characters, build a 32-bit big-endian
  * word from those characters.  Does not require the character pointer to be
  * aligned.
- */ 
+ */
 extern	uint32_t buildword(const unsigned char *p);
 
 /*

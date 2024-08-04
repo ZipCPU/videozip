@@ -89,7 +89,7 @@ module	exmkword #(
 		assign	sync = i_sync;
 	end endgenerate
 	// }}}
-	
+
 	// this_word, bytes_remaining
 	// {{{
 	initial	{ this_word, bytes_remaining } = 0;

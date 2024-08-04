@@ -95,7 +95,7 @@ module	hdmibchdec (
 			end
 		end
 		// }}}
-					
+
 		// 64b Single error correction
 		// {{{
 		for(ij=0; ij<64; ij=ij+1)
@@ -115,7 +115,7 @@ module	hdmibchdec (
 
 		// Zero errors always decodes to zero corrections
 		dec64[8'h0] = 56'h0;
-					
+
 
 		// 32b Dual error correction (to extent possible)
 		// {{{
@@ -139,7 +139,7 @@ module	hdmibchdec (
 			end
 		end
 		// }}}
-					
+
 		// 32b Single error correction
 		// {{{
 		for(ij=0; ij<32; ij=ij+1)

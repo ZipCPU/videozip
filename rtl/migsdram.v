@@ -45,7 +45,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 		o_ddr_reset_n, o_ddr_cke,
 		// o_ddr_cs_n,
 		o_ddr_ras_n, o_ddr_cas_n, o_ddr_we_n,
-		o_ddr_ba, o_ddr_addr, 
+		o_ddr_ba, o_ddr_addr,
 		o_ddr_odt, o_ddr_dm,
 		io_ddr_dqs_p, io_ddr_dqs_n,
 		io_ddr_data
@@ -55,7 +55,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 	parameter	DDRWIDTH = 16, WBDATAWIDTH=32;
 	parameter	AXIDWIDTH = 1;
 	// The SDRAM address bits (RAMABITS) are a touch more difficult to work
-	// out.  Here we leave them as a fixed parameter, but there are 
+	// out.  Here we leave them as a fixed parameter, but there are
 	// consequences to this.  Specifically, the wishbone data width, the
 	// wishbone address width, and this number have interactions not
 	// well captured here.

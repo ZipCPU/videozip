@@ -23,7 +23,7 @@
 //		set to 2^(RW/2) / (nominal clock rate), where RW is the register
 //		width used for our computations.  (64 is sufficient for up to
 //		4 GHz clock speeds, 56 is minimum for 100 MHz.)  Although
-//		RW is listed as a variable parameter, I have no plans to 
+//		RW is listed as a variable parameter, I have no plans to
 //		test values other than 64.  So your mileage might vary there.
 //
 //		Other parameters, alpha, beta, and gamma are specific to the
@@ -44,7 +44,7 @@
 //
 //	Wishbone bus
 //
-// Outputs:	
+// Outputs:
 //	o_led	No circuit would be complete without a properly blinking LED.
 //		This one blinks an LED at the top of the GPS 1PPS and the
 //		internal 1PPS.  When the two match, the LED will be on for
@@ -55,7 +55,7 @@
 //		is open (0) or closed (1).  Does not indicate performance.
 //
 //	o_count		A counter, from zero to 2^RW-1, indicating the position
-//		of the current clock within a second.  (This'll be off by 
+//		of the current clock within a second.  (This'll be off by
 //		two clocks due to internal latencies.)
 //
 //	o_step		The amount the counter, o_count, is stepped each clock.
@@ -144,7 +144,7 @@ module	gpsclock #(
 	//
 	// Configuration variables.  These control the loop bandwidth, the speed
 	// of convergence, the speed of adaptation to changes, and more.  If
-	// you adjust these outside of what the specification recommends, 
+	// you adjust these outside of what the specification recommends,
 	// be careful that the control loop still synchronizes!
 	reg			new_config;
 	reg	[5:0]		r_alpha;
@@ -276,11 +276,11 @@ module	gpsclock #(
 		o_wb_ack <= i_wb_stb;
 
 	assign	o_wb_stall = 1'b0;
-	
+
 
 	//
 	//
-	// Deal with the realities of an unsynchronized 1PPS signal: 
+	// Deal with the realities of an unsynchronized 1PPS signal:
 	// register it with two flip flops to avoid metastability issues.
 	// Create a 'tick' variable to note the top of a second.
 	//
@@ -445,7 +445,7 @@ module	gpsclock #(
 
 
 	bigadd	getnewstep(i_clk, 1'b0, o_step,
-			{ { (HRW-1){step_correction_plus_carry[HRW]} }, 
+			{ { (HRW-1){step_correction_plus_carry[HRW]} },
 				step_correction_plus_carry},
 			new_step, w_step_correct_unused);
 
@@ -468,7 +468,7 @@ module	gpsclock #(
 		else if (delay_step_clk)
 			{ delayed_carry, delayed_step } <= delayed_step
 					+ delayed_step_correction;
-		
+
 
 
 	//
@@ -518,7 +518,7 @@ module	gpsclock #(
 
 	// On some architectures, adding and subtracting 64'bit number cannot
 	// be done in a single clock tick.  On these architectures, we may
-	// take a couple clocks.  Here, the "bigsub" module captures what it 
+	// take a couple clocks.  Here, the "bigsub" module captures what it
 	// takes to subtract 64-bit numbers.
 	//
 	// Either way, here we subtract our error from our filtered_err.  This
@@ -528,7 +528,7 @@ module	gpsclock #(
 			filtered_err, filter_sub_count, sub_tick);
 
 	//
-	// This shouldn't be required: We only want to shift our 
+	// This shouldn't be required: We only want to shift our
 	// filter_sub_count by r_alpha bits, why the extra struggles?
 	// Why is because Verilator decides that these values are unsigned,
 	// and so despite being told that they are signed values, verilator
@@ -573,7 +573,7 @@ module	gpsclock #(
 		r_mpy_err <= (config_filter_errors) ? r_filtered_err : o_err;
 
 	// Okay, so we've gone from our original tick to the err_tick, the
-	// sub_tick, the shift_tick, and now the fltr_tick. 
+	// sub_tick, the shift_tick, and now the fltr_tick.
 	//
 	// We want to multiply our filtered error by one of two constants.
 	// Here, we set up those constants.  We use the fltr_tick as a strobe,
@@ -642,13 +642,13 @@ module	gpsclock #(
 	// by pre_count_correction.  When we add this to the counter, we'll
 	// need to add the step to it as well.  To help timing out with 64-bit
 	// math, let's do that step+correction math here, so that we can later
-	// do 
+	// do
 	//	counts = counts + count_correction
 	// instead of
 	//	counts = counts + step + pre_count_correction
 	// saves us one addition--especially since we have the clock to do this.
 	wire	count_correction_strobe;
-	bigadd	ccounts(i_clk, mpy_sync_two, o_step, pre_count_correction, 
+	bigadd	ccounts(i_clk, mpy_sync_two, o_step, pre_count_correction,
 			count_correction, count_correction_strobe);
 
 	// Our original plan was to apply this correction at the top of the
@@ -656,7 +656,7 @@ module	gpsclock #(
 	// correction being applied before the top of the second error gets
 	// measured.  Hence, we'll apply it at some time mid-second, not
 	// long after the error is measured (w/in 16 clocks or so), and never
-	// notice the difference until the top of the next second where it 
+	// notice the difference until the top of the next second where it
 	// now appears to have properly taken place.
 	always @(posedge i_clk)
 		if (count_correction_strobe)

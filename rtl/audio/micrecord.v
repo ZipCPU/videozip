@@ -388,7 +388,7 @@ module	micrecord #(
 	/*
 	wire	smoke;
 
-	udpsmokedet 
+	udpsmokedet
 	u_smoke (
 		.S_AXI_ACLK(S_AXI_ACLK), .S_AXI_ARESETN(S_AXI_ARESETN),
 		.S_AXIN_VALID(M_UDP_VALID),

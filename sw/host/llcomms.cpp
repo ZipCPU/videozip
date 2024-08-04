@@ -51,11 +51,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h> 
-#include <assert.h> 
-#include <strings.h> 
-#include <poll.h> 
-#include <ctype.h> 
+#include <arpa/inet.h>
+#include <assert.h>
+#include <strings.h>
+#include <poll.h>
+#include <ctype.h>
 
 #include "llcomms.h"
 
@@ -135,15 +135,15 @@ TTYCOMMS::TTYCOMMS(const char *dev) {
 }
 
 NETCOMMS::NETCOMMS(const char *host, const int port) {
-	struct sockaddr_in serv_addr; 
+	struct sockaddr_in serv_addr;
 	struct	hostent	*hp;
 
 	if ((m_fdr = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		printf("\n Error : Could not create socket \n");
 		exit(-1);
-	} 
+	}
 
-	memset(&serv_addr, '0', sizeof(serv_addr)); 
+	memset(&serv_addr, '0', sizeof(serv_addr));
 
 	hp = gethostbyname(host);
 	if (hp == NULL) {
@@ -154,12 +154,12 @@ NETCOMMS::NETCOMMS(const char *host, const int port) {
 	bcopy(hp->h_addr, &serv_addr.sin_addr.s_addr, hp->h_length);
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(port); 
+	serv_addr.sin_port = htons(port);
 
 	if (connect(m_fdr,(struct sockaddr *)&serv_addr, sizeof(serv_addr))< 0){
 		perror("Connect Failed Err");
 		exit(-1);
-	} 
+	}
 
 	m_fdw = m_fdr;
 }

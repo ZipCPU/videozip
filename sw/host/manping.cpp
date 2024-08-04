@@ -241,7 +241,7 @@ int main(int argc, char **argv) {
 				printf("Could not generate random numbers from /dev/urandom!\nTest may not be valid.\n");
 		}
 	}
-			
+
 
 	FPGAOPEN(m_fpga);
 
@@ -369,7 +369,7 @@ int main(int argc, char **argv) {
 
 		m_fpga->writeio(R_NET_MACHI, (smac[0]<<8)|(smac[1]));
 		m_fpga->writeio(R_NET_MACLO, (smac[2]<<24)|(smac[3]<<16)|(smac[4]<<8)|(smac[5]));
-			
+
 		// Now, let's rebuild our packet for the non-hw-mac option,
 		// now that we know the CRC.  In general, we're just going
 		// to copy the packet we created earlier, but we need to

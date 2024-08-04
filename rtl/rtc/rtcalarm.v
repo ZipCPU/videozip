@@ -240,7 +240,7 @@ module	rtcalarm #(
 			`ASSUME(i_alarm_time[11: 8] <= 4'h9);
 			`ASSUME(i_alarm_time[15:12] <= 4'h5);
 		end
-	
+
 		always @(*)
 		if (pre_valid[2])
 		begin

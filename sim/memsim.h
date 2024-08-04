@@ -49,7 +49,7 @@
 #include <stdint.h>
 
 class	MEMSIM {
-public:	
+public:
 	typedef	unsigned int	BUSW;
 	typedef	unsigned char	uchar;
 	static const int	NWRDWIDTH;

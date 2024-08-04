@@ -53,7 +53,7 @@
 // #define	UDP_DBGPORT
 // #define	UDP_DATAPORT
 
-	
+
 class	NETSIM {
 	UDPSOCKET		*m_dbgskt, *m_dataskt;
 	struct sockaddr_in	udp_srcaddr;

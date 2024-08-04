@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 				printf("\n");
 		} printf("sCC : 0x%08x ", r[14]);
 		printf("sPC : 0x%08x ", r[15]);
-		printf("\n\n"); 
+		printf("\n\n");
 
 		for(int i=0; i<14; i++) {
 			printf("uR%-2d: 0x%08x ", i, r[i+16]);
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 				printf("\n");
 		} printf("uCC : 0x%08x ", r[30]);
 		printf("uPC : 0x%08x ", r[31]);
-		printf("\n\n"); 
+		printf("\n\n");
 	}
 
 	delete	m_fpga;

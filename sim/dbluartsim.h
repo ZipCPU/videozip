@@ -110,7 +110,7 @@ public:
 	// be connected to the the rxuart receive wire into the device.  This
 	// makes hookup and operation very simple.
 	//
-	// This is the most appropriate simulation entry function if the 
+	// This is the most appropriate simulation entry function if the
 	// setup register will never change.
 	//
 	int	operator()(int i_tx) {
@@ -126,11 +126,11 @@ public:
 	//
 	// setup() busts out the bits from isetup to the various internal
 	// parameters.  It is ideally only called between bits at appropriate
-	// transition intervals. 
+	// transition intervals.
 	void	setup(unsigned isetup);
 	// We'll use the file descriptor for the listener socket to determine
 	// whether we are connected to the network or not.  If not connected
-	// to the network, then we assume m_conrd and m_conwr refer to 
+	// to the network, then we assume m_conrd and m_conwr refer to
 	// your more traditional file descriptors, and use them as such.
 	int	tick(const int i_tx);
 

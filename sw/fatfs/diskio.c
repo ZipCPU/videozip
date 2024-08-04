@@ -45,7 +45,7 @@
 #include "sdiodrv.h"
 #include "diskiodrvr.h"
 
-#define	STDIO_DEBUG
+// #define	STDIO_DEBUG
 #include "zipcpu.h"
 
 #ifdef	STDIO_DEBUG

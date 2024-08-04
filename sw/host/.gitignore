@@ -12,6 +12,8 @@ exuart
 flashid
 flashscope
 gpscoeffs
+i2casm
+lex.yy.c
 manping
 mdioscope
 mkedid

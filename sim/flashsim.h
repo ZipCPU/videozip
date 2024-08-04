@@ -145,7 +145,7 @@ public:
 		return;}
 	int	operator()(const int csn, const int sck, const int dat);
 
-	// simtick applies various programmable delays to the inputs in 
+	// simtick applies various programmable delays to the inputs in
 	// order to determine the outputs.  It's primary purpose is to
 	// support an ODDR based clock (and or other) components.
 	int	simtick(const int csn, const int sck, const int dat,

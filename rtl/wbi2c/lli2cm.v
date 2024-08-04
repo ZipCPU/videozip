@@ -155,13 +155,13 @@ module lli2cm(i_clk, i_clocks, i_cyc, i_stb, i_we, i_data,
 		begin
 			clock <= clocks_per_tick;
 			zclk <= 1'b0;
-		end else begin	
+		end else begin
 			clock <= clock - 1'b1;
 			zclk <= (clock == 1);
 		end
 
 	initial	state  = `I2CMIDLE;
-	initial	o_ack  = 1'b0;		
+	initial	o_ack  = 1'b0;
 	initial	o_busy = 1'b0;
 	initial	r_cyc  = 1'b1;
 	initial	nbits  = 3'h0;
@@ -184,7 +184,7 @@ module lli2cm(i_clk, i_clocks, i_cyc, i_stb, i_we, i_data,
 				o_scl <= 1'b1;
 				if ((i_stb)&&(!o_busy)) begin
 					r_data <= i_data;
-					r_we   <= i_we; 
+					r_we   <= i_we;
 					nbits  <= 0;
 					state  <= `I2CMSTART;
 					o_sda  <= 1'b0;

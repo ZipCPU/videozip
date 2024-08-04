@@ -61,7 +61,7 @@ void	ENETCTRLSIM::write(unsigned addr, unsigned short v) {
 	// {{{
 	switch(addr & 0x01f) {
 	case 2: case 3: break;	// Read-only PHY-ID registers
-	default: 
+	default:
 		m_mem[addr] = v & 0x0ffff;
 		break;
 	}

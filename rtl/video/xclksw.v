@@ -63,6 +63,8 @@ module	xclksw #(
 	reg		hard_0, hard_1, r_sel;
 	// }}}
 
+	// o_clk = (i_clk_sel == 0) ? i_ck0 : i_ck1
+
 	BUFGCTRL #(
 		// {{{
 		.INIT_OUT(1'b0),

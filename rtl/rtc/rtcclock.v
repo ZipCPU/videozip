@@ -423,7 +423,7 @@ module	rtcclock #(
 	// Otherwise, 256 times a second, add 11 to an 18 bit counter.
 	else if (ck_carry)
 		ledreg <= ledreg + 18'h11;
-	
+
 	// The top 8 bits of this counter will form our LED setting.
 	// Since the Basys3 board has two sets of LED's, we inverse the bottom
 	// set for a pretty display.

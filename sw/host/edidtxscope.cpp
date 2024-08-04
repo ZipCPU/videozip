@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
 		printf("Scope is not yet ready: (%08x->%08x)\n", WBSCOPE, m_fpga->readio(WBSCOPE));
 		scope->decode_control();
 	} else {
-		// The scope has been primed, triggered, the holdoff wait 
+		// The scope has been primed, triggered, the holdoff wait
 		// period has passed, and the scope has now stopped.
 		//
 		// Hence we can read from our scope the values we need.

@@ -5,7 +5,7 @@
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	This was once a FIFO for a UART ... but now it works as a
-//		synchronous FIFO for JTAG-wishbone conversion 36-bit codewords. 
+//		synchronous FIFO for JTAG-wishbone conversion 36-bit codewords.
 //
 //
 // Creator:	Dan Gisselquist, Ph.D.

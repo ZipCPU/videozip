@@ -82,18 +82,29 @@ typedef	uint32_t DWORD, LBA_t, UINT;
 #include "zipcpu.h"
 #include "sdiodrv.h"
 
+// tx* -- debugging output functions
+// {{{
+// Debugging isn't quite as simple as using printf(), since I want to guarantee
+// that I can still compile and build this into a memory that isn't large enough
+// to hold a printf function.  The txstr(), txchr(), and txhex() functions fit
+// that low memory footprint need.  For cases where these are not sufficient,
+// we use the STDIO_DEBUG flag to determine if the regular ?rintf() functions
+// are available.
 #ifndef	TXFNS_H
 #include <stdio.h>
 
 #define	txchr(A)		putchar(A)
-#define	txstr(A)		printf("%s",A)
+#define	txstr(A)		puts(A)
 #define	txhex(A)		printf("%08x", A)
 #define	txdecimal(A)		printf("%d", A)
+#define	STDIO_DEBUG
 #else
 // extern	void	txstr(const char *);
 // extern	void	txhex(unsigned);
 // extern	void	txdecimal(int);
+#define	printf(...)
 #endif
+// }}}
 
 static	const int	SDINFO=0, SDDEBUG=0, SDEXTDMA=0;
 
@@ -1220,8 +1231,9 @@ SDIODRV *sdio_init(SDIO *dev) {
 	RELEASE_MUTEX;
 
 	if (SDDEBUG) {
-		printf("Block size:   %d\n", dv->d_block_size);
-		printf("Sector count: %d\n", dv->d_sector_count);
+		txstr("Block size:   "); txdecimal(dv->d_block_size);
+		txstr("\nSector count: "); txdecimal(dv->d_sector_count);
+		txstr("\n");
 	}
 
 	return	dv;
@@ -1366,11 +1378,11 @@ int	sdio_write(SDIODRV *dev, const unsigned sector,
 
 	if (dev_stat & (SDIO_ERR|SDIO_REMOVED|SDIO_RXERR)) {
 		if (SDDEBUG)
-			printf("SDIO-WRITE -> ERR\n");
+			txstr("SDIO-WRITE -> ERR\n");
 		return	RES_ERROR;
 	} else if (card_stat & SDIO_R1ERR) {
 		if (SDDEBUG)
-			printf("SDIO-WRITE -> R1 ERR\n");
+			txstr("SDIO-WRITE -> R1 ERR\n");
 		return	RES_ERROR;
 	} return RES_OK;
 }
@@ -1397,8 +1409,10 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 	}
 
 	if (SDDEBUG) {
+#ifdef	STDIO_DEBUG
 		printf("SDIO-READ.M(%08x, %08x, %08x): [DEV %08x]\n",
 			sector, count, buf, dev->d_dev->sd_cmd);
+#endif
 	}
 
 	GRAB_MUTEX;
@@ -1506,14 +1520,17 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 	} else if (dev_stat & (SDIO_ERR|SDIO_REMOVED)) {
 		TRIGGER_SCOPE;
 		err = 1;
-		if (SDDEBUG)
-			printf("\tSDIO-ERR: %08x:%08x\n", dev_stat, card_stat);
+		if (SDDEBUG) {
+			txstr("\tSDIO-ERR: ");
+			txhex(dev_stat); txstr(":");
+			txhex(card_stat); txstr("\n");
+		}
 		// If the stop transmission command didn't receive
 		// a proper response, return an error status
 	} else if (card_stat & SDIO_R1ERR) {
 		TRIGGER_SCOPE;
 		if (SDDEBUG)
-			printf("\tR1-ERR\n");
+			txstr("\tR1-ERR\n");
 		// If the card has an error, return an error status
 		err = 1;
 	}
@@ -1521,7 +1538,7 @@ int	sdio_read(SDIODRV *dev, const unsigned sector,
 	if (err) {
 		TRIGGER_SCOPE;
 		if (SDDEBUG)
-			printf("SDIO-READ -> ERR\n");
+			txstr("SDIO-READ -> ERR\n");
 		return RES_ERROR;
 	} return RES_OK;
 }

@@ -10,7 +10,7 @@
 //	1. Turning our incoming clocks from double ended to single ended via
 //		a Xilinx IBUFDS.
 //	2. Selecting from among three clocks for our pixel clock.  The pixel
-//		clock will therefore be one of: 1) an internal 40MHz reference,
+//		clock will therefore be one of: 1) an internal 80MHz reference,
 //		2) an external reference from some frequency generator (not
 //		present on the Nexys Video), or 3) an external reference from
 //		an external/incoming HDMI RX port.
@@ -61,6 +61,10 @@ module	xpxclk #(
 		input	wire		i_hdmirx_clk_p, i_hdmirx_clk_n,
 		input	wire		i_lcl_pixclk,
 		input	wire		i_siclk,
+		// i_cksel == 2'b00	// Local clock
+		// i_cksel == 2'b01	// Externally generated clock
+		// i_cksel == 2'b10	// Incoming HDMI receive clock
+		// i_cksel == 2'b11	(Reserved)
 		input	wire	[1:0]	i_cksel,
 		output	wire		o_hdmick_locked,
 		output	wire		o_hdmirx_clk,
@@ -106,7 +110,7 @@ module	xpxclk #(
 
 	PLLE2_BASE #(
 		// {{{
-		.CLKFBOUT_MULT(20),
+		.CLKFBOUT_MULT(10),
 		.CLKFBOUT_PHASE(0.0),
 		.CLKIN1_PERIOD(6.6),	// Up to 200MHz input
 		.CLKOUT0_DIVIDE(10),

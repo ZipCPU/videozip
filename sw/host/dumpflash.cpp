@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
 	char	*buf = new char[FLASHLEN];
 
 	m_fpga = connect_devbus(NULL);
-	fprintf(stderr, "Before starting, nread = %ld\n", 
+	fprintf(stderr, "Before starting, nread = %ld\n",
 		m_fpga->m_total_nread);
 
 	// Start with testing the version:
@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
 			DEVBUS::BUSW	word;
 
 			word = m_fpga->readio(DUMPMEM+i);
-			
+
 			buf[i  ] = (word>>24) & 0x0ff;
 			buf[i+1] = (word>>16) & 0x0ff;
 			buf[i+2] = (word>> 8) & 0x0ff;

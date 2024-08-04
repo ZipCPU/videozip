@@ -145,3 +145,7 @@
 @RTL.MAKE.FILES=wbi2cslave.v
 @RTL.MAKE.GROUP=I2CSLV
 @RTL.MAKE.SUBD=wbi2c
+@BDEF.IONAME=_@$(PREFIX)
+@BDEF.IOTYPE=char
+@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$[0x%08x](REGBASE));
+
