@@ -380,6 +380,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_
 ## No XDC.INSERT tag in zip_alt_uic
 ## No XDC.INSERT tag in zip_alt_mpc
 ## No XDC.INSERT tag in cfg
+## No XDC.INSERT tag in vidscope
 ## No XDC.INSERT tag in KEYS
 ## No XDC.INSERT tag in RESET_ADDRESS
 ## No XDC.INSERT tag in iclock

@@ -101,6 +101,9 @@ module	vidpipe #(
 		output	wire	[14:0]	o_iodelay,
 		input	wire	[14:0]	i_iodelay,
 		output	reg		o_interrupt,
+		//
+		output	reg		o_dbg_ce,
+		output	reg		o_dbg_trigger,
 		output	reg	[31:0]	o_pixdebug
 		// }}}
 	);
@@ -281,10 +284,14 @@ module	vidpipe #(
 	wire		hin_syncpol, vin_syncpol;
 	wire		hin_syncpol_sys, vin_syncpol_sys;
 
-	reg	[1:0]	dbg_sel_sys;
-	wire	[1:0]	dbg_sel;
+	reg	[2:0]	dbg_sel_sys;
+	wire	[2:0]	dbg_sel;
 	// Verilator lint_off UNUSED
 	wire	[31:0]	src_debug, tx_debug, alph_debug, pip_debug, vga_debug;
+
+	wire		di_dbg_ce, di_dbg_trigger, di_alt_valid;
+	wire	[31:0]	di_debug, di_alt_debug;
+
 	// Verilator lint_on  UNUSED
 
 	wire		ipkt_valid, ipkt_hdr, ipkt_last;
@@ -474,7 +481,7 @@ module	vidpipe #(
 				if (i_wb_sel[3])
 					iodelay_request_sys[14:10]<=i_wb_data[24+:5];
 				if (i_wb_sel[3])
-					dbg_sel_sys <= i_wb_data[31:30];
+					dbg_sel_sys <= i_wb_data[31:29];
 				end
 				// }}}
 			ADR_CAPTURE: begin
@@ -661,7 +668,7 @@ module	vidpipe #(
 				pre_wb_data[ 8 +: 5] <= iodelay_actual_sys[ 4: 0];
 				pre_wb_data[16 +: 5] <= iodelay_actual_sys[ 9: 5];
 				pre_wb_data[24 +: 5] <= iodelay_actual_sys[14:10];
-				pre_wb_data[31:30] <= dbg_sel_sys;
+				pre_wb_data[31:29] <= dbg_sel_sys;
 			end
 			// }}}
 		ADR_CAPTURE: begin
@@ -905,7 +912,7 @@ module	vidpipe #(
 	);
 
 	tfrvalue #(
-		.W(LGDIM*11+3+4+15+2+2)
+		.W(LGDIM*11+3+4+15+2+3)
 	) u_sys2px (
 		// {{{
 		.i_a_clk(i_clk), .i_a_reset_n(!pix_reset_sys),
@@ -1664,7 +1671,8 @@ module	vidpipe #(
 		wire		pktdec_valid, pktdec_hdr, pktdec_last;
 		wire	[7:0]	pktdec_data;
 
-		wire		di_valid, di_ready, di_last;
+		wire		di_valid, di_ready, di_last,
+				ign_dicap_ready;
 		wire	[7:0]	di_data;
 
 		hdmibchdec
@@ -1718,6 +1726,30 @@ module	vidpipe #(
 			// }}}
 		);
 
+		vid_dicap
+		u_dicap (
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.S_VALID(pktdec_valid),
+			.S_READY(ign_dicap_ready),
+			.S_DATA( pktdec_data),
+			.S_LAST( pktdec_last),
+			//
+			.o_vld(di_dbg_ce),
+			.o_debug(di_debug),
+			.o_last(di_dbg_trigger)
+		);
+
+		assign	di_alt_valid = di_valid || pktdec_valid || ipkt_valid;
+		assign	di_alt_debug = { opkt_valid,
+				di_valid && di_ready, di_last, di_data,	// 10b
+				pktdec_valid, pktdec_last, pktdec_data, // 10b
+				ipkt_valid, ipkt_hdr, ipkt_last, ipkt_data // 11
+				};
+
+		// Verilator lint_off UNUSED
+		wire	unused_di;
+		assign	unused_di = &{ 1'b0, ign_dicap_ready };
+		// Verilator lint_on  UNUSED
 		// }}}
 	end else begin : NO_DATA_ISLAND_SUPPORT
 		// {{{
@@ -1725,6 +1757,14 @@ module	vidpipe #(
 		assign	opkt_hdr   = 1'b0;
 		assign	opkt_data  = 8'h0;
 		assign	opkt_last  = 1'b0;
+
+		assign	di_dbg_ce = 1'b1;
+		assign	di_dbg_trigger = 1'b1;
+		assign	di_debug = 32'h0;
+
+
+		assign	di_alt_valid = 1'b1;
+		assign	di_alt_debug = 32'h0;
 
 		// Keep Verilator happy
 		// {{{
@@ -1785,10 +1825,15 @@ module	vidpipe #(
 
 	always @(posedge i_pixclk)
 	case(dbg_sel)
-	2'b00:	o_pixdebug <= src_debug;
-	2'b01:	o_pixdebug <= alph_debug;
-	2'b10:	o_pixdebug <= pip_debug;
-	2'b11:	o_pixdebug <= tx_debug;
+	3'b000:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, src_debug[31],  src_debug };
+	3'b001:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, alph_debug[31], alph_debug };
+	3'b010:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, pip_debug[31],  pip_debug };
+	3'b011:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31],   tx_debug };
+	3'b100:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
+	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
+			{ di_alt_valid, di_alt_valid, di_alt_debug };
+	default:
+		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31], tx_debug };
 	endcase
 
 	// Keep Verilator happy

@@ -198,6 +198,7 @@
 `ifdef	VERILATOR
 	wire		i_hdmiclk;
 `endif
+	wire		hdmidbg_ce, hdmidbg_trigger;
 	wire	[31:0]	hdmiclr_debug;
 	// Verilator lint_on  UNUSED
 @MAIN.INSERT=
@@ -230,6 +231,8 @@
 		.i_iodelay(i_hdmi_iodelay),
 		.o_interrupt(@$(INT.VIDFRAME.WIRE)),
 		//
+		.o_dbg_ce(hdmidbg_ce),
+		.o_dbg_trigger(hdmidbg_trigger),
 		.o_pixdebug(hdmiclr_debug)
 	);
 
