@@ -502,7 +502,7 @@ module	vidpipe #(
 				// cfg_capen <= (&i_wb_sel)
 				//		&& (i_wb_data[WBLSB +: AW]!=0);
 				if (&i_wb_sel)
-					cfg_capbase <= i_wb_data[WBLSB +: AW];;
+					cfg_capbase <= i_wb_data[WBLSB +: AW];
 				end
 			ADR_CAPWORDS: begin
 				if (&i_wb_sel)

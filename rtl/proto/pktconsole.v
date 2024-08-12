@@ -133,6 +133,13 @@ module pktconsole #(
 
 	// Local declarations
 	// {{{
+	localparam	[2:0]	FSM_IDLE  = 3'b000,
+				// FSM_PREFIX= 3'b001,
+				FSM_POSN1 = 3'b001,
+				FSM_POSN2 = 3'b010,
+				FSM_POSN3 = 3'b011,
+				FSM_DATA  = 3'b100;
+
 	wire			skd_valid, skd_ready;
 	wire	[7:0]		skd_data;
 
@@ -298,12 +305,6 @@ module pktconsole #(
 	//
 	// Assemble the packet
 	// {{{
-	localparam	[2:0]	FSM_IDLE  = 3'b000,
-				// FSM_PREFIX= 3'b001,
-				FSM_POSN1 = 3'b001,
-				FSM_POSN2 = 3'b010,
-				FSM_POSN3 = 3'b011,
-				FSM_DATA  = 3'b100;
 
 	// rdptr
 	// {{{

@@ -380,7 +380,15 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_
 ## No XDC.INSERT tag in zip_alt_uic
 ## No XDC.INSERT tag in zip_alt_mpc
 ## No XDC.INSERT tag in cfg
-## No XDC.INSERT tag in vidscope
+## From vidscope
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/br_config*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/GEN_ASYNC.q_*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/br_holdoff*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/dr_stopped*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/o_pixdebug*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/o_bus_data*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/waddr*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/this_addr*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_triggered*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_stopped*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_primed*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/GEN_ASYNC.r_reset_complete*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/GEN_ASYNC.q_reset_complete*}] 5.0
 ## No XDC.INSERT tag in KEYS
 ## No XDC.INSERT tag in RESET_ADDRESS
 ## No XDC.INSERT tag in iclock

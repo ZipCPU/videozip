@@ -2521,7 +2521,6 @@ module	main(i_clk, i_reset,
 		.o_interrupt(vidscope_int)
 		// }}}
 	);
-
 	// }}}
 `else	// VIDSCOPE_SCOPE
 	// {{{

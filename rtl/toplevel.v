@@ -368,8 +368,8 @@ i_sd_cd_n,
 		netclk_locked, netclk_feedback, netclk_feedback_buffered;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
-	reg	[3:0]	sysclk_stable,
-			upper_plls_stable;
+	wire	dly_ctrl_ready;
+	reg	[3:0]	sysclk_stable, syncd_stable;
 	reg	[4:0]	pll_reset_sreg;
 	reg		pll_reset;
 	// }}}
@@ -532,8 +532,10 @@ i_sd_cd_n,
 
 	// }}}
 
-	assign	o_led = { w_led[8-1:2], (w_led[1] || !clocks_locked),
-			w_led[0] | s_reset };
+	assign	o_led = { w_led[8-1:3],
+			(w_led[2] || !syncd_stable[3]),
+			(w_led[1] || !clocks_locked),
+			(w_led[0] || s_reset) };
 
 	// RGMII control
 	// {{{
@@ -879,7 +881,7 @@ i_sd_cd_n,
 		.i_clk_200mhz(s_clk_200mhz),
 		.o_sys_clk(s_clk),
 		// .i_rst(!i_cpu_resetn),
-		.i_rst(upper_plls_stable[3:2] != 2'b11),
+		.i_rst(!syncd_stable[3]),
 		.o_sys_reset(s_reset),
 		//
 		.i_wb_cyc(sdram_cyc), .i_wb_stb(sdram_stb),
@@ -994,7 +996,26 @@ i_sd_cd_n,
 	BUFG	netbf5(.I(s_clk_250_unbuffered), .O(s_clk_250mhz));
 	BUFG	netfb(.I(netclk_feedback), .O(netclk_feedback_buffered));
 
-	assign	clocks_locked = (netclk_locked && sysclk_locked);
+	assign	clocks_locked = (netclk_locked && sysclk_locked && dly_ctrl_ready);
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// reg	[3:0]	sysclk_stable;
+	// {{{
+	initial	sysclk_stable = 0;
+	always @(posedge i_clk_buffered or negedge clocks_locked)
+	if (!clocks_locked)
+		sysclk_stable <= 0;
+	else
+		sysclk_stable <= { sysclk_stable[2:0], 1'b1 };
+
+	initial	syncd_stable = 0;
+	always @(posedge i_clk_buffered)
+	if (!sysclk_stable[3])
+		syncd_stable <= 0;
+	else
+		syncd_stable <= { syncd_stable[2:0], 1'b1 };
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -1003,8 +1024,8 @@ i_sd_cd_n,
 	IDELAYCTRL
 	u_delay_control (
 		.REFCLK(s_clk_200mhz),
-		.RST(pll_reset),
-		.RDY()
+		.RST(!sysclk_locked),
+		.RDY(dly_ctrl_ready)
 	);
 
 

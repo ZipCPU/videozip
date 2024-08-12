@@ -63,8 +63,8 @@
 		netclk_locked, netclk_feedback, netclk_feedback_buffered;
 	wire	i_clk_buffered;
 	wire	clocks_locked;
-	reg	[3:0]	sysclk_stable,
-			upper_plls_stable;
+	wire	dly_ctrl_ready;
+	reg	[3:0]	sysclk_stable, syncd_stable;
 	reg	[4:0]	pll_reset_sreg;
 	reg		pll_reset;
 	// }}}
@@ -167,7 +167,26 @@
 	BUFG	netbf5(.I(s_clk_250_unbuffered), .O(s_clk_250mhz));
 	BUFG	netfb(.I(netclk_feedback), .O(netclk_feedback_buffered));
 
-	assign	clocks_locked = (netclk_locked && sysclk_locked);
+	assign	clocks_locked = (netclk_locked && sysclk_locked && dly_ctrl_ready);
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// reg	[3:0]	sysclk_stable;
+	// {{{
+	initial	sysclk_stable = 0;
+	always @(posedge i_clk_buffered or negedge clocks_locked)
+	if (!clocks_locked)
+		sysclk_stable <= 0;
+	else
+		sysclk_stable <= { sysclk_stable[2:0], 1'b1 };
+
+	initial	syncd_stable = 0;
+	always @(posedge i_clk_buffered)
+	if (!sysclk_stable[3])
+		syncd_stable <= 0;
+	else
+		syncd_stable <= { syncd_stable[2:0], 1'b1 };
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -176,8 +195,8 @@
 	IDELAYCTRL
 	u_delay_control (
 		.REFCLK(s_clk_200mhz),
-		.RST(pll_reset),
-		.RDY()
+		.RST(!sysclk_locked),
+		.RDY(dly_ctrl_ready)
 	);
 
 @MAIN.PORTLIST=

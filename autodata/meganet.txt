@@ -317,7 +317,7 @@ typedef struct ENETSTREAM_S {
 @RTL.MAKE.FILES= enetstream.v
         addecrc.v addemac.v addepad.v addepreamble.v
         rxecrc.v rxehwmac.v rxeipchk.v rxemin.v rxepacket.v rxepreambl.v
-	stream2pkt.v txespeed.v xiddr.v xoddr.v strmmerge.v pkt2wide.v
+	stream2pkt.v txespeed.v xiddr.v xoddr.v pkt2wide.v
 @CLOCK.NAME=@$(PREFIX)_rx_clk
 @$CLOCK.FREQUENCY=125000000
 @SIM.CLOCK=@$(PREFIX)_rx_clk

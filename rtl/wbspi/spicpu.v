@@ -760,7 +760,7 @@ module	spicpu #(
 
 	// Offers a simple bit-banging interface, should it be required
 	generate if (OPT_MANUAL)
-	begin : GEN_MANUAL;
+	begin : GEN_MANUAL
 		// {{{
 		reg			r_manual, r_sck, r_mosi;
 		reg	[NCE-1:0]	r_csn;
