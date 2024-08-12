@@ -389,6 +389,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vi
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_stopped*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_primed*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/GEN_ASYNC.r_reset_complete*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/GEN_ASYNC.q_reset_complete*}] 5.0
+## No XDC.INSERT tag in spiscope
 ## No XDC.INSERT tag in KEYS
 ## No XDC.INSERT tag in RESET_ADDRESS
 ## No XDC.INSERT tag in iclock

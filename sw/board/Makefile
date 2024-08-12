@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd hdmistart
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd hdmistart logo
 all:	$(PROGRAMS)
 #
 #
@@ -133,6 +133,9 @@ sdreadd: $(SDREADD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
 
 helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
+
+logo: $(OBJDIR)/logo.o $(OBJDIR)/txfns.o $(ZLIBD)/$(ZIPLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/logo.o $(OBJDIR)/txfns.o -o $@
 
 simple_ping: $(OBJDIR)/simple_ping.o $(OBJDIR)/zipcpu.o
 simple_ping: $(OBJDIR)/arp.o $(OBJDIR)/ipcksum.o

@@ -63,17 +63,18 @@
 	// Ethernet control (MDIO)
 	output	wire		o_mdclk, o_mdio, o_mdwe;
 	input	wire		i_mdio;
-@MAIN.INSERT=
+@MAIN.DEFNS=
 	// Verilator lint_off UNUSED
-	wire[31:0]	mdio_debug;
+	wire[31:0]	@$(PREFIX)_debug;
 	// Verilator lint_on  UNUSED
+@MAIN.INSERT=
 	enetctrl #(
 		.CLKBITS(6)
 	) u_@$(PREFIX) (
 		.i_clk(i_clk), .i_reset(i_reset),
 		@$(SLAVE.ANSIPORTLIST),
 		.o_mdclk(o_mdclk), .o_mdio(o_mdio), .i_mdio(i_mdio),
-		.o_mdwe(o_mdwe), .o_debug(mdio_debug)
+		.o_mdwe(o_mdwe), .o_debug(@$(PREFIX)_debug)
 	);
 @MAIN.ALT=
 	assign	o_mdclk = 1'b1;

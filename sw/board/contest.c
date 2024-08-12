@@ -483,13 +483,54 @@ int main(int argc, char **argv) {
 #endif
 	// }}}
 
+	// Check for ROTARY encoder
+#ifdef	_BOARD_HAS_ROTARY
+	rwcheckm("ROTARY ENC  : ", &__rotary, 0xffffffff);
+#endif
+	if (1) { // Check for OLEDBW
+		// {{{
+#ifdef	_BOARD_HAS_OLEDBW
+		unsigned	v;
+
+		if (R_OLED != (unsigned)_oled) {
+			gbl_fail = 1;
+			txstr("Unexpected R_OLED address\r\n");
+		} else if ((v=_oled->o_cmd) & 0x00000001) {
+			rwcheckw("OLED.CLK    : ",
+				(unsigned *)&_oled->o_clk, 0x0ffe);
+		} else {
+			txstr("OLED        : (Busy -- check skipped, ");
+			txhex(v);
+			txstr(")\r\n");
+		}
+#endif
+	}
+	// }}}
+	// Check for RTC
+	// Check for RTCDATE
+	// Check for ICAPETWO
+	// {{{
+#ifdef	_BOARD_HAS_ICAPETWO
+	rwcheckw("ICAPE.WBSTAR: ", &_icape[CFG_WBSAR], 0x0ffffff);
+#endif
+	// }}}
+
+	// Check for VIDPIPE
+
+	// Scope checks
+	// {{{
+#ifdef	_BOARD_HAS_VIDSCOPE
+	scopecheck("VIDSCOPE    : ", (unsigned *)&_zipscope->s_ctrl);
+#endif
 #ifdef	_BOARD_HAS_SDSCOPE
-	// scopecheck("SD-SCOPE    : ", (unsigned *)&_scope_sdcard->s_ctrl);
+	scopecheck("SD-SCOPE    : ", (unsigned *)&_scope_sdcard->s_ctrl);
 #endif
 #ifdef	_BOARD_HAS_ZIPSCOPE
 	scopecheck("ZIPSCOPE    : ", (unsigned *)&_zipscope->s_ctrl);
-#endif
 	_zipscope->s_ctrl = 0;
+#endif
+	// }}}
+
 	txstr("GPIO        : "); txhex(*_gpio); txstr("\r\n");
 	*_spio = 0x0ff05;
 	// Return to pwr count and RTC counts

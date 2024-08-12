@@ -145,7 +145,7 @@ module	spicpu #(
 		parameter [0:0]	 OPT_LOWPOWER = 0,
 		parameter [0:0]	 OPT_START_HALTED= 0,
 		parameter [0:0]	 OPT_SHARED_MISO = 0,
-		parameter [0:0]	 DEF_CPOL = 1,
+		parameter [0:0]	 DEF_CPOL = 0,
 		// DEF_CKCOUNT -- Default number of system clocks per SCK
 		// {{{
 		// This number gets divided by two, so *DON'T* set it to
@@ -197,7 +197,8 @@ module	spicpu #(
 		// output reg		M_AXIS_TABORT,
 		// }}}
 		input	wire		i_sync_signal,
-		output wire		o_interrupt
+		output wire		o_interrupt,
+		output	reg	[31:0]	o_debug
 		// }}}
 	);
 
@@ -626,6 +627,7 @@ module	spicpu #(
 				dcd_valid <= 1'b1;
 				dcd_byte  <= 1'b0;
 				dcd_last  <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
 
 				if (next_insn[4:0] >= NCE)
 				begin
@@ -676,8 +678,10 @@ module	spicpu #(
 				imm_count <= next_insn[4:0] + 1;
 				end
 			// }}}
-			{ CMD_LAST,  1'b? }:
+			{ CMD_LAST,  1'b? }: begin
+				{ dcd_keep, dcd_send } <= 2'b00;
 				{ dcd_valid, dcd_last } <= 2'b01; // LAST insn
+				end
 			CMD_HALT[4:1]: begin	// WAIT, HALT
 				// {{{
 				dcd_valid  <= (dcd_active);
@@ -685,6 +689,7 @@ module	spicpu #(
 				dcd_active <= 1'b0;
 				dcd_byte   <= 1'b0;
 				dcd_last   <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
 
 				// { r_stopped, r_wait } <= { !next_insn[4],
 				//				next_insn[4] };
@@ -699,6 +704,7 @@ module	spicpu #(
 				dcd_valid <= dcd_active;
 				dcd_keep  <= 1'b0;
 				dcd_byte  <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
 				end
 				// }}}
 			CMD_TARGET[4:1]: begin // TARGET || JUMP
@@ -708,6 +714,7 @@ module	spicpu #(
 				dcd_active <= 1'b0;
 				dcd_byte   <= 1'b0;
 				dcd_last   <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
 
 				if (dcd_active)
 				begin
@@ -719,10 +726,13 @@ module	spicpu #(
 				// {{{
 				dcd_valid  <= 1'b0;
 				dcd_channel<=  next_insn[LGNCHAN-1:0];
+				{ dcd_keep, dcd_send } <= 2'b00;
 				end
 				// }}}
-			CMD_NOOP: begin end // dcd_valid <= 1'b0;
-			default: dcd_valid <= 1'b0;
+			CMD_NOOP: // dcd_valid <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
+			default:
+				{ dcd_valid, dcd_keep, dcd_send } <= 3'b00;
 			endcase
 
 			if (next_illegal)
@@ -732,6 +742,7 @@ module	spicpu #(
 				dcd_active <= 1'b0;
 				dcd_csn    <= -1;
 				dcd_byte   <= 1'b0;
+				{ dcd_keep, dcd_send } <= 2'b00;
 			end
 			// }}}
 		end
@@ -908,7 +919,7 @@ module	spicpu #(
 		if (dcd_valid && !spi_stall)
 		begin
 			o_spi_csn  <= dcd_csn;
-			spi_active <= dcd_active;
+			spi_active <= dcd_active && (dcd_keep || dcd_send);
 		end
 
 		if (manual_mode)
@@ -931,10 +942,10 @@ module	spicpu #(
 	if (i_reset)
 		o_spi_sck <= DEF_CPOL;
 	else begin
-		if (!spi_stall)
+		if (!spi_stall || r_stopped)
 			o_spi_sck <= DEF_CPOL;
-		else if (spi_ckedge && (!M_AXIS_TVALID || M_AXIS_TREADY
-				|| !spi_keep || !spi_active || spi_count > 1))
+		else if (spi_ckedge && spi_active && (!M_AXIS_TVALID || M_AXIS_TREADY
+				|| !spi_keep || spi_count > 1))
 			o_spi_sck <= !o_spi_sck;
 
 		if (manual_mode)
@@ -1052,6 +1063,33 @@ module	spicpu #(
 	// }}}
 
 	// }}}
+
+	localparam	MISO_BITS = (OPT_SHARED_MISO ? 1 : (NCE > 5) ? 5 : NCE);
+	always @(posedge i_clk)
+	begin
+		o_debug <= 0;
+		o_debug[30] <= manual_mode;
+		o_debug[29] <= imm_cycle;
+		o_debug[28] <= r_stopped;
+		o_debug[27] <= r_wait;
+		o_debug[26] <= r_err;
+		o_debug[25] <= dcd_stop;
+		o_debug[24] <= dcd_valid;
+		o_debug[23] <= dcd_ready;
+		o_debug[22] <= dcd_active;
+		o_debug[21] <= dcd_last;
+		o_debug[20] <= dcd_send;
+		o_debug[19] <= dcd_keep;
+		o_debug[18] <= next_valid;
+		o_debug[17] <= next_ready;
+		o_debug[16] <= next_illegal;
+		if (next_valid)
+			o_debug[15:8] <= next_insn;
+		o_debug[7] <= o_spi_csn[0];
+		o_debug[6] <= o_spi_sck;
+		o_debug[5] <= o_spi_mosi;
+		o_debug[MISO_BITS-1:0] <= i_spi_miso[MISO_BITS-1:0];
+	end
 
 	// Keep Verilator happy
 	// {{{

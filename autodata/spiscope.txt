@@ -1,18 +1,19 @@
 ################################################################################
 ##
-## Filename:	autodata/wbrotary.txt
+## Filename:	autodata/spiscope.txt
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	To describe the interface of a encoder for
-##		autofpga to use to compose the bus.
+## Purpose:	Describes how to connect a wishbone scope to the SPICPU
+##		interface associated with a universal SPI port for debugging
+##	purposes.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
 ##
 ################################################################################
 ## }}}
-## Copyright (C) 2015-2024, Gisselquist Technology, LLC
+## Copyright (C) 2024, Gisselquist Technology, LLC
 ## {{{
 ## This program is free software (firmware): you can redistribute it and/or
 ## modify it under the terms of the GNU General Public License as published
@@ -36,29 +37,31 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=rotary
-@NADDR=	1
-@DEVID=ROTARY
-@SLAVE.TYPE=SINGLE
-@SLAVE.BUS=wb32
-@ACCESS= @$(DEVID)_ACCESS
-@MAIN.PORTLIST=
-		// The PMic3 microphone wires
-		i_@$(PREFIX)_a, i_@$(PREFIX)_b
-@MAIN.IODECL=
-	input	wire		i_@$(PREFIX)_a, i_@$(PREFIX)_b;
+@PREFIX=spiscope
+@NADDR=2
+@DEVID=SPISCOPE
+@DEPENDS=OLEDBW_ACCESS
+@TARGET=oled
+@$LOG_CAPTURE_SIZE=9
+@MAIN.DEFNS=
 @MAIN.INSERT=
-	wbrotary
-	u_@$(PREFIX) (
-		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
-		.i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
+	@$(CORE) #(
+		// {{{
+		.LGMEM(@$(LOG_CAPTURE_SIZE)),
+		.SYNCHRONOUS(@$(SYNCHRONOUS)),
+		.DEFAULT_HOLDOFF(@$(DEFHOLDOFF))
+		// }}}
+	) @$(PREFIX)i(
+		// {{{
+		.i_data_clk(@$(DATA_CLOCK)), .i_ce(@$(CAPTURECE)),
+		.i_trigger(@$(TRIGGER)), .i_data(@$(DEBUG)),
+		.i_wb_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
 		@$(SLAVE.ANSIPORTLIST),
-		.i_a(i_@$(PREFIX)_a), .i_b(i_@$(PREFIX)_b)
+		.o_interrupt(@$(PREFIX)_int)
+		// }}}
 	);
-@REGS.NOTE = // @$(PREFIX) registers
-@REGS.N = 1
-@REGS.0 = 0 R_@$(DEVID)		 @$(DEVID)
-@BDEF.IONAME= _@$(PREFIX)
-@BDEF.IOTYPE=unsigned
-@BDEF.OSDEF=_BOARD_HAS_@$(DEVID)
-@BDEF.OSVAL=static volatile @$(BDEF.IOTYPE) *const @$(BDEF.IONAME) = ((@$(BDEF.IOTYPE) *)@$(REGBASE));
+
+@INT.OLEDSCOPE.WIRE=@$(PREFIX)_int
+@INT.OLEDSCOPE.PIC=altpic
+@DATA_CLOCK=i_clk
+@INCLUDEFILE=wbscopc.txt
