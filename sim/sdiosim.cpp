@@ -722,7 +722,9 @@ void	SDIOSIM::accept_command(void) {
 		if (m_app_cmd) { // ACMD41
 		// {{{
 			if (1 || m_selected) {
-				unsigned opcond = 0xc0ff8000;
+				unsigned opcond = 0x40ff8000;
+				// if (still_busy)
+				//	opcond |= 0x80000000;
 				load_reply(41, opcond);
 			} m_app_cmd = 0;
 		// } else {

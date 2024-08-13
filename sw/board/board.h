@@ -397,7 +397,7 @@ static volatile unsigned *const _buserr = ((unsigned *)0x08002084);
 static volatile unsigned *const _spio = ((unsigned *)0x080020ac);
 #endif	// SPIO_ACCESS
 #ifdef	CFG_ACCESS
-#define	_BOARD_HAS_ICAPTETWO
+#define	_BOARD_HAS_ICAPETWO
 static volatile unsigned *const _icape = ((unsigned *)0x08001800);
 #endif	// CFG_ACCESS
 #ifdef	VIDSCOPE_SCOPE

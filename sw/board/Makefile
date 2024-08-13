@@ -134,6 +134,7 @@ sdreadd: $(SDREADD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
 helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
+$(OBJDIR)/logo.o: logo.c logo.h
 logo: $(OBJDIR)/logo.o $(OBJDIR)/txfns.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/logo.o $(OBJDIR)/txfns.o -o $@
 

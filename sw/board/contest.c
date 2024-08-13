@@ -434,6 +434,8 @@ int main(int argc, char **argv) {
 	} else {
 		unsigned	orig = *_spio, msk, m, failed = 0;
 
+		if (!failed)
+			txstr("SPIO LED CHK: ");
 		// Count how many LEDs we have
 		*_spio = 0x0ffff;	// Turn all LEDs on (if possible)
 		msk = *_spio & 0x0ff;
@@ -455,6 +457,9 @@ int main(int argc, char **argv) {
 			*_spio = 0x1000000;
 		else
 			*_spio = orig | 0x0ff00;
+
+		if (!failed)
+			txstr("(Good)\n");
 	}
 #endif
 	// }}}
@@ -485,7 +490,7 @@ int main(int argc, char **argv) {
 
 	// Check for ROTARY encoder
 #ifdef	_BOARD_HAS_ROTARY
-	rwcheckm("ROTARY ENC  : ", &__rotary, 0xffffffff);
+	rwcheckm("ROTARY ENC  : ", _rotary, 0xffffffff);
 #endif
 	if (1) { // Check for OLEDBW
 		// {{{
@@ -495,7 +500,7 @@ int main(int argc, char **argv) {
 		if (R_OLED != (unsigned)_oled) {
 			gbl_fail = 1;
 			txstr("Unexpected R_OLED address\r\n");
-		} else if ((v=_oled->o_cmd) & 0x00000001) {
+		} else if (0 == ((v=_oled->o_cmd) & 1)) {
 			rwcheckw("OLED.CLK    : ",
 				(unsigned *)&_oled->o_clk, 0x0ffe);
 		} else {
@@ -506,16 +511,44 @@ int main(int argc, char **argv) {
 #endif
 	}
 	// }}}
-	// Check for RTC
-	// Check for RTCDATE
-	// Check for ICAPETWO
-	// {{{
+
+	// Check for RTC	--- but what test to use?
+	txstr("REALTIMECLK : "); txhex(_rtc->r_clock); txstr("\n");
+	// Check for RTCDATE	--- but what test to use?
+	txstr("REALTIMEDATE: "); txhex(*_rtcdate); txstr("\n");
+
+	if (1) { // Check for ICAPETWO
+		// {{{
 #ifdef	_BOARD_HAS_ICAPETWO
-	rwcheckw("ICAPE.WBSTAR: ", &_icape[CFG_WBSAR], 0x0ffffff);
+		if (R_CFG_WBSTAR != (unsigned)&_icape[CFG_WBSTAR]) {
+			gbl_fail = 1;
+			txstr("Unexpected ICAPE2 address\r\n");
+		} else
+			rwcheckw("ICAPE.WBSTAR: ",&_icape[CFG_WBSTAR],0x0ffffff);
+#else
+		txstr("ICAPE2 CHECK: (SKIPPED! -- Not installed)\n");
 #endif
+	}
 	// }}}
 
-	// Check for VIDPIPE
+	if (1) { // Check for VIDPIPE
+		// {{{
+#ifdef	_BOARD_HAS_VIDPIPE
+		if (R_VIDPIPE != (unsigned)&_hdmi->v_control) {
+			gbl_fail = 1;
+			txstr("Unexpected VIDPIPE address\r\n");
+		} else {
+			unsigned	msk;
+			volatile unsigned *_sz;
+
+			_sz = (unsigned *)&_hdmi->v_in.m_height;
+			*_sz = -1;
+			msk = *_sz;
+			rwcheckw("VIDPIPE.SIZE: ", (unsigned *)_sz,msk);
+		}
+#endif
+	}
+	// }}}
 
 	// Scope checks
 	// {{{
@@ -532,7 +565,7 @@ int main(int argc, char **argv) {
 	// }}}
 
 	txstr("GPIO        : "); txhex(*_gpio); txstr("\r\n");
-	*_spio = 0x0ff05;
+
 	// Return to pwr count and RTC counts
 	// {{{
 #ifdef	PWRCOUNT_ACCESS

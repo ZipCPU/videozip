@@ -38,9 +38,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 // }}}
-#include "ff.h"
-#include "diskio.h"
-#include "board.h"
+#include "ff.h"		// From FATFS
+#include "diskio.h"	// From FATFS as well
+#include "board.h"	// Defines associated with the driver
 #include "sdspidrv.h"
 #include "sdiodrv.h"
 #include "diskiodrvr.h"
