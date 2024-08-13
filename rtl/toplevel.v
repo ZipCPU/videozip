@@ -790,11 +790,7 @@ i_sd_cd_n,
 
 
 	assign	i_gpio = { 9'h0,
-`ifdef	HDMI_ACCESS
 			w_hdmi_in_pll_locked,
-`else
-			1'b0,
-`endif
 			sysclk_locked,
 `ifdef	GPSTRK_ACCESS
 			i_gps_3df,
@@ -802,34 +798,17 @@ i_sd_cd_n,
 			1'b0,
 `endif
 			!i_hdmitx_hpd_n,
-`ifdef	SDIO_ACCESS
 			!i_sd_cd_n,
-`else
-`ifdef	SDSPI_ACCESS
-			!i_sd_cd_n,
-`else
 			1'b0,
-`endif
-`endif
 			io_hdmitx_cec, io_hdmirx_cec };
 	assign	io_hdmirx_cec = o_gpio[0] ? 1'bz : 1'b0;
 	assign	io_hdmitx_cec = o_gpio[1] ? 1'bz : 1'b0;
 	assign	o_hdmirx_txen = o_gpio[2];
 	assign	o_hdmirx_hpa  = o_gpio[3];	// Hotplug assert
-`ifdef	SDIO_ACCESS
 	assign	o_sd_reset  = !w_sdio_hwreset_n;
-`else
-	assign	o_sd_reset  = o_gpio[4];
-`endif
-`ifdef	OLEDBW_ACCESS
 	assign	o_oled_reset_n  = !o_gpio[5];
 	assign	o_oled_panel_en =  o_gpio[6];
 	assign	o_oled_logic_en =  o_gpio[7];
-`else
-	assign	o_oled_reset_n  = 1'b0;
-	assign	o_oled_panel_en = 1'b0;
-	assign	o_oled_logic_en = 1'b0;
-`endif
 	// These two pins are only used in simulation, and only within the
 	// MAIN RTL component.
 	// assign o_trace     = o_gpio[8];

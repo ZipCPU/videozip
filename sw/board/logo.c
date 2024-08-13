@@ -38,6 +38,7 @@
 #include "regdefs.h"
 #include "txfns.h"
 #include "zipcpu.h"
+#include "zipsys.h"
 #include "logo.h"
 // }}}
 
@@ -49,6 +50,26 @@ int main(int argc, char **argv) {
 "+----------------------------------+\n"
 "|-     B/W OLED Logo Display      -|\n"
 "+----------------------------------+\n\n");
+
+	// OLED_VDD(V22 = o_oled_logic_en) LOW for 1ms
+	*_gpio = OLED_LOGICDIS | OLED_PANELDIS | OLED_RUN;
+	_zip->z_tma = CLKFREQHZ / 1000 / 1000;
+	while(_zip->z_tma > 0)
+		;
+
+	// Pulse RES#(U21) low for 3us
+	*_gpio = OLED_LOGICEN | OLED_PANELDIS | OLED_RESET;
+	_zip->z_tma = 3 * CLKFREQHZ / 1000;
+	while(_zip->z_tma > 0)
+		;
+
+	// VBAT(P20 = o_oled_panel_en) LOW for 100ms
+	*_gpio = OLED_LOGICEN | OLED_PANELEN | OLED_RUN;
+	_zip->z_tma = 100 * (CLKFREQHZ / 1000 / 1000);
+	while(_zip->z_tma > 0)
+		;
+
+	// Then write ...
 
 	_oled->o_addr = (unsigned)logo;
 	while(0 == (_oled->o_cmd & 0x01))

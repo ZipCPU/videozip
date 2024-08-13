@@ -23,6 +23,7 @@ rdclocks
 rdsync
 readmdio
 spiasm
+spiscope
 tags
 tstgps
 wbregs
