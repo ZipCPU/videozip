@@ -790,7 +790,7 @@ i_sd_cd_n,
 
 
 	assign	i_gpio = { 9'h0,
-			w_hdmi_in_pll_locked,
+			pxrx_locked,
 			sysclk_locked,
 `ifdef	GPSTRK_ACCESS
 			i_gps_3df,
