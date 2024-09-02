@@ -137,6 +137,7 @@ module sdio_top #(
 		// reset.
 		parameter [0:0]	OPT_HWRESET = OPT_EMMC,
 		// }}}
+		parameter	HWDELAY = 0,
 		// OPT_1P8V
 		// {{{
 		// Some protocols require switching voltages during the
