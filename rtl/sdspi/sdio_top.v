@@ -80,6 +80,7 @@ module sdio_top #(
 		parameter [0:0]	OPT_DMA = 1'b0,
 		parameter [0:0]	OPT_LITTLE_ENDIAN = 1'b0,
 		localparam	AW = ADDRESS_WIDTH-$clog2(DW/8),
+		parameter	HWDELAY=0,
 		// OPT_ISTREAM: Enable an incoming AXI stream to specify data
 		// {{{
 		// to the DMA, separate from any data that may be read from
@@ -137,7 +138,6 @@ module sdio_top #(
 		// reset.
 		parameter [0:0]	OPT_HWRESET = OPT_EMMC,
 		// }}}
-		parameter	HWDELAY = 0,
 		// OPT_1P8V
 		// {{{
 		// Some protocols require switching voltages during the
