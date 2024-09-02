@@ -42,6 +42,8 @@
 // }}}
 module	sdckgen #(
 		// {{{
+		parameter [0:0]	OPT_SERDES = 0,
+		parameter [0:0]	OPT_DDR = 0,
 		// To hit 100kHz from a 100MHz clock, we'll need to divide by
 		// 4, and then by another 250.  Hence, we'll need Lg(256)-2
 		// bits.  (The first three are special)
@@ -58,6 +60,7 @@ module	sdckgen #(
 		output	reg			o_ckstb,
 		output	reg			o_hlfck,
 		output	reg	[7:0]		o_ckwide,
+		output	wire			o_clk90,
 		output	reg	[LGMAXDIV-1:0]	o_ckspd
 		// }}}
 	);
@@ -71,6 +74,7 @@ module	sdckgen #(
 	reg	[LGMAXDIV-1:0]	ckspd;
 	wire			w_clk90;
 	wire	[LGMAXDIV-1:0]	w_ckspd;
+	reg	[LGMAXDIV-1:0]	new_ckspd;
 	// }}}
 
 	// nxt_stb, nxt_clk, nxt_counter
@@ -89,11 +93,11 @@ module	sdckgen #(
 			{ nxt_clk, nxt_counter[NCTR-1:NCTR-2] }
 						= nxt_counter[NCTR-1:NCTR-2] +1;
 
-			if (ckspd <= 1)
+			if ((OPT_DDR || OPT_SERDES) && ckspd <= 1)
 			begin
 				nxt_clk = 1;
 				nxt_counter[NCTR-3:0] = 0;
-			end else if (ckspd == 2)
+			end else if (ckspd <= 2)
 			begin
 				nxt_clk = counter[NCTR-1];
 				nxt_counter[NCTR-3:0] = 0;
@@ -103,19 +107,26 @@ module	sdckgen #(
 
 		if (nxt_clk)
 		begin
-			if (i_cfg_ckspd <= 1)
+			if ((OPT_DDR || OPT_SERDES) && new_ckspd <= 1)
 				nxt_counter = {2'b11, {(NCTR-2){1'b0}} };
-			else if (i_cfg_ckspd == 2)
+			else if (new_ckspd <= 2)
 				nxt_counter = { 2'b01, {(NCTR-2){1'b0}} };
-			else
-				nxt_counter[NCTR-3:0] = i_cfg_ckspd-3;
-		end
+			else begin
+				nxt_counter[NCTR-1:NCTR-2] = 0;
+				nxt_counter[NCTR-3:0] = new_ckspd-3;
+			end end
 	end
 
 	always @(posedge i_clk)
 	if (i_reset)
-		counter <= 0;
-	else if (nxt_clk && i_cfg_shutdown)
+	begin
+		if (OPT_SERDES)
+			counter <= 0;
+		else if (OPT_DDR)
+			counter <= { 2'b11, {(NCTR-2){1'b0}} };
+		else
+			counter <= { 2'b01, {(NCTR-2){1'b0}} };
+	end else if (nxt_clk && i_cfg_shutdown)
 		counter <= { 2'b11, {(NCTR-2){1'b0}} };
 	else
 		counter <= nxt_counter;
@@ -128,44 +139,63 @@ module	sdckgen #(
 		clk90 <= 0;
 	else
 		clk90 <= w_clk90;
+	assign	o_clk90 = clk90;
 
+	initial	ckspd = (OPT_SERDES) ? 8'd0 : (OPT_DDR) ? 8'd1 : 8'd2;
 	always @(posedge i_clk)
 	if (i_reset)
-		ckspd <= 0;
+		ckspd <= (OPT_SERDES) ? 8'd0 : (OPT_DDR) ? 8'd1 : 8'd2;
 	else
 		ckspd <= w_ckspd;
 
+	always @(*)
+	if (OPT_SERDES)
+		new_ckspd = i_cfg_ckspd;
+	else if (OPT_DDR && i_cfg_ckspd <= 1 && !i_cfg_clk90)
+		new_ckspd = 1;
+	else if (i_cfg_ckspd <= 2 && (OPT_DDR || !i_cfg_clk90))
+		new_ckspd = 2;
+	else if (i_cfg_ckspd <= 3)
+		new_ckspd = 3;
+	else
+		new_ckspd = i_cfg_ckspd;
 
 	assign	w_clk90 = (nxt_clk) ? i_cfg_clk90 : clk90;
-	assign	w_ckspd = (nxt_clk) ? i_cfg_ckspd : ckspd;
+	assign	w_ckspd = (nxt_clk) ? new_ckspd   : ckspd;
 	// }}}
 
 	// o_ckstb, o_ckwide
 	// {{{
 	initial	o_ckstb  = 1;
-	initial	o_hlfck  = 1;
+	initial	o_hlfck  = (OPT_SERDES || OPT_DDR);
 	initial	o_ckwide = 0;
 	always @(posedge i_clk)
 	if (i_reset)
 	begin
 		o_ckstb  <= 1;
-		o_hlfck  <= 1;
+		o_hlfck  <= (OPT_SERDES || OPT_DDR);
 		o_ckwide <= 0;
-	end else if ((nxt_clk && i_cfg_shutdown) || (w_ckspd == 0))
+	end else if (nxt_clk && i_cfg_shutdown)
+	begin
+		o_ckstb  <= 1'b0;
+		o_hlfck  <= 1'b0;
+		o_ckwide <= 8'h0;
+	end else if (OPT_SERDES && w_ckspd == 0)
 	begin
 		o_ckstb  <= !i_cfg_shutdown;
 		o_hlfck  <= !i_cfg_shutdown;
-		o_ckwide <= (i_cfg_shutdown) ? 8'h00
-				: (i_cfg_clk90) ? 8'h66 : 8'h33;
-	end else if (w_ckspd == 1)
+		o_ckwide <= (i_cfg_clk90) ? 8'h66 : 8'h33;
+		if (i_cfg_shutdown)
+			o_ckwide <= 8'h0;
+	end else if ((OPT_SERDES || OPT_DDR) && w_ckspd <= 1)
 	begin
 		o_ckstb  <= 1'b1;
 		o_hlfck  <= 1'b1;
-		o_ckwide <= (w_clk90) ? 8'h3c : 8'h0f;
+		o_ckwide <= (OPT_SERDES && w_clk90) ? 8'h3c : 8'h0f;
 	end else if (w_ckspd == 2)
 	begin
 		{ o_ckstb, o_hlfck } <= (!nxt_counter[NCTR-1]) ? 2'b10 : 2'b01;
-		if (w_clk90)
+		if (w_clk90 && (OPT_SERDES || OPT_DDR))
 			o_ckwide <= (!nxt_counter[NCTR-1]) ? 8'h0f : 8'hf0;
 		else
 			o_ckwide <= (!nxt_counter[NCTR-1]) ? 8'h00 : 8'hff;

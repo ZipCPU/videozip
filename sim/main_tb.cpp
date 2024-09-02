@@ -290,6 +290,7 @@ public:
 		m_core->i_sdio_ac_valid = (tmp_async & 2) ? 1:0;
 		m_core->i_sdio_ad_valid =  tmp_async & 1;
 		m_core->i_sdio_detect = 1;
+		m_core->i_sdio_card_busy = m_sdio->card_busy() ? 1:0;
 		if (!m_core->o_sdio_cfg_dscmd) {
 			m_core->i_sdio_ac_valid = 0;
 			m_core->i_sdio_ac_data = 0;

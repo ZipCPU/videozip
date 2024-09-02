@@ -79,8 +79,8 @@ SDSPISIM::SDSPISIM(const bool debug) {
 	m_reading_data = false;
 	m_have_token = false;
 	m_debug = debug;
-	// }}}
 }
+// }}}
 
 void	SDSPISIM::load(const char *fname) {
 	// {{{
@@ -101,10 +101,12 @@ void	SDSPISIM::load(const char *fname) {
 
 unsigned	SDSPISIM::read_bitfield(int offset, int bits,
 				int ln, const uint8_t *bitfield) {
+	// {{{
 	// unsigned	total = 8*ln;
 	// unsigned	index = total-offset;
 	return 0;
 }
+// }}}
 
 unsigned	SDSPISIM::OCR(void) {
 	// {{{
@@ -179,10 +181,12 @@ void	SDSPISIM::CSD(void) {
 // }}}
 
 uint8_t	SDSPISIM::CSD(int index) {
+	// {{{
 	assert(index >= 0);
 	assert(index < SDSPI_CSDLEN);
 	return m_csd[index];
 }
+// }}}
 
 void	SDSPISIM::CID(void) {
 	// {{{
@@ -668,5 +672,3 @@ void	SDSPISIM::add_block_crc(int len, char *buf) const {
 	buf[len+2] = (fill     )&0x0ff;
 }
 // }}}
-
-

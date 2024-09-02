@@ -1677,34 +1677,34 @@ module	vidpipe #(
 
 		hdmibchdec
 		u_bch_decode (
-		// {{{
-		.i_clk(i_pixclk), .i_reset(pix_reset),
-		//
-		.S_VALID(ipkt_valid),
-		.S_HDR(  ipkt_hdr),
-		.S_DATA( ipkt_data),
-		.S_LAST( ipkt_last),
-		//
-		.M_VALID(pktdec_valid),
-		.M_DATA( pktdec_data),
-		.M_LAST( pktdec_last)
-		// }}}
+			// {{{
+			.i_clk(i_pixclk), .i_reset(pix_reset),
+			//
+			.S_VALID(ipkt_valid),
+			.S_HDR(  ipkt_hdr),
+			.S_DATA( ipkt_data),
+			.S_LAST( ipkt_last),
+			//
+			.M_VALID(pktdec_valid),
+			.M_DATA( pktdec_data),
+			.M_LAST( pktdec_last)
+			// }}}
 		);
 
 		hdmigate #(
 			.LGFLEN(6)
 		) u_gate (
-		// {{{
-		.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(!pix_reset),
-		.S_AXIN_VALID(pktdec_valid),
-		.S_AXIN_DATA( pktdec_data),
-		.S_AXIN_LAST( pktdec_last),
-		//
-		.M_AXIN_VALID(di_valid),
-		.M_AXIN_READY(di_ready),
-		.M_AXIN_DATA( di_data),
-		.M_AXIN_LAST( di_last)
-		// }}}
+			// {{{
+			.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(!pix_reset),
+			.S_AXIN_VALID(pktdec_valid),
+			.S_AXIN_DATA( pktdec_data),
+			.S_AXIN_LAST( pktdec_last),
+			//
+			.M_AXIN_VALID(di_valid),
+			.M_AXIN_READY(di_ready),
+			.M_AXIN_DATA( di_data),
+			.M_AXIN_LAST( di_last)
+			// }}}
 		);
 
 		hdmigenpkt
@@ -1726,8 +1726,9 @@ module	vidpipe #(
 			// }}}
 		);
 
-		vid_dicap
+		vid_dicap	// A basic 8b:32b gearbox via zipdma_rxgears
 		u_dicap (
+			// {{{
 			.i_clk(i_pixclk), .i_reset(pix_reset),
 			.S_VALID(pktdec_valid),
 			.S_READY(ign_dicap_ready),
@@ -1737,6 +1738,7 @@ module	vidpipe #(
 			.o_vld(di_dbg_ce),
 			.o_debug(di_debug),
 			.o_last(di_dbg_trigger)
+			// }}}
 		);
 
 		assign	di_alt_valid = di_valid || pktdec_valid || ipkt_valid;

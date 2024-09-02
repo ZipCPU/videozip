@@ -22,6 +22,7 @@ netuart
 rdclocks
 rdsync
 readmdio
+sdioscope
 spiasm
 spiscope
 tags
