@@ -51,7 +51,7 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c sdinfo.c # hdmistart.c
+SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c sdinfo.c hdmistart.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 INCS    := -I../zlib -I../../rtl -I../fatfs -I.
 LDSCRIPT:= -Tboard.ld

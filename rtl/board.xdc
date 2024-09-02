@@ -502,8 +502,12 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknetclock
 ## No XDC.INSERT tag in zip
 ## No XDC.INSERT tag in wbwide
 ## No XDC.INSERT tag in wb32
+## No XDC.INSERT tag in edidscope
 ## From sdio
 set_property -dict { PULLTYPE PULLUP } [get_ports io_sd_cmd]
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_sdio/u_sdcmd/cmd_tristate*}] -to [get_cells -hier -filter {NAME=~ u_sdio_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_sdio/u_txframe/r_tristate*}] -to [get_cells -hier -filter {NAME=~ u_sdio_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
+
 ## No XDC.INSERT tag in gpio
 ## No XDC.INSERT tag in edid
 ## No XDC.INSERT tag in flashcfg
