@@ -52,7 +52,7 @@
 @INT.SDCARD.WIRE= @$(PREFIX)_int
 @INT.SDCARD.PIC= syspic
 @CARD_DETECT=1'b1
-@OPT_SERDES=1'b0
+@OPT_SERDES=1'b1
 @OPT_DMA=1'b1
 @OPT_DDR=1'b1
 @OPT_EMMC=1'b0
@@ -448,5 +448,9 @@ struct @$(DEVID)_S;
 @RTL.MAKE.GROUP= SDIO
 @RTL.MAKE.SUBD=sdspi
 @RTL.MAKE.FILES= sdio_top.v sdio.v sdfrontend.v sdckgen.v sdwb.v sdtxframe.v sdrxframe.v sdcmd.v sddma.v sddma_mm2s.v sddma_rxgears.v sdfifo.v sddma_txgears.v sddma_s2mm.v xsdddr.v xsdserdes8x.v
+@XDC.SERDES=
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/u_sdcmd/cmd_tristate*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/u_txframe/r_tristate*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
 @XDC.INSERT=
 set_property -dict { PULLTYPE PULLUP } [get_ports io_@$(TOP.IOPREFIX)_cmd]
+@$(XDC.SERDES)
