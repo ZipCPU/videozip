@@ -46,10 +46,14 @@
 `default_nettype	none
 // }}}
 module	sdtxframe #(
+		// {{{
 		parameter		NCRC = 16,
-		parameter [0:0]		OPT_SERDES = 1'b1,
+		// OPT_SERDES=1 delays the invocation of tristate by a clock
+		// cycle.  This is in an attempt to match Xilinx's 8x SERDES.
+		parameter [0:0]		OPT_SERDES = 1'b0,
 		parameter [0:0]		OPT_CRCTOKEN = 1'b0,
 		parameter [NCRC-1:0]	CRC_POLYNOMIAL  = 16'h1021
+		// }}}
 	) (
 		// {{{
 		input	wire			i_clk, i_reset,
@@ -59,6 +63,9 @@ module	sdtxframe #(
 		input	wire			i_cfg_ddr,
 		input	wire			i_cfg_pp,
 		input	wire			i_cfg_expect_ack,
+		//
+		input	wire			i_cfg_clk90,
+		input	wire	[7:0]		i_ckwide,
 		//
 		input	wire			i_en, i_ckstb, i_hlfck,
 		//
@@ -114,7 +121,9 @@ module	sdtxframe #(
 	reg	[NCRC* 8-1:0]	di_crc_8w, nxt_crc_8w, new_crc_8w, crc_8w_reg;
 	reg	[NCRC*16-1:0]	di_crc_8d, nxt_crc_8d, new_crc_8d, crc_8d_reg;
 
-	reg		ck_valid, ck_tristate;
+	reg		ck_valid, ck_tristate, ck_stop_bit;
+	reg		r_tristate;
+
 	reg	[4:0]	ck_counts;
 	reg	[31:0]	ck_data, ck_sreg;
 
@@ -487,8 +496,6 @@ module	sdtxframe #(
 	// Clock divider, data shift register
 	// {{{
 
-	reg	ck_stop_bit;
-
 	// ck_valid
 	// {{{
 	initial	ck_valid = 0;
@@ -708,34 +715,63 @@ module	sdtxframe #(
 		endcase
 	end
 
+	initial {r_tristate, ck_tristate } = 2'h3;
 	always @(posedge i_clk)
 	if (i_reset) // pstate == P_IDLE)
 	begin
 		ck_tristate <= 1'b1;
+		r_tristate <= 1'b1;
 	end else if (i_ckstb && pre_valid && ck_counts == 0) // && tx_ready
 	begin
 		if (cfg_pp || cfg_period != P_1D)
+		begin
 			ck_tristate <= 1'b0;
-		else case(cfg_width) // One clock period of data
-		WIDTH_1W: ck_tristate <= pre_data[31];
-		WIDTH_4W: ck_tristate <= !(&pre_data[31:28]);
-		default:  ck_tristate <= !(&pre_data[31:24]);
+			r_tristate <= 1'b0;
+		end else case(cfg_width) // One clock period of data
+		WIDTH_1W: begin
+			ck_tristate <= pre_data[31];
+			r_tristate <= pre_data[31] && (!OPT_SERDES || ck_tristate);
+			end
+		WIDTH_4W: begin
+			ck_tristate <= (&pre_data[31:28]);
+			r_tristate <= (&pre_data[31:28]) && (!OPT_SERDES || ck_tristate);
+			end
+		default:  begin
+			ck_tristate <= (&pre_data[31:24]);
+			r_tristate <= (&pre_data[31:24]) && (!OPT_SERDES || ck_tristate);
+			end
 		endcase
 	end else if ((i_ckstb || (i_hlfck && cfg_ddr)) && ck_counts > 0)
 	begin
 		if (cfg_pp || cfg_period != P_1D)
+		begin
 			ck_tristate <= 1'b0;
-		else case(cfg_width) // One clock period of data
-		WIDTH_1W: ck_tristate <= ck_sreg[31];
-		WIDTH_4W: ck_tristate <= !(&ck_sreg[31:28]);
-		default:  ck_tristate <= !(&ck_sreg[31:24]);
+			r_tristate <= 1'b0;
+		end else case(cfg_width) // One clock period of data
+		WIDTH_1W: begin
+			ck_tristate <= ck_sreg[31];
+			r_tristate <= ck_sreg[31] && (!OPT_SERDES || ck_tristate);
+			end
+		WIDTH_4W: begin
+			ck_tristate <= (&ck_sreg[31:28]);
+			r_tristate <= (&ck_sreg[31:28]) && (!OPT_SERDES || ck_tristate);
+			end
+		default:  begin
+			ck_tristate <= (&ck_sreg[31:24]);
+			r_tristate <= (&ck_sreg[31:24]) && (!OPT_SERDES || ck_tristate);
+			end
 		endcase
 	end else if (i_ckstb && ck_counts == 0)
 	begin
 		ck_tristate <= 1'b1;
+		r_tristate <= (!OPT_SERDES || ck_tristate);
 		if (start_packet)
+		begin
 			ck_tristate <= 1'b0;
-	end
+			r_tristate <= 1'b0;
+		end
+	end else
+		r_tristate <= ck_tristate;
 
 	assign	pre_ready = (ck_counts == 0) && i_ckstb; // && tx_ready;
 	// }}}
@@ -746,9 +782,8 @@ module	sdtxframe #(
 	assign	tx_valid = ck_valid;
 	// assign ck_ready = (i_ckstb || (i_hlfck && cfg_ddr)); // && tx_ready;
 	assign	tx_data  = ck_data;
-	assign	tx_tristate = ck_tristate;
+	assign	tx_tristate = r_tristate;
 	// }}}
-
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Status feedback
@@ -761,9 +796,11 @@ module	sdtxframe #(
 	// 2 such clocks, together with the number of clocks required for an
 	// ACK/NACK sequence (5).  Here, we round that number up to 15 for good
 	// measure.
-	initial	r_timeout = 4'd15;
+	initial	r_timeout = (OPT_CRCTOKEN) ? 4'd15 : 4'h0;
 	always @(posedge i_clk)
-	if (i_reset || (i_en && S_VALID) || tx_valid || !i_en)
+	if (!OPT_CRCTOKEN)
+		r_timeout <= 0;
+	else if (i_reset || (i_en && S_VALID) || tx_valid || !i_en)
 	begin
 		r_timeout <= 15;
 	end else if (i_ckstb && (r_timeout != 0))
@@ -776,7 +813,8 @@ module	sdtxframe #(
 	always @(posedge i_clk)
 	if (i_reset || (i_en && S_VALID) || tx_valid || !i_en)
 		r_done <= 1'b0;
-	else if (!r_done && i_ckstb && (r_timeout <= 1))
+	else if (!r_done && i_ckstb && (!OPT_CRCTOKEN || r_timeout <= 1))
+		// Once set, r_done will stay set until i_en drops
 		r_done <= 1'b1;
 
 	assign	o_done = r_done;
@@ -800,11 +838,11 @@ module	sdtxframe #(
 		if (i_reset || (i_en && S_VALID) || tx_valid || !i_en)
 		begin
 			{ r_err, r_ercode } <= 2'b00;
-		end else if (i_en && !r_done && !o_err)
+		end else if (i_en && !r_done && !o_err && !r_ackd)
 		begin
 			if (r_timeout <= 1 && i_cfg_expect_ack)
 				{ r_err, r_ercode } <= 2'b10;
-			if (i_crcnak && !i_crcack && !r_ackd)
+			if (i_crcnak && !i_crcack)
 				{ r_err, r_ercode } <= 2'b11;
 		end
 
@@ -826,8 +864,8 @@ module	sdtxframe #(
 	// {{{
 	// verilator coverage_off
 	// verilator lint_off UNUSED
-	// wire	unused;
-	// assign	unused = i_wb_cyc;
+	wire	unused;
+	assign	unused = &{ 1'b0, i_ckwide, i_cfg_clk90 };
 	// verilator lint_on  UNUSED
 	// verilator coverage_on
 	// }}}

@@ -934,7 +934,7 @@ module	sddma_mm2s #(
 		begin
 			assert(r_inc  == f_cfg_inc);
 			assert(r_size == f_cfg_size);
-			assert(r_addr == f_cfg_addr[WBLSB-1:0]);
+			assert(r_addr == f_cfg_addr);
 			assert(r_transferlen == f_cfg_len);
 		end
 	end

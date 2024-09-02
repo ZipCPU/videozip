@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd hdmistart logo
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd sdrecord hdmistart logo
 all:	$(PROGRAMS)
 #
 #
@@ -130,6 +130,13 @@ $(OBJDIR)/sdreadd.o: sdreadd.c
 	$(CC) -c $(CFLAGS) $< -o $@
 sdreadd: $(SDREADD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(SDREADD) $(LIBFAT) $(LIBS) -o $@
+
+SDRECORD:= $(addprefix $(OBJDIR)/,sdrecord.o txfns.o)
+$(OBJDIR)/sdrecord.o: sdrecord.c
+	$(mk-objdir)
+	$(CC) -c $(CFLAGS) $< -o $@
+sdrecord: $(SDRECORD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(SDRECORD) $(LIBFAT) $(LIBS) -o $@
 
 helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@

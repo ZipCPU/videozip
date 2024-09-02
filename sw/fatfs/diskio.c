@@ -208,6 +208,12 @@ DRESULT	disk_write(
 	if (pdrv >= MAX_DRIVES || NULL == DRIVES[pdrv].fd_addr
 			|| NULL == DRIVES[pdrv].fd_driver)
 		return RES_ERROR;
-	return (*DRIVES[pdrv].fd_driver->dio_write)(DRIVES[pdrv].fd_data,
+
+	DWORD	res;
+
+	res = (*DRIVES[pdrv].fd_driver->dio_write)(DRIVES[pdrv].fd_data,
 					sector, count, buff);
+	if (res != 0)
+		asm("NOOP");
+	return	res;
 }

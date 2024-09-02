@@ -105,7 +105,6 @@ int	main(int argc, char **argv) {
 	// {{{
 #if	defined(VIDPIPE_ACCESS)
 	// || defined(OLED_ACCESS)
-fprintf(stderr, "Video startup\n");
 	Gtk::Main	main_instance(argc, argv);
 #endif
 	Verilated::commandArgs(argc, argv);

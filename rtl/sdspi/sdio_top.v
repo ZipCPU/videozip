@@ -80,6 +80,7 @@ module sdio_top #(
 		parameter [0:0]	OPT_DMA = 1'b0,
 		parameter [0:0]	OPT_LITTLE_ENDIAN = 1'b0,
 		localparam	AW = ADDRESS_WIDTH-$clog2(DW/8),
+		parameter	HWDELAY=0,
 		// OPT_ISTREAM: Enable an incoming AXI stream to specify data
 		// {{{
 		// to the DMA, separate from any data that may be read from
@@ -162,7 +163,10 @@ module sdio_top #(
 		// such happen.  Detecting collisions requires a solid
 		// knowledge internal to the front end about the delay through
 		// the system, to avoid false alarms.
-		parameter [0:0]	OPT_COLLISION=OPT_EMMC,
+		//
+		// NOTE: Collisions detection does not (currently) work with
+		//   OPT_SERDES.
+		parameter [0:0]	OPT_COLLISION=OPT_EMMC && !OPT_SERDES,
 		// }}}
 		// LGTIMEOUT
 		// {{{
@@ -346,9 +350,12 @@ module sdio_top #(
 	);
 
 	sdfrontend #(
+		// {{{
 		.OPT_SERDES(OPT_SERDES), .OPT_DDR(OPT_DDR), .NUMIO(NUMIO),
 		.OPT_DS(OPT_DS), .OPT_COLLISION(OPT_COLLISION),
-		.OPT_CRCTOKEN(OPT_CRCTOKEN)
+		.OPT_CRCTOKEN(OPT_CRCTOKEN), .HWBIAS(HWDELAY),
+		.BUSY_CLOCKS(OPT_EMMC ? 16 : 4)
+		// }}}
 	) u_sdfrontend (
 		// {{{
 		.i_clk(i_clk), .i_hsclk(i_hsclk), .i_reset(i_reset),

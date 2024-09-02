@@ -6,6 +6,7 @@ hdmistest
 logo
 memtest
 sdreadd
+sdrecord
 simple_ping
 *.map
 *.txt
