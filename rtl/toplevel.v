@@ -90,7 +90,7 @@ i_sd_cd_n,
 		o_sd_reset,
 		i_gps_3df,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en,
-			io_hdmitx_scl, io_hdmitx_sda,
+			io_hdmirx_scl, io_hdmirx_sda,
 		// UART/host to wishbone interface
 		i_wbu_uart_rx, o_wbu_uart_tx,
 		// SDRAM I/O port wires
@@ -100,7 +100,7 @@ i_sd_cd_n,
 		ddr3_addr, ddr3_ba,
 		ddr3_dq, ddr3_dm, ddr3_odt,
 		// EDID RX definitions
-		io_hdmirx_scl, io_hdmirx_sda,
+		io_hdmitx_scl, io_hdmitx_sda,
 		// VADJ ports
 		o_vadj_en, o_vadj);
 	//
@@ -228,7 +228,7 @@ i_sd_cd_n,
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 	output	wire	o_oled_reset_n, o_oled_panel_en, o_oled_logic_en;
-	inout	wire	io_hdmitx_scl, io_hdmitx_sda;
+	inout	wire	io_hdmirx_scl, io_hdmirx_sda;
 	input	wire		i_wbu_uart_rx;
 	output	wire		o_wbu_uart_tx;
 	// I/O declarations for the DDR3 SDRAM
@@ -246,7 +246,7 @@ i_sd_cd_n,
 	inout	wire	[16-1:0]	ddr3_dq;
 	// }}}
 	// EDID RX definitions
-	inout	wire	io_hdmirx_scl, io_hdmirx_sda;
+	inout	wire	io_hdmitx_scl, io_hdmitx_sda;
 	// VADJ wires
 	output	wire		o_vadj_en;
 	output	wire [1:0]	o_vadj;
@@ -473,7 +473,7 @@ i_sd_cd_n,
 		// PLL generated clocks
 		s_clk_125mhz,
 	// EDID RX definitions
-	io_hdmirx_scl, io_hdmirx_sda,
+	io_hdmitx_scl, io_hdmitx_sda,
 	w_edidslv_scl,  w_edidslv_sda);
 
 
@@ -832,7 +832,7 @@ i_sd_cd_n,
 		.I(1'b0),
 		.T(o_edid_scl),
 		.O(i_edid_scl),
-		.IO(io_hdmitx_scl)
+		.IO(io_hdmirx_scl)
 		// }}}
 	);
 
@@ -841,7 +841,7 @@ i_sd_cd_n,
 		.I(1'b0),
 		.T(o_edid_sda),
 		.O(i_edid_sda),
-		.IO(io_hdmitx_sda)
+		.IO(io_hdmirx_sda)
 		// }}}
 	);
 	// }}}
@@ -1008,8 +1008,8 @@ i_sd_cd_n,
 	);
 
 
-	assign	io_hdmirx_scl = w_edidslv_scl ? 1'bz : 1'b0;
-	assign	io_hdmirx_sda = w_edidslv_sda ? 1'bz : 1'b0;
+	assign	io_hdmitx_scl = w_edidslv_scl ? 1'bz : 1'b0;
+	assign	io_hdmitx_sda = w_edidslv_sda ? 1'bz : 1'b0;
 
 	assign	o_vadj = 2'b11;
 	initial	vadj33_vadj_counter = 0;

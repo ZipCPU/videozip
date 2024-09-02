@@ -43,8 +43,8 @@
 @DEVID=EDID
 @ACCESS=@$(DEVID)_ACCESS
 @INCLUDEFILE=i2ccpu.txt
-@IOSDA=io_hdmitx_sda
-@IOSCL=io_hdmitx_scl
+@IOSDA=io_hdmirx_sda
+@IOSCL=io_hdmirx_scl
 @INTERRUPT=edid_int
 @INT.I2C.WIRE=
 @INT.I2C.PIC=
@@ -94,20 +94,22 @@
 @SLAVE.BUS=wb32
 @SLAVE.TYPE=DOUBLE
 @STREAM=edid
+@IOSDA=io_hdmitx_sda
+@IOSCL=io_hdmitx_scl
 @TOP.PORTLIST=
 		// EDID RX definitions
-		io_hdmirx_scl, io_hdmirx_sda
+		@$(IOSCL), @$(IOSDA)
 @TOP.IODECL=
 	// EDID RX definitions
-	inout	wire	io_hdmirx_scl, io_hdmirx_sda;
+	inout	wire	@$(IOSCL), @$(IOSDA);
 @TOP.DEFNS=
 	wire	w_@$(PREFIX)_scl, w_@$(PREFIX)_sda;
 @TOP.INSERT=
-	assign	io_hdmirx_scl = w_@$(PREFIX)_scl ? 1'bz : 1'b0;
-	assign	io_hdmirx_sda = w_@$(PREFIX)_sda ? 1'bz : 1'b0;
+	assign	@$(IOSCL) = w_@$(PREFIX)_scl ? 1'bz : 1'b0;
+	assign	@$(IOSDA) = w_@$(PREFIX)_sda ? 1'bz : 1'b0;
 @TOP.MAIN=
 	// EDID RX definitions
-	io_hdmirx_scl, io_hdmirx_sda,
+	@$(IOSCL), @$(IOSDA),
 	w_@$(PREFIX)_scl,  w_@$(PREFIX)_sda
 @MAIN.PORTLIST=
 		// EDID RX definitions
