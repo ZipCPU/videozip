@@ -1315,7 +1315,7 @@ SDIODRV *sdio_init(SDIO *dev) {
 	unsigned	ifcond, op_cond, hcs;
 	SDIODRV	*dv = (SDIODRV *)malloc(sizeof(SDIODRV));
 	unsigned op_cond_query;
-	const	unsigned	CKPHASE = 16 << 16;
+	unsigned	clk_phase = 16 << 16;
 
 	dv->d_dev = dev;
 	dv->d_RCA = 0;
@@ -1332,9 +1332,25 @@ SDIODRV *sdio_init(SDIO *dev) {
 	dv->d_dev->sd_cmd = SDIO_REMOVED;
 	dv->d_dev->sd_cmd = SDIO_RESET;
 
-	dv->d_dev->sd_phy = SPEED_SLOW | SECTOR_512B | CKPHASE;
+	dv->d_dev->sd_phy = SPEED_SLOW | SECTOR_512B | SDPHY_PHASEMSK;
 	while(SPEED_SLOW != (dv->d_dev->sd_phy & SDIOCK_MASK))
 		;
+
+	{
+		unsigned	phy;
+		phy = dv->d_dev->sd_phy;
+		// SDPHY_PHASEMSK= 0x001f0000,
+		if (0x010000 & phy) {
+			// OPT_SERDES
+			clk_phase = 24 << 16;	// 0x18_0000
+		} else if (0x040000 & phy) {
+			// OPT_DDR
+			clk_phase = 16 << 16;
+		} else {
+			// Raw front end I/O
+			clk_phase = 8 << 16;
+		}
+	}
 
 	sdio_go_idle(dv);
 
@@ -1430,7 +1446,7 @@ SDIODRV *sdio_init(SDIO *dev) {
 	sdio_select_card(dv);
 
 	dv->d_dev->sd_phy = SECTOR_512B | SDIOCK_25MHZ | SDIO_PUSHPULL
-			| CKPHASE;
+			| clk_phase;
 	while(SDIOCK_25MHZ != (dv->d_dev->sd_phy & 0x0ff))
 		; // Wait for the clock to change
 
@@ -1461,7 +1477,7 @@ SDIODRV *sdio_init(SDIO *dev) {
 		// couldn't set the clock, and so we should abandon our attempt.
 		dv->d_dev->sd_phy = SDIOCK_SHUTDN
 					| (phy & ~(SDPHY_PHASEMSK|SDIOCK_MASK))
-					| CKPHASE | SDIOCK_50MHZ;
+					| clk_phase | SDIOCK_50MHZ;
 
 		for(int k=0; k<50; k++)
 			if (SDIOCK_50MHZ == (dv->d_dev->sd_phy & SDIOCK_MASK))
@@ -1508,7 +1524,7 @@ SDIODRV *sdio_init(SDIO *dev) {
 							| SDIOCK_50MHZ;
 				dv->d_dev->sd_phy = phy;
 				phy = dv->d_dev->sd_phy;
-				phy = (phy & ~SDPHY_PHASEMSK) | CKPHASE;
+				phy = (phy & ~SDPHY_PHASEMSK) | clk_phase;
 				if (SDDEBUG) {
 					txstr("Adjusting PHY to: ");
 					txhex(phy);

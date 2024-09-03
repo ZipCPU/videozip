@@ -5,6 +5,7 @@ capgps
 cpedid
 dbgfp.64t
 dumpflash
+edidrxscope
 edidtxscope
 excheck
 exregs
@@ -13,6 +14,7 @@ flashid
 flashscope
 gpscoeffs
 i2casm
+i2cscope
 lex.yy.c
 manping
 mdioscope

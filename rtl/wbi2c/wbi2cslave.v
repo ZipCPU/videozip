@@ -53,7 +53,7 @@ module	wbi2cslave #(
 		parameter [0:0]	WB_READ_ONLY  = 1'b0,
 		parameter [0:0]	I2C_READ_ONLY = 1'b0,
 		parameter [0:0]	AXIS_SUPPORT  = 1'b1,
-		parameter [6:0]	SLAVE_ADDRESS = 7'h50,
+		parameter [6:0]	SLAVE_ADDRESS = 7'h50,	// = A0/A1
 		parameter	MEM_ADDR_BITS = 8
 		// }}}
 	) (
@@ -178,9 +178,9 @@ module	wbi2cslave #(
 				r_we <= wr_stb[3:0];
 				r_addr <= i2c_addr[MEM_ADDR_BITS-1:2];
 				r_data <= {(4){wr_data}};
-			end else if (AXIS_SUPPORT && s_valid)
+			end else if (AXIS_SUPPORT && s_valid && s_ready)
 			begin
-				r_we <= { 2'b00, axis_addr[1:0] };
+				r_we <= (4'b1000 >> axis_addr[1:0]);
 				r_addr <= axis_addr[MEM_ADDR_BITS-1:2];
 				r_data <= {(4){s_data}};
 			end else if ((!WB_READ_ONLY)&&(i_wb_stb)&&(i_wb_we))
@@ -325,6 +325,7 @@ module	wbi2cslave #(
 		I2CSTART: begin
 			// {{{
 				dbits <= 0;
+				oreg <= 8'hff;
 				if (i2c_negedge)
 					i2c_state <= I2CADDR;
 			end
@@ -395,11 +396,8 @@ module	wbi2cslave #(
 			// {{{
 				dbits <= 3'h0;
 				if (i2c_negedge)
-				begin
-					i2c_state <= I2CTX;
-					oreg <= i2c_tx_byte;
-				end
-				oreg <= rd_val;
+					i2c_state <= (this_sda)? I2CIDLE:I2CTX;
+				oreg <= i2c_tx_byte;
 			end
 			// }}}
 		I2CILLEGAL:	dbits <= 3'h0;
@@ -433,7 +431,9 @@ module	wbi2cslave #(
 			// {{{
 			if (i2c_rx_stb)
 			begin
-				i2c_addr <= i2c_rx_byte;
+				i2c_addr <= 0;
+				i2c_addr[((MEM_ADDR_BITS > 8) ? 7
+					: (MEM_ADDR_BITS-1)):0] <= i2c_rx_byte;
 				bus_state <= BUS_READ;
 				bus_rd_stb <= 1'b1;
 			end else if (i2c_tx_stb)
@@ -533,10 +533,12 @@ module	wbi2cslave #(
 	always @(posedge i_clk)
 		r_trigger <= i2c_start;
 
-	assign	o_dbg = { r_trigger, 3'h0,
+	assign	o_dbg = { r_trigger, (i2c_start || i2c_stop),
+				(i2c_start||i2c_stop) ? {i2c_start, i2c_stop}
+						: i2c_state[1:0],
 			i_wb_stb, i_wb_we && i_wb_stb, o_wb_stall,
-					o_wb_ack, 2'b00,i_wb_addr[5:0],	// 12b
-			s_valid, s_ready, s_last, 1'b0, s_data,		// 12b
+				o_wb_ack, dbits[1:0],i_wb_addr[5:0],	// 12b
+			s_valid, s_ready, s_last, 1'b0, s_data,	// 12b
 			i_i2c_scl, i_i2c_sda, o_i2c_scl, o_i2c_sda	//  4b
 			};
 	// }}}
