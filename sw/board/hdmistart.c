@@ -50,6 +50,23 @@
 #include "getedid.c"
 // }}}
 
+#include <stdio.h>
+#include "i2c.c"
+
+// #define	_BOARD_HAS_EDIDSCOPE
+#ifdef	_BOARD_HAS_EDIDSCOPE
+
+#define	EDIDSCOPE_SET		_edidscope->s_ctrl = WBSCOPE_DISABLE
+#define	EDIDSCOPE_TRIGGER	_edidscope->s_ctrl = WBSCOPE_TRIGGER|WBSCOPE_DISABLE
+
+#else
+
+#error "No scope"
+#define	EDIDSCOPE_SET
+#define	EDIDSCOPE_TRIGGER
+
+#endif
+
 /*
 void	wait_ms(int ms) {
 	constexpr	int	CLOCKS_PER_MS = CLKFREQHZ / 1000;
@@ -79,9 +96,17 @@ main(int argc, char ** argv) {
 	unsigned	v;
 	int		valid_edid = 0;
 
+	EDIDSCOPE_SET;
+	*_spio = 0x0ff00;
+
 	txstr("+--------------------------------------+\n"
 		"|             HDMI Startup             |\n"
 		"+--------------------------------------+\n");
+
+	{
+		unsigned s = _edidscope->s_ctrl;
+		txstr("Initial scope: "); txhex(s); txstr("\n");
+	}
 
 	txstr("\n"
 		"De-asserting the upstream HDMI detect flag, and the\n"
@@ -113,44 +138,121 @@ main(int argc, char ** argv) {
 	// Read EDID
 	// {{{
 	txstr("HDMI output (monitor) detected.\n");
-	txstr("Attempting to read EDID.\n");
+	txstr("Attempting to read EDID, via @0x");
+		txhex((unsigned)get_edid_script); txstr("\n");
+
+	printf("Initial dump:\n");
+		i2c_dump((I2CCPU * const)_edid);
+		txstr("\n\n");
+
+	i2c_clear((I2CCPU * const)_edid);
+	printf("Next dump:\n");
+		i2c_dump((I2CCPU * const)_edid);
+		txstr("\n\n");
 
 	_edid->ic_address = (unsigned)get_edid_script;
 
-	while(0 == (_edid->ic_control & I2CC_STOPPED))
+	_zip->z_tmc = 1000000;	// 10ms
+	while(_zip->z_tmc != 0)
 		;
+	EDIDSCOPE_TRIGGER;
+
+	while(0 == (_edid->ic_control & I2CC_STOPPED)) {
+		if (_zip->z_tmc == 0) {
+			printf("Timeout dump:\n");
+			i2c_dump((I2CCPU * const)_edid);
+			// Repeat every 4 seconds
+			_zip->z_tmc = 4 * 100 * 1000 * 1000;
+		}
+
+		if (_edid->ic_control & I2CC_FAULT) {
+			_edid->ic_control = I2CC_ABORT | I2CC_ERROR | I2CC_HALT;
+			unsigned s = _edidscope->s_ctrl;
+			EDIDSCOPE_TRIGGER;
+			txstr("SCOPE was : "); txhex(s); txstr("\n");
+			txstr("Halting on I2CC Fault\n");
+			while(0 == (_edid->ic_control & I2CC_STOPPED))
+				;
+		}
+	}
 	// }}}
 
 	*_spio = 0x0101;
 
 	// DUMP the EDID
 	// {{{
-	txstr("EDID:\n  ");
+	txstr("EDID:\n  0x");
 	for(int k=0; k<256; k++) {
 		unsigned	v, hx;
 
 		v = _edidslv[k];
-		txstr("0x");
+		// txstr("0x");
 
+		// Upper
+		// {{{
 		hx = (v >> 4) & 0x0f;
 		if (hx >= 10)
 			txchr(hx - 10 + 'A');
 		else
 			txchr(hx + '0');
+		// }}}
 
+		// Lower
+		// {{{
 		hx = v & 0x0f;
 		if (hx >= 10)
 			txchr(hx - 10 + 'A');
 		else
 			txchr(hx + '0');
+		// }}}
+
 		if (k == 255)
 			txchr('\n');
-		else if (0x0f == k & 0x0f)
-			txstr("\n  ");
-		else if (7 == k & 0x7)
+		else if (0x0f == (k & 0x0f))
+			txstr("\n  0x");
+		else if (7 == (k & 0x7))
 			txstr("  ");
 		else
 			txchr(' ');
+	}
+	// }}}
+
+	if (I2CC_FAULT & _edid->ic_control) {
+		txstr("EDID Read fault\n");
+		i2c_dump((I2CCPU * const)_edid);
+		zip_halt();
+	}
+
+	// Validate the EDID data
+	// {{{
+	{
+		int	failed = 0;
+
+		if (0x00 != _edidslv[0]) failed = 1;
+		if (0xff != _edidslv[1]) failed = 1;
+		if (0xff != _edidslv[2]) failed = 1;
+		if (0xff != _edidslv[3]) failed = 1;
+		if (0xff != _edidslv[4]) failed = 1;
+		if (0xff != _edidslv[5]) failed = 1;
+		if (0xff != _edidslv[6]) failed = 1;
+		if (0x00 != _edidslv[7]) failed = 1;
+
+		if (!failed) {
+			// Check the checksum
+			unsigned	sum;
+			for(int k=0; k<128; k++) {
+				sum = sum + (_edidslv[k] & 0x0ff);
+			} // txstr("CHECK SUM: "); txhex(sum); txstr("\n");
+			if (0 != (sum & 0x0ff))
+				failed = 1;
+		}
+
+		if (failed) {
+			txstr("ERR: Invalid EDID\n");
+			EDIDSCOPE_TRIGGER;
+			i2c_dump((I2CCPU * const)_edid);
+			zip_halt();
+		}
 	}
 	// }}}
 
@@ -162,6 +264,8 @@ main(int argc, char ** argv) {
 	//	external video source
 	//	HDMI clock (comes externally)
 	_hdmi->v_control = 0x0661;	// External video source, HDMI clock
+
+	*_spio = 0x0f06;
 
 	// Wait for the upstream video to be valid
 	while(0 == (_hdmi->v_control & 0x010000)) {
@@ -204,6 +308,8 @@ main(int argc, char ** argv) {
 		}
 	} while(valid_edid == 0);
 	*/
+
+	*_spio = 0x0f07;
 
 	txstr("Enabling the HDMI source port\n");
 	*_gpio = GPIO_HDMITX_EN_SET;

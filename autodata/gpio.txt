@@ -61,7 +61,7 @@
 	output	wire	o_hdmirx_hpa;
 	output	wire	o_hdmirx_txen;
 	inout	wire	io_hdmitx_cec;
-	input	wire	i_hdmitx_hpd_n;
+	input	wire	i_hdmitx_hpd_n;		// Hotplug detect
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
 	output	wire	o_oled_reset_n, o_oled_panel_en, o_oled_logic_en;
@@ -86,7 +86,7 @@
 `else
 			1'b0,
 `endif
-			!i_hdmitx_hpd_n,
+			!i_hdmitx_hpd_n,	// Hotplug detect
 			!i_sd_cd_n,
 			1'b0,
 			io_hdmitx_cec, io_hdmirx_cec };

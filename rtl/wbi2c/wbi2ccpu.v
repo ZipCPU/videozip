@@ -280,7 +280,7 @@ module	wbi2ccpu #(
 	assign	bus_write_data = i_wb_data;
 	assign	bus_write_strb = i_wb_sel;
 
-	assign	bus_read       = i_wb_stb && !i_wb_we && !o_wb_stall;
+	assign	bus_read       = i_wb_stb && !i_wb_we && !o_wb_stall && i_wb_sel != 0;
 	assign	bus_read_addr  = i_wb_addr;
 
 	assign	o_wb_stall = 1'b0; // (i_wb_we && i_wb_addr == BUS_OVERRIDE && !ovw_ready)

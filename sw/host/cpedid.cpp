@@ -69,7 +69,7 @@ void	usage(void) {
 }
 
 int main(int argc, char **argv) {
-#ifdef	R_EDID_OUT
+#ifdef	R_EDIDRX
 	int	skp=0;
 
 	skp=1;
@@ -100,6 +100,10 @@ int main(int argc, char **argv) {
 	}
 
 	delete	m_fpga;
+
+
+	printf("You may now run:\n  %% edid-decode < edidsrc.bin\n"
+		"to decode this file\n");
 #else
 	printf("Design has no sink EDID port\n");
 #endif

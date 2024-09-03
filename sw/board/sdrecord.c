@@ -2,7 +2,7 @@
 //
 // Filename:	sw/board/sdrecord.c
 // {{{
-// Project:	KIMOS, a Mercury KX2 demonstration project
+// Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
 // Purpose:	Records a set of pseudorandom data to an SD card, and then
 //		reads it back--proving that data can be written and then read
@@ -15,12 +15,10 @@
 // }}}
 // Copyright (C) 2023-2024, Gisselquist Technology, LLC
 // {{{
-// This file is part of the KIMOS project.
-//
-// The KIMOS project is free software and gateware: you can redistribute it
-// and/or modify it under the terms of the GNU General Public License as
-// published by the Free Software Foundation, either version 3 of the License,
-// or (at your option) any later version.
+// This program is free software (firmware): you can redistribute it and/or
+// modify it under the terms of the GNU General Public License as published
+// by the Free Software Foundation, either version 3 of the License, or (at
+// your option) any later version.
 //
 // This program is distributed in the hope that it will be useful, but WITHOUT
 // ANY WARRANTY; without even the implied warranty of MERCHANTIBILITY or

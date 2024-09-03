@@ -43,8 +43,8 @@
 @DEVID=EDID
 @ACCESS=@$(DEVID)_ACCESS
 @INCLUDEFILE=i2ccpu.txt
-@IOSDA=io_hdmirx_sda
-@IOSCL=io_hdmirx_scl
+@IOSDA=io_hdmitx_sda
+@IOSCL=io_hdmitx_scl
 @INTERRUPT=edid_int
 @INT.I2C.WIRE=
 @INT.I2C.PIC=
@@ -94,8 +94,8 @@
 @SLAVE.BUS=wb32
 @SLAVE.TYPE=DOUBLE
 @STREAM=edid
-@IOSDA=io_hdmitx_sda
-@IOSCL=io_hdmitx_scl
+@IOSDA=io_hdmirx_sda
+@IOSCL=io_hdmirx_scl
 @TOP.PORTLIST=
 		// EDID RX definitions
 		@$(IOSCL), @$(IOSDA)

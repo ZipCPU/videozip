@@ -1,6 +1,6 @@
 ################################################################################
 ##
-## Filename:	autodata/edidscope.txt
+## Filename:	autodata/edidslvscope.txt
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
@@ -37,13 +37,14 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=edidscope
-@DEVID=EDIDSCOPE
-@TARGET=edid
-@TRIGGER=edid_debug[31]
+@PREFIX=edidslvscope
+@DEVID=EDIDSLVSCOPE
+@TARGET=edidslv
+@TRIGGER=edidslv_dbg[31]
+@DEBUG=edidslv_dbg[30:0]
 @LOG_CAPTURE_SIZE=14
 @INCLUDEFILE=wbscopc.txt
-@INT.I2CSCOPE.PIC=altpic
-@INT.I2CSCOPE.WIRE=@$(PREFIX)_int
+@INT.EDIDSLVSCOPE.PIC=altpic
+@INT.EDIDSLVSCOPE.WIRE=@$(PREFIX)_int
 @$DEFHOLDOFF=0
 @MAIN.DEFNS=
