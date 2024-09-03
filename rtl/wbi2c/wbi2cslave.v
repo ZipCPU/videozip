@@ -539,7 +539,7 @@ module	wbi2cslave #(
 			i_wb_stb, i_wb_we && i_wb_stb, o_wb_stall,
 				o_wb_ack, dbits[1:0],i_wb_addr[5:0],	// 12b
 			s_valid, s_ready, s_last, 1'b0, s_data,	// 12b
-			i_i2c_scl, i_i2c_sda, o_i2c_scl, o_i2c_sda	//  4b
+			this_scl, this_sda, o_i2c_scl, o_i2c_sda	//  4b
 			};
 	// }}}
 
