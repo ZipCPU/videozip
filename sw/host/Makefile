@@ -40,7 +40,8 @@ all:
 ## }}}
 PROGRAMS := exregs exuart mkedid zipdbg zipload zipstate cpedid flashid \
 	dumpflash readmdio netstat mkedid rdsync rdclocks excheck # manping
-SCOPES := mdioscope edidtxscope edidrxscope flashscope i2cscope sdioscope spiscope zipscope
+SCOPES := mdioscope edidtxscope edidrxscope flashscope i2cscope		\
+	sdioscope sdwbscope spiscope zipscope
 all: $(PROGRAMS) $(SCOPES) gps
 CXX := g++
 OBJDIR := obj-pc
@@ -50,7 +51,8 @@ SOURCES := exregs.cpp exuart.cpp rdclocks.cpp flashdrvr.cpp		\
 	zipload.cpp zipstate.cpp zipdbg.cpp cpedid.cpp readhist.cpp	\
 	getframe.cpp rawdscope.cpp tmdscope.cpp rdsync.cpp manping.cpp	\
 	erxscope.cpp etxscope.cpp flashscope.cpp flashid.cpp		\
-	i2cscope.cpp readmdio.cpp mdioscope.cpp sdioscope.cpp spiscope.cpp netstat.cpp
+	i2cscope.cpp readmdio.cpp mdioscope.cpp				\
+	sdioscope.cpp sdwbscope.cpp spiscope.cpp netstat.cpp
 	# wbsettime.cpp
 HEADERS := llcomms.h port.h exbus.h devbus.h nexbus.h udpsocket.h
 OBJECTS := $(addprefix $(OBJDIR)/,$(subst .cpp,.o,$(SOURCES)))
@@ -82,6 +84,7 @@ $(OBJDIR)/flashscope.o:  flashscope.cpp  scopecls.h
 $(OBJDIR)/i2cscope.o:    i2cscope.cpp    scopecls.h
 $(OBJDIR)/mdioscope.o:   mdioscope.cpp   scopecls.h
 $(OBJDIR)/sdioscope.o:   sdioscope.cpp   scopecls.h
+$(OBJDIR)/sdwbscope.o:   sdwbscope.cpp   scopecls.h
 $(OBJDIR)/spiscope.o:    spiscope.cpp    scopecls.h
 $(OBJDIR)/zipscope.o:    zipscope.cpp    scopecls.h
 #
@@ -158,6 +161,8 @@ i2cscope: $(OBJDIR)/i2cscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 mdioscope: $(OBJDIR)/mdioscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 sdioscope: $(OBJDIR)/sdioscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
+	$(CXX) -g $^ -o $@
+sdwbscope: $(OBJDIR)/sdwbscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@
 spiscope: $(OBJDIR)/spiscope.o $(OBJDIR)/scopecls.o $(BUSOBJS)
 	$(CXX) -g $^ -o $@

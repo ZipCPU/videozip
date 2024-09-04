@@ -51,9 +51,9 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := cputest.c memtest.c i2cdbg.c txfns.c helloworld.c simple_ping.c arp.c ipcksum.c sdinfo.c hdmistart.c
+SOURCES := contest.c cputest.c hdmistart.c i2c.c logo.c memtest.c rxfns.c sdreadd.c sdrecord.c txfns.c zipcpu.c helloworld.c simple_ping.c arp.c ipcksum.c hdmistart.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
-INCS    := -I../zlib -I../../rtl -I../fatfs -I.
+INCS    := -I../zlib -I../../rtl -I../fatfs -I../host -I.
 LDSCRIPT:= -Tboard.ld
 LBKRAM	:= -T bkram.ld -L../zlib
 ZIPLIB	:= libvidzip.a
@@ -62,6 +62,7 @@ NLIBD	:=$(INSTALLD)/cross-tools/zip/lib
 LIB	:= $(NLIBD)/libg.a $(NLIBD)/libc.a
 ZLIBD	:=../zlib
 LFLAGS  := $(LDSCRIPT) -L../zlib -L../fatfs $(ZLIBD)/$(ZIPLIB)
+LBLKRAM := -Tbkram.ld -L../zlib -L../fatfs $(ZLIBD)/$(ZIPLIB)
 LIBS    := -lc -lvidzip -lgcc
 LIBFAT  := -lfatfs
 FAT     := ../fatfs/libfatfs.a
@@ -129,21 +130,23 @@ $(OBJDIR)/sdreadd.o: sdreadd.c
 	$(mk-objdir)
 	$(CC) -c $(CFLAGS) $< -o $@
 sdreadd: $(SDREADD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LFLAGS) $(SDREADD) $(LIBFAT) $(LIBS) -o $@
+	# $(CC) $(CFLAGS) $(LFLAGS) $(SDREADD) $(LIBFAT) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LBLKRAM) $(SDREADD) $(LIBFAT) $(LIBS) -o $@
 
 SDRECORD:= $(addprefix $(OBJDIR)/,sdrecord.o txfns.o)
 $(OBJDIR)/sdrecord.o: sdrecord.c
 	$(mk-objdir)
 	$(CC) -c $(CFLAGS) $< -o $@
 sdrecord: $(SDRECORD) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LFLAGS) $(SDRECORD) $(LIBFAT) $(LIBS) -o $@
+	# $(CC) $(CFLAGS) $(LFLAGS) $(SDRECORD) $(LIBFAT) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LBLKRAM) $(SDRECORD) $(LIBFAT) $(LIBS) -o $@
 
 helloworld: $(OBJDIR)/helloworld.o $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/helloworld.o -o $@
 
 $(OBJDIR)/logo.o: logo.c logo.h
 logo: $(OBJDIR)/logo.o $(OBJDIR)/txfns.o $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LFLAGS) $(OBJDIR)/logo.o $(OBJDIR)/txfns.o -o $@
+	$(CC) $(CFLAGS) $(LBLKRAM) $(OBJDIR)/logo.o $(OBJDIR)/txfns.o -o $@
 
 simple_ping: $(OBJDIR)/simple_ping.o $(OBJDIR)/zipcpu.o
 simple_ping: $(OBJDIR)/arp.o $(OBJDIR)/ipcksum.o

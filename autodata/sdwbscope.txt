@@ -1,12 +1,12 @@
 ################################################################################
 ##
-## Filename:	autodata/sdioscope.txt
+## Filename:	autodata/sdwbscope.txt
 ## {{{
 ## Project:	VideoZip, a ZipCPU SoC supporting video functionality
 ##
-## Purpose:	Describes how to connect the SDIO controllers' debugging port
-##		to a wishbone scope, then to be connected to the bus by
-##	autofpga.
+## Purpose:	Describes how to connect the debug port from the SDIO control
+##		(sdwb.v) module to a compressed wishbone scope, to then be
+##	connected to the bus by autofpga.
 ##
 ## Creator:	Dan Gisselquist, Ph.D.
 ##		Gisselquist Technology, LLC
@@ -37,14 +37,14 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=sdioscope
-@DEVID=SDIOSCOPE
-@DEPENDS=SDIO_ACCESS
-@TARGET=sdio
-@TRIGGER=i_@$(TARGET)_debug[31]
-@DEBUG=i_@$(TARGET)_debug[30:0]
-@$LOG_CAPTURE_SIZE=12
+@PREFIX=sdwbscope
+@DEVID=SDWBSCOPE
+@TARGET=sdwb
+@TRIGGER=w_sdio_sdwb_debug[31]
+@DEBUG=w_sdio_sdwb_debug[30:0]
+@LOG_CAPTURE_SIZE=15
 @INCLUDEFILE=wbscopc.txt
-@INT.SDIOSCOPE.PIC=altpic
-@INT.SDIOSCOPE.WIRE=@$(PREFIX)_int
+@INT.SDWBSCOPE.PIC=altpic
+@INT.SDWBSCOPE.WIRE=@$(PREFIX)_int
+@$DEFHOLDOFF=0
 @MAIN.DEFNS=

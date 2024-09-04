@@ -494,6 +494,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~thedesign/u_h
 ## No XDC.INSERT tag in SIM
 ## No XDC.INSERT tag in uart
 ## No XDC.INSERT tag in altpic
+## No XDC.INSERT tag in sdwbscope
 ## No XDC.INSERT tag in version
 ## From nettxctr
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clknettxctrctr/avgs*}]     -to [get_cells -hier -filter {NAME=~*clknettxctrctr/q_*}]        8

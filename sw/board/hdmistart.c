@@ -61,7 +61,7 @@
 
 #else
 
-#error "No scope"
+// #error "No scope"
 #define	EDIDSCOPE_SET
 #define	EDIDSCOPE_TRIGGER
 
@@ -102,11 +102,6 @@ main(int argc, char ** argv) {
 	txstr("+--------------------------------------+\n"
 		"|             HDMI Startup             |\n"
 		"+--------------------------------------+\n");
-
-	{
-		unsigned s = _edidscope->s_ctrl;
-		txstr("Initial scope: "); txhex(s); txstr("\n");
-	}
 
 	txstr("\n"
 		"De-asserting the upstream HDMI detect flag, and the\n"
@@ -167,9 +162,7 @@ main(int argc, char ** argv) {
 
 		if (_edid->ic_control & I2CC_FAULT) {
 			_edid->ic_control = I2CC_ABORT | I2CC_ERROR | I2CC_HALT;
-			unsigned s = _edidscope->s_ctrl;
 			EDIDSCOPE_TRIGGER;
-			txstr("SCOPE was : "); txhex(s); txstr("\n");
 			txstr("Halting on I2CC Fault\n");
 			while(0 == (_edid->ic_control & I2CC_STOPPED))
 				;

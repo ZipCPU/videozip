@@ -250,6 +250,32 @@ void txhex2(unsigned val) {
 }
 // }}}
 
+int	user_issim(void) {
+	// {{{
+	asm("CLR R1\n");
+	asm("SIM\n");
+	asm("LDI 1,R1\n");
+	asm("AND 0xffffffdf,CC\n");
+	asm("BUSY");
+}
+// }}}
+
+int	issim(void) {
+	// {{{
+	volatile int	context[16];
+	int	stack[4];	// Overkill, but so what
+
+	for(int k=0; k<16; k++)
+		context[k] = 0;
+	context[13] = (int)&stack[3];
+	context[15] = (int)user_issim;
+	zip_restore_context((void *)context);
+	zip_rtu();
+	zip_save_context((void *)context);
+	return	context[1];
+}
+// }}}
+
 int main(int argc, char **argv) {
 	unsigned pwr, rtc;
 	// char *_sdram = _streamram;
@@ -265,6 +291,10 @@ int main(int argc, char **argv) {
 		rwcheck("STACK-CHK   : ", &a);
 	}
 
+	if (issim())
+		txstr("SIM-CHECK   : Simulation\r\n");
+	else
+		txstr("SIM-CHECK   : Hardware\r\n");
 	if (R_BKRAM != (unsigned)_bkram) {
 		txstr("Unexpected BKRAM address\r\n");
 		gbl_fail = 1;
@@ -474,13 +504,22 @@ int main(int argc, char **argv) {
 		unsigned	v;
 
 		v = _sdio->sd_cmd;
-		rwchecka("SDIO.DMAADDR: ", (unsigned *)&_sdio->sd_dma_addr, 0);
+		// The SD card will only pass if it's not in reset, and it'll
+		// only not be in reset if the card removed signal isn't set.
+		if (v & 0x080000) {
+			txstr("SDIO.CMD    : No card present\r\n");
+		} else {
+			if (v & 0x040000)
+				_sdio->sd_cmd = 0x040000;
+			v = _sdio->sd_cmd;
+			rwchecka("SDIO.DMAADDR: ", (unsigned *)&_sdio->sd_dma_addr, 0);
 
-		if (0 == (v & 0x80000)) {
-			// A card is present, so we can check the ARG and
-			// DMA length
-			rwcheck( "SDIO.ARG    : ", (unsigned *)&_sdio->sd_data);
-			rwcheck( "SDIO.DMALN  : ", (unsigned *)&_sdio->sd_dma_length);
+			if (0 == (v & 0x80000)) {
+				// A card is present, so we can check the ARG and
+				// DMA length
+				rwcheck( "SDIO.ARG    : ", (unsigned *)&_sdio->sd_data);
+				rwcheck( "SDIO.DMALN  : ", (unsigned *)&_sdio->sd_dma_length);
+			}
 		}
 	}
 #else
@@ -517,7 +556,7 @@ int main(int argc, char **argv) {
 	// Check for RTCDATE	--- but what test to use?
 	txstr("REALTIMEDATE: "); txhex(*_rtcdate); txstr("\n");
 
-	if (1) { // Check for ICAPETWO
+	if (!issim()) { // Check for ICAPETWO
 		// {{{
 #ifdef	_BOARD_HAS_ICAPETWO
 		if (R_CFG_WBSTAR != (unsigned)&_icape[CFG_WBSTAR]) {
@@ -552,11 +591,35 @@ int main(int argc, char **argv) {
 
 	// Scope checks
 	// {{{
+#ifdef	_BOARD_HAS_FLASHSCOPE
+	scopecheck("FLASHSCOPE  : ", (unsigned *)&_flashscope->s_ctrl);
+#endif
 #ifdef	_BOARD_HAS_VIDSCOPE
 	scopecheck("VIDSCOPE    : ", (unsigned *)&_zipscope->s_ctrl);
 #endif
-#ifdef	_BOARD_HAS_SDSCOPE
-	scopecheck("SD-SCOPE    : ", (unsigned *)&_scope_sdcard->s_ctrl);
+#ifdef	_BOARD_HAS_SDIOSCOPE
+	scopecheck("SDIOSCOPE   : ", (unsigned *)&_sdioscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_SDWBSCOPE
+	scopecheck("SDWBSCOPE   : ", (unsigned *)&_sdwbscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_EDIDSLVSCOPE
+	scopecheck("EDIDSLVSCOPE: ", (unsigned *)&_edidslvscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_EDIDSCOPE
+	scopecheck("EDIDSCOPE   : ", (unsigned *)&_edidscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_I2CSCOPE
+	scopecheck("I2CSCOPE    : ", (unsigned *)&_i2cscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_I2SSCOPE
+	scopecheck("I2SSCOPE    : ", (unsigned *)&_i2sscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_MDIOSCOPE
+	scopecheck("MDIOSCOPE   : ", (unsigned *)&_mdioscope->s_ctrl);
+#endif
+#ifdef	_BOARD_HAS_SPISCOPE
+	scopecheck("SPISCOPE    : ", (unsigned *)&_spiscope->s_ctrl);
 #endif
 #ifdef	_BOARD_HAS_ZIPSCOPE
 	scopecheck("ZIPSCOPE    : ", (unsigned *)&_zipscope->s_ctrl);

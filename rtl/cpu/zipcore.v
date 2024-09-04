@@ -3609,6 +3609,7 @@ module	zipcore #(
 				DBGSRC_JUMP	= 2'b10;
 
 		reg	[31:0]	r_debug;
+		reg	[31:0]	dbg_flags, dbg_regwr, dbg_jump;
 		reg		debug_trigger, dbg_mem_we;
 		wire	[27:0]	debug_flags;
 		reg	[1:0]	dbgsrc;
@@ -3651,26 +3652,31 @@ module	zipcore #(
 			dbgsrc <= 0;
 			if ((i_halt)||(!master_ce)||(debug_trigger)||(o_break))
 				dbgsrc <= DBGSRC_FLAGS;
-			else if ((i_mem_valid)||((!clear_pipeline)&&(!alu_illegal)
-					&&(((alu_wR)&&(alu_valid))
-						||(div_valid)||(fpu_valid))))
+			else if (i_mem_valid)
 				dbgsrc <= DBGSRC_WRITEBACK;
 			else if (clear_pipeline)
 				dbgsrc <= DBGSRC_JUMP;
+			else if (!alu_illegal &&((alu_wR && alu_valid)
+						|| div_valid || fpu_valid))
+				dbgsrc <= DBGSRC_WRITEBACK;
 			else
 				dbgsrc <= DBGSRC_FLAGS;
 		end
 
+		// Delay by one to match dbgsrc
+		always @(posedge i_clk)
+		begin
+			dbg_flags <= { debug_trigger, 3'b101, debug_flags };
+			dbg_regwr <= { debug_trigger, 1'b0, wr_reg_id[3:0],
+							wr_gpreg_vl[25:0] };
+			dbg_jump <= { debug_trigger, 3'b100, dbg_pc };
+		end
+
 		always @(posedge i_clk)
 		casez(dbgsrc)
-		DBGSRC_FLAGS:
-			r_debug <= { debug_trigger, 3'b101,
-				debug_flags };
-		DBGSRC_WRITEBACK:
-			r_debug <= { debug_trigger, 1'b0,
-				wr_reg_id[3:0], wr_gpreg_vl[25:0]};
-		DBGSRC_JUMP: r_debug <= { debug_trigger, 3'b100,
-				dbg_pc };
+		DBGSRC_FLAGS:		r_debug <= dbg_flags;
+		DBGSRC_WRITEBACK:	r_debug <= dbg_regwr;
+		DBGSRC_JUMP:		r_debug <= dbg_jump;
 		default: r_debug <= 32'h0;
 		endcase
 

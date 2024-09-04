@@ -110,10 +110,24 @@ typedef	uint32_t DWORD, LBA_t, UINT;
 // {{{
 // The following defines may be useful when a WBScope has been attached
 // to the device.  They are mostly useful for debugging.  If no WBScope
-// is attached, these macros are given null definitions.
+// is attached, these macros are given null definitions.  SET_SCOPE
+// clears any prior collection, and sets it up for new collect requiring
+// and manual trigger and a holdoff of 100.
+//
+// Two scopes are supported: SDIOSCOPE, which is (currently) more of a
+// front end scope, and SDWBSCOPE scopes the internal control and error
+// signals.
 #ifdef	_BOARD_HAS_SDIOSCOPE
+ #ifdef	_BOARD_HAS_SDWBSCOPE
+#define	SET_SCOPE	_sdioscope->s_ctrl = 0x04000100; _sdwbscope->s_ctrl = 0x04000100
+#define	TRIGGER_SCOPE	_sdioscope->s_ctrl = 0xff000100; _sdwbscope->s_ctrl = 0xff000100
+ #else	// !SDWBSCOPE
 #define	SET_SCOPE	_sdioscope->s_ctrl = 0x04000100
 #define	TRIGGER_SCOPE	_sdioscope->s_ctrl = 0xff000100
+ #endif
+#elif defined(_BOARD_HAS_SDWBSCOPE) // but not SDIOSCOPE
+#define	SET_SCOPE	_sdwbscope->s_ctrl = 0x04000100
+#define	TRIGGER_SCOPE	_sdwbscope->s_ctrl = 0xff000100
 #else
 #define	SET_SCOPE
 #define	TRIGGER_SCOPE
@@ -247,9 +261,9 @@ static	const	uint32_t
 		SDIO_READREG  = SDIO_CMD | SDIO_R1,
 		SDIO_READREGb = SDIO_CMD | SDIO_R1b,
 		SDIO_READR2  = (SDIO_CMD | SDIO_R2),
-		SDIO_WRITEBLK = (SDIO_CMD | SDIO_R1 | SDIO_ERR
+		SDIO_WRITEBLK = (SDIO_CMD | SDIO_R1b | SDIO_ERR
 				| SDIO_WRITE | SDIO_MEM) + 24,
-		SDIO_WRMULTI = (SDIO_CMD | SDIO_R1
+		SDIO_WRMULTI = (SDIO_CMD | SDIO_R1b
 				| SDIO_WRITE | SDIO_MEM) + 25,
 		SDIO_WRDMA = SDIO_WRMULTI | SDIO_DMA,
 		SDIO_READBLK  = (SDIO_CMD | SDIO_R1
@@ -1101,7 +1115,7 @@ unsigned sdio_get_r1(SDIODRV *dev) {	// CMD13=send_status
 		txstr("  Data:    "); txhex(vd); txstr("\n");
 		txstr("  PHY:     "); txhex(dev->d_dev->sd_phy); txstr("\n");
 
-		if (SDINFO)
+		if (SDINFO && (0 == (vc & 0x8000)))
 			sdio_dump_r1(vd);
 	}
 	return	vd;
@@ -1342,13 +1356,16 @@ SDIODRV *sdio_init(SDIO *dev) {
 		// SDPHY_PHASEMSK= 0x001f0000,
 		if (0x010000 & phy) {
 			// OPT_SERDES
-			clk_phase = 24 << 16;	// 0x18_0000
+txstr("OPT_SERDES\n");
+			clk_phase = 16 << 16;	// 0x18_0000
 		} else if (0x040000 & phy) {
 			// OPT_DDR
 			clk_phase = 16 << 16;
+txstr("OPT_DDR\n");
 		} else {
 			// Raw front end I/O
-			clk_phase = 8 << 16;
+			clk_phase = 16 << 16;
+txstr("OPT_RAW\n");
 		}
 	}
 
@@ -1733,8 +1750,8 @@ int	sdio_write(SDIODRV *dev, const unsigned sector,
 
 	sdio_wait_while_busy(dev);
 
+	dev_stat  = dev->d_dev->sd_cmd;
 	card_stat = dev->d_dev->sd_data;
-	dev_stat  = dev->d_dev->sd_data;
 
 	RELEASE_MUTEX;
 
@@ -1957,6 +1974,7 @@ txstr("Read w/o DMA\n");
 			txstr("\n");
 			if (SDINFO)
 				sdio_dump_err(dev_stat);
+			sdio_get_r1(dev);
 		}
 		// If the stop transmission command didn't receive
 		// a proper response, return an error status

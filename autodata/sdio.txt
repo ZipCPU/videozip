@@ -40,6 +40,7 @@
 @DEVID=SDIO
 @NAME=SDIO SD Card
 @NADDR=8
+@CRCTOKEN=1
 @$NUMIO=4
 @ACCESS=SDIO_ACCESS
 @SLAVE.TYPE=OTHER
@@ -54,7 +55,7 @@
 @CARD_DETECT=1'b1
 @OPT_SERDES=1'b1
 @OPT_DMA=1'b1
-@OPT_DDR=1'b1
+@OPT_DDR=1'b0
 @OPT_EMMC=1'b0
 @TOP.IOPREFIX=sd
 @OPT_HWRESET=@$(OPT_EMMC)
@@ -132,7 +133,9 @@
 	sdfrontend #(
 		.OPT_SERDES(@$(OPT_SERDES)),
 		.OPT_DDR(@$(OPT_DDR)),
-		.NUMIO(@$(NUMIO))
+		.NUMIO(@$(NUMIO)),
+		.BUSY_CLOCKS(16),
+		.OPT_CRCTOKEN(@$(CRCTOKEN))
 	) u_@$(PREFIX)_frontend (
 		// {{{
 		.i_clk(s_clk), .i_hsclk(s_clk_400mhz), .i_reset(s_reset),
@@ -285,7 +288,7 @@
 @MAIN.DEFNS=
 	// @$(NAME) definitions
 	// Verilator lint_off UNUSED
-	// wire	[31:0]	w_@$(PREFIX)_sub_debug;
+	wire	[31:0]	w_@$(PREFIX)_sdwb_debug;
 	wire		w_@$(PREFIX)_1p8v, s_@$(PREFIX)_ready,
 			m_@$(PREFIX)_valid, m_@$(PREFIX)_last;
 	reg	[31:0]	@$(PREFIX)_debug;
@@ -304,7 +307,7 @@
 	always @(*)
 	begin
 		@$(PREFIX)_debug = i_@$(PREFIX)_debug;
-		// @$(PREFIX)_debug = w_@$(PREFIX)_sub_debug;
+		@$(PREFIX)_debug = w_@$(PREFIX)_sdwb_debug;
 	end
 
 	sdio #(
@@ -319,6 +322,7 @@
 		.OPT_DDR(@$(OPT_DDR)),
 		.OPT_HWRESET(@$(OPT_HWRESET)),
 		.OPT_CARD_DETECT(@$(CARD_DETECT)),
+		.OPT_CRCTOKEN(@$(CRCTOKEN)),
 `ifdef	VERILATOR
 		.LGTIMEOUT(18),
 `else
@@ -375,9 +379,9 @@
 		.S_AC_VALID(i_@$(PREFIX)_ac_valid),
 		.S_AC_DATA( i_@$(PREFIX)_ac_data),
 		.S_AD_VALID(i_@$(PREFIX)_ad_valid),
-		.S_AD_DATA( i_@$(PREFIX)_ad_data)
+		.S_AD_DATA( i_@$(PREFIX)_ad_data),
 		//
-		// .o_debug(w_@$(PREFIX)_sub_debug)
+		.o_debug(w_@$(PREFIX)_sdwb_debug)
 		// }}}
 	);
 

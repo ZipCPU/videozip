@@ -14,6 +14,7 @@ flashid
 flashscope
 gpscoeffs
 i2casm
+/i2casm.l
 i2cscope
 lex.yy.c
 manping
@@ -25,6 +26,7 @@ rdclocks
 rdsync
 readmdio
 sdioscope
+sdwbscope
 spiasm
 spiscope
 tags

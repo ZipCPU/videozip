@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-// Filename:	sw/host/sdioscope.cpp
+// Filename:	sw/host/sdwbscope.cpp
 // {{{
 // Project:	VideoZip, a ZipCPU SoC supporting video functionality
 //
@@ -49,15 +49,15 @@
 #include "devbus.h"
 #include "scopecls.h"
 
-#ifndef	R_SDIOSCOPE
+#ifndef	R_SDWBSCOPE
 int main(int argc, char **argv) {
 	printf("This design was not built with an SDIO scope within it.\n");
 	exit(EXIT_FAILURE);
 }
 #else
 
-#define	WBSCOPE		R_SDIOSCOPE
-#define	WBSCOPEDATA	R_SDIOSCOPED
+#define	WBSCOPE		R_SDWBSCOPE
+#define	WBSCOPEDATA	R_SDWBSCOPED
 
 DEVBUS	*m_fpga;
 void	closeup(int v) {
@@ -65,59 +65,57 @@ void	closeup(int v) {
 	exit(0);
 }
 
-class	SDIOSCOPE : public SCOPE {
+class	SDWBSCOPE : public SCOPE {
 public:
-	SDIOSCOPE(DEVBUS *fpga, unsigned addr, bool vecread = true)
+	SDWBSCOPE(DEVBUS *fpga, unsigned addr, bool vecread = true)
 		: SCOPE(fpga, addr, true, vecread) {};
-	~SDIOSCOPE(void) {}
+	~SDWBSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
-		// int	scl, sda;
-
-		// scl = (val >> 13) & 1;
-		// sda = (val >> 12) & 1;
-		// printf("%3s %3s", (scl) ? "SCL":"", (sda) ? "SDA":"");
 	}
 
 	virtual	void	define_traces(void) {
-		// OPT_IO=0 => neither SERDES or DDR
-		//	= 1	=> DDR, but not SERDES
-		//	= 2	=> SERDES (not yet defined)
-		const unsigned	OPT_IO=0;
+		//
+		register_trace("w_card_busy",    1,30);
+		register_trace("o_cmd_request",  1,29);
+		register_trace("i_cmd_busy",     1,28);
+		register_trace("i_cmd_done",     1,27);
+		register_trace("i_cmd_err",      1,26);
+		register_trace("i_cmd_ercode",   2,24);
+		register_trace("i_cmd_response", 1,23);
+		//
+		register_trace("i_dma_busy",     1,22);
+		register_trace("i_dma_err",      1,21);
+		register_trace("o_dma_abort",    1,20);
+		register_trace("o_dma_sd2s",     1,19);
+		register_trace("o_sd2s_valid",   1,18);
+		register_trace("i_sd2s_ready",   1,17);
+		register_trace("o_sd2s_last",    1,16);
+		register_trace("o_dma_s2sd",     1,15);
+		register_trace("i_s2sd_valid",   1,14);
+		register_trace("o_s2sd_ready",   1,13);
+		//
+		register_trace("o_tx_mem_valid", 1,12);
+		register_trace("i_tx_mem_ready", 1,11);
+		register_trace("o_tx_mem_last",  1,10);
+		register_trace("o_tx_en",        1, 9);
+		register_trace("r_tx_request",   1, 8);
+		register_trace("i_tx_done",      1, 7);
+		register_trace("i_tx_err",       1, 6);
+		//
+		register_trace("i_rx_mem_valid", 1, 5);
+		register_trace("i_rx_done",      1, 4);
+		register_trace("i_rx_err",       1, 3);
+		register_trace("i_x_ecode",      1, 2);
+		register_trace("r_rx_request",   1, 1);
+		register_trace("o_rx_en",        1, 0);
 
-		switch(OPT_IO) {
-		case 0: // !OPT_SERDES && !OPT_DDR
-			register_trace("trigger",   1,31);
-			register_trace("i_sdclk",   1,25);
-			register_trace("i_cmd_en",  1,23);
-			register_trace("i_cmd_data",1,22);
-			register_trace("w_cmd",     1,20);
-			register_trace("r_cmd_strb",1,19);
-			register_trace("r_cmd",     1,18);
-			register_trace("dat_en",    1,17);
-			register_trace("rx_strb",   1,16);
-			register_trace("rx_data",   8, 8);
-			register_trace("io_dat",    8, 0);
-			break;
-		case 1: // !OPT_SERDES && OPT_DDR
-			register_trace("trigger",   1,31);
-			register_trace("i_rx_en",   1,28);
-			register_trace("sample_ck", 2,26);
-			register_trace("i_sdclk",   2,24);
-			register_trace("i_cmd_en",  1,23);
-			register_trace("i_cmd_data",2,21);
-			register_trace("w_cmd",     1,20);
-			register_trace("r_cmd_strb",1,19);
-			register_trace("r_cmd_data",1,18);
-			register_trace("dat_en",    1,17);
-			register_trace("rx_strb",   1,16);
-			register_trace("rx_data",   8, 8);
-			register_trace("io_dat",    8, 0);
-			break;
-		case 2: // OPT_SERDES
-			break;
-		default:
-			break;
-		}
+		// Bonus/double use
+		//	Not typically enabled.  These make long collects
+		//	harder.
+		// register_trace("dbl_rxvalid",    1, 19);
+		// register_trace("dbl_rxdata",     4, 15);
+		// register_trace("dbl_txvalid",    1,  4);
+		// register_trace("dbl_txdata",     4,  0);
 	}
 };
 
@@ -127,14 +125,14 @@ int main(int argc, char **argv) {
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	SDIOSCOPE *scope = new SDIOSCOPE(m_fpga, WBSCOPE);
+	SDWBSCOPE *scope = new SDWBSCOPE(m_fpga, WBSCOPE);
 	scope->set_clkfreq_hz(100000000);
 	if (!scope->ready()) {
 		printf("Scope is not yet ready:\n");
 		scope->decode_control();
 	} else {
 		scope->print();
-		scope->writevcd("sdioscope.vcd");
+		scope->writevcd("sdwbscope.vcd");
 	}
 	delete	m_fpga;
 }

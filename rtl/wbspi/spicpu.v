@@ -408,7 +408,7 @@ module	spicpu #(
 		next_valid <= 0;
 	else if (bus_override || (pf_valid && pf_ready))
 		next_valid <= 1;
-	else if (next_ready)
+	else if (next_ready || (r_stopped && !next_cpu))
 		next_valid <= 0;
 
 `ifdef	FORMAL

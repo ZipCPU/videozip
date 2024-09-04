@@ -188,7 +188,7 @@ Options include:
 - `-d` generates a trace file, whose output is controlled by the GPIO
   peripheral, allowing the CPU to determine when data gets dumped and not.
 
-- `-d -d` forces the trace file generation for all cycles
+- `-d -d` forces the trace file generation for all cycles, independent of CPU control.
 
 - `-g` turns on an active simulation of the HDMI port.
 
@@ -235,8 +235,10 @@ If you wish to build the design and load it onto hardware, the same interface
 is available but the setup is just a touch different.
 
 To use the serial port to access the design, you'll first need to run
-[exuart](sw/host/exuart.v).  This accepts one argument specifying the
-terminal device your component is connected to, such as:
+[exuart](sw/host/exuart.v).  This program connects to the serial port and
+forwards everything it hears to a TCP/IP port on your computer.  The
+program accepts one argument specifying the terminal device your PCB
+is connected to, such as:
 
     exuart /dev/ttyUSB2
 
@@ -245,14 +247,17 @@ adjust the environment to:
 
     export VIDEODEV=uart://localhost
 
-Once done, the same access commands should then work again.
+Once done, the same access commands should then work again only now they
+would interact with the device itself instead of the simulation.
 
-While [exuart](sw/host/exuart.cpp) is running, you may access the console
-port of the ZipCPU running on the Nexys Video board the same as before:
+While [exuart](sw/host/exuart.cpp) is running, you may still access the
+console port of the ZipCPU running on the Nexys Video board the same way
+as before:
 
     telnet localhost 6783
 
-To interact with the design via the network port, you'll need its IP address.
+You can also interact with the design independent of the console port via
+its Gb Ethernet port.  To do this, you'll need the board's IP address.
 This is currently set in [autodata/meganet.txt](autodata/meganet.txt).  As of
 this writing, the IP address is fixed at `192.168.15.29`, but can easily be
 changed there.  Assuming you keep this IP address the same, you'll need to
@@ -278,19 +283,60 @@ Particular demonstration programs include:
   have been built into the board, and attempts to verify that the CPU can reach
   out and touch each of them.
 
+- [hdmistart](sw/board/hdmistart.c): Attempts to fire up the HDMI.  This involves:
+  1. Waiting for the downstream HDMI hotplug to be asserted
+  2. Reading the EDID information from the downstream HDMI (transmit)
+     connection
+  3. Moving that EDID info to an upstream I2C slave
+  4. Turning on the hot plug assertion for the upstream
+  5. Waiting for the upstream (HDMI receive) connection to be valid
+  6. Measuring the HDMI clock speed
+  7. Forwarding the incoming HDMI downstream.
+
+  If all goes well, then whatever comes into the device HDMI-wise should also
+  be transmitted out.  It's at this point that I'd like to come back and
+  investigate the HDMI data island packets.
+
 - [helloworld](sw/board/helloworld.c): A basic program, built upon the
   C-library, that just prints "Hello, World!" to the console port.
+
+- [logo](sw/board/logo.c): Puts a couple of logos on the B/W OLED, demonstrating that the SPI controller works.
 
 - [memtest](sw/board/memtest.c): Tests the DDR3 SDRAM memory.
 
 - [sdreadd](sw/board/sdreadd.c): Verifies that the directory of the SD card can
   be read from.
 
+- [sdrecord](sw/board/sdrecord.c): Writes data to the SD card, and then reads it back again--measuring the speed of both write and read operations.  The output should look [something like this](doc/sdrecord-spd.png).
+
 ## Status
 
 The design is currently coming out of a massive rewrite.  Those simulations
-that have been built, work.  It's now time for hardware testing.  While the
-design's bit file can be built via Vivado, testing it will be next.
+that have been built, work.  It's now time for hardware testing.
+
+Test results:
+
+- Connection testing and CPU testing work.  This includes hello world, and
+  requires the flash to work.
+
+- Controlling the B/W OLED works nicely.
+
+  The next step here will be to create a glyph library, and the ability to write
+  text to the OLED to provide user feedback.
+
+- Hardware network connectivity (ARP+ICMP) works nicely
+
+  I haven't (yet) verified that the CPU can access the network.
+
+- Reading the SD card works
+
+- Writing the SD card ... has problems when it gets to the second block.  I'm
+  not yet certain if these are due to the read that attempts to verify the
+  second block, or the write that provides the second block.
+
+- Reading and forwarding EDID information just works
+
+  But I haven't managed to get the upstream HDMI generator to provide a clock (yet)
 
 ## License
 

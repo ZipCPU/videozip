@@ -44,7 +44,7 @@
 
 constexpr	unsigned	COM_CRC_ERROR	= 0x00800000;
 
-SDIOSIM::SDIOSIM(const char *fname) : m_debug(false) {
+SDIOSIM::SDIOSIM(const char *fname) : m_debug(true) {
 	// {{{
 	HCS = true;
 
@@ -241,12 +241,12 @@ void	SDIOSIM::appendcrc(unsigned len_bytes) {
 	unsigned	fill;
 
 	//unsigned	SDIOSIM::blockcrc(unsigned fill, unsigned bit) {
-	if (false && m_debug) {
+	if (true && m_debug) {
 		// {{{
 		printf("SDIOSIM: Preparing block to receive:\n");
 		for(unsigned k=0; k<len_bytes; k++) {
 			printf("%02x", m_dbuf[k] & 0x0ff);
-			if (15 == (k&15))
+			if ((k == (len_bytes-1)) || (15 == (k&15)))
 				printf("\n");
 			else if (7 == (k & 7))
 				printf("  ");
@@ -733,7 +733,7 @@ void	SDIOSIM::accept_command(void) {
 				m_sector >>= 9;
 			m_data_delay = rand() & 1023;
 			m_data_posn  = 0;
-			m_multiblock = true;
+			m_multiblock = false;
 
 			(void)fseek(m_fp, (long)(m_sector * 512l), SEEK_SET);
 			sz = fread(m_dbuf, sizeof(char), 512, m_fp);
