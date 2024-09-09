@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd sdrecord hdmistart logo
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd sdrecord hdmistart logo rotary
 all:	$(PROGRAMS)
 #
 #
@@ -51,7 +51,7 @@ OBJDUMP := zip-objdump
 SUBMAKE:= $(MAKE) --no-print-directory -C
 #
 #
-SOURCES := contest.c cputest.c hdmistart.c i2c.c logo.c memtest.c rxfns.c sdreadd.c sdrecord.c txfns.c zipcpu.c helloworld.c simple_ping.c arp.c ipcksum.c hdmistart.c
+SOURCES := contest.c cputest.c hdmistart.c i2c.c logo.c rotary.c memtest.c rxfns.c sdreadd.c sdrecord.c txfns.c zipcpu.c helloworld.c simple_ping.c arp.c ipcksum.c hdmistart.c
 HEADERS := $(foreach hdr,$(subst .c,.o,$(SOURCES)),$(wildcard $(hdr))) board.h
 INCS    := -I../zlib -I../../rtl -I../fatfs -I../host -I.
 LDSCRIPT:= -Tboard.ld
@@ -124,6 +124,10 @@ $(OBJDIR)/hdmistart.o: hdmistart.c
 	$(CC) -c $(CFLAGS) $< -o $@
 hdmistart: $(HDMISTARTOBJS)
 	$(CC) $(CFLAGS) $(LFLAGS) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
+
+ROTARY:= $(addprefix $(OBJDIR)/,rotary.o txfns.o)
+rotary: $(ROTARY) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(ROTARY) $(LIBS) -o $@
 
 SDREADD:= $(addprefix $(OBJDIR)/,sdreadd.o txfns.o)
 $(OBJDIR)/sdreadd.o: sdreadd.c
