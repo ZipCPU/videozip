@@ -221,8 +221,6 @@ int main(int argc, char **argv) {
 	res = f_read(&fp, d, TESTLN, &nr);
 #ifdef	_BOARD_HAS_SDWBSCOPE
 	// _sdwbscope->s_ctrl = 0xff000000;
-#else
-#error "Scope should be present"
 #endif
 	read_over = _zip->z_jiffies;
 	if (FR_OK != res) {

@@ -54,6 +54,8 @@ module	wbi2cslave #(
 		parameter [0:0]	I2C_READ_ONLY = 1'b0,
 		parameter [0:0]	AXIS_SUPPORT  = 1'b1,
 		parameter [6:0]	SLAVE_ADDRESS = 7'h50,	// = A0/A1
+		parameter [0:0]	OPT_HDMI = 1'b1,
+		parameter [6:0]	SEGMENT_ADDR = 7'h30,	// = 60/61
 		parameter	MEM_ADDR_BITS = 8
 		// }}}
 	) (
@@ -141,6 +143,9 @@ module	wbi2cslave #(
 
 	wire	[MEM_ADDR_BITS-1:0]	axis_addr;
 	//
+	reg		segment_dev;
+	reg	[7:0]	segment_addr;
+
 
 `ifndef	VERILATOR
 	initial begin
@@ -302,6 +307,7 @@ module	wbi2cslave #(
 	initial	o_i2c_scl = 1'b1;
 	initial	o_i2c_sda = 1'b1;
 	initial	i2c_slave_ack  = 1'b1;
+	initial	segment_dev = 1'b0;
 	always	@(posedge i_clk)
 	begin
 		// Default is to do nothing with the output ports.  A 1'b1 does
@@ -324,80 +330,84 @@ module	wbi2cslave #(
 			// }}}
 		I2CSTART: begin
 			// {{{
-				dbits <= 0;
-				oreg <= 8'hff;
-				if (i2c_negedge)
-					i2c_state <= I2CADDR;
+			dbits <= 0;
+			oreg <= 8'hff;
+			if (i2c_negedge)
+				i2c_state <= I2CADDR;
 			end
 			// }}}
 		I2CADDR: begin
 			// {{{
-				if (i2c_negedge)
-					dbits <= dbits + 1'b1;
-				if ((i2c_negedge)&&(dbits == 3'h7))
+			segment_dev <= 1'b0;
+			if (i2c_negedge)
+				dbits <= dbits + 1'b1;
+			if ((i2c_negedge)&&(dbits == 3'h7))
+			begin
+				slave_tx_rx_n <= dreg[0];
+				if (dreg[7:1] == SLAVE_ADDRESS)
 				begin
-					slave_tx_rx_n <= dreg[0];
-					if (dreg[7:1] == SLAVE_ADDRESS)
-					begin
-						i2c_state <= I2CSACK;
-						i2c_slave_ack <= 1'b0;
-					end else begin
-						// Ignore this, its not for
-						// me.
-						i2c_state <= I2CILLEGAL;
-						i2c_slave_ack <= 1'b1;
-					end
+					i2c_state <= I2CSACK;
+					i2c_slave_ack <= 1'b0;
+				end else if (OPT_HDMI
+					&& dreg[7:1] == SEGMENT_ADDR
+					&& !dreg[0])	// Writes only ACK'd
+				begin
+					i2c_state <= I2CSACK;
+					i2c_slave_ack <= 1'b0;
+					segment_dev <= 1'b1;
+				end else begin
+					// Ignore this, its not for
+					// me.
+					i2c_state <= I2CILLEGAL;
+					i2c_slave_ack <= 1'b1;
 				end
-			end
+			end end
 			// }}}
 		I2CSACK: begin
 			// {{{
-				dbits <= 3'h0;
-				// NACK anything outside of our address range
-				o_i2c_sda <= i2c_slave_ack;
-				oreg <= rd_val;
-				if (i2c_negedge)
-				begin
-					i2c_state <= (slave_tx_rx_n)? I2CTX:I2CRX;
-					oreg <= i2c_tx_byte;
-				end
-			end
+			dbits <= 3'h0;
+			// NACK anything outside of our address range
+			o_i2c_sda <= i2c_slave_ack;
+			oreg <= rd_val;
+			if (i2c_negedge)
+			begin
+				i2c_state <= (slave_tx_rx_n)? I2CTX:I2CRX;
+				oreg <= i2c_tx_byte;
+			end end
 			// }}}
-		I2CRX: begin	// Slave reads from the bus
+		I2CRX: begin	// Slave reads from the bus, master writes
 			// {{{
-				//
-				// First byte received is always the memory
-				// address.
-				//
-				if (i2c_negedge)
-					dbits <= dbits + 1'b1;
-				if ((i2c_negedge)&&(dbits == 3'h7))
-				begin
-					i2c_rx_byte <= dreg;
-					i2c_rx_stb  <= 1'b1;
-					i2c_state <= I2CSACK;
-				end
-			end
+			//
+			// First byte received is always the memory
+			// address.
+			//
+			if (i2c_negedge)
+				dbits <= dbits + 1'b1;
+			if ((i2c_negedge)&&(dbits == 3'h7))
+			begin
+				i2c_rx_byte <= dreg;
+				i2c_rx_stb  <= 1'b1;
+				i2c_state <= I2CSACK;
+			end end
 			// }}}
 		I2CTX: begin	// Slave transmits
 			// {{{
-				// Read from the slave (that's us)
-				if (i2c_negedge)
-					dbits <= dbits + 1'b1;
-				if ((i2c_negedge)&&(dbits == 3'h7))
-				begin
-					i2c_tx_stb <= 1'b1;
-					i2c_state <= I2CMACK;
-				end
-				o_i2c_sda <= oreg[7];
-			end
+			// Read from the slave (that's us)
+			o_i2c_sda <= oreg[7];
+			if (i2c_negedge)
+				dbits <= dbits + 1'b1;
+			if ((i2c_negedge)&&(dbits == 3'h7))
+			begin
+				i2c_tx_stb <= 1'b1;
+				i2c_state <= I2CMACK;
+			end end
 			// }}}
 		I2CMACK: begin
 			// {{{
-				dbits <= 3'h0;
-				if (i2c_negedge)
-					i2c_state <= (this_sda)? I2CIDLE:I2CTX;
-				oreg <= i2c_tx_byte;
+			dbits <= 3'h0;
+			if (i2c_negedge)
+				i2c_state <= (this_sda)? I2CIDLE:I2CTX;
+			oreg <= i2c_tx_byte;
 			end
 			// }}}
 		I2CILLEGAL:	dbits <= 3'h0;
@@ -430,12 +440,17 @@ module	wbi2cslave #(
 		BUS_IDLE: begin
 			// {{{
 			if (i2c_rx_stb)
-			begin
-				i2c_addr <= 0;
-				i2c_addr[((MEM_ADDR_BITS > 8) ? 7
-					: (MEM_ADDR_BITS-1)):0] <= i2c_rx_byte;
-				bus_state <= BUS_READ;
-				bus_rd_stb <= 1'b1;
+			begin // Master writes to slave
+				if (!OPT_HDMI || !segment_dev)
+				begin
+					i2c_addr <= 0;
+					i2c_addr[((MEM_ADDR_BITS > 8) ? 7
+						: (MEM_ADDR_BITS-1)):0] <= i2c_rx_byte;
+					bus_state <= BUS_READ;
+					// pre-read the first byte
+					bus_rd_stb <= 1'b1;
+				end else
+					segment_addr <= i2c_rx_byte;
 			end else if (i2c_tx_stb)
 			begin
 				bus_state <= BUS_SEND;
@@ -452,7 +467,7 @@ module	wbi2cslave #(
 			end
 			// Increment the address once a write completes
 			// }}}
-		BUS_SEND: if (i2c_tx_stb)
+		BUS_SEND: if (i2c_tx_stb && (!OPT_HDMI || !segment_dev))
 			// {{{
 			begin
 				// Once we've finished transmitting,
@@ -502,9 +517,34 @@ module	wbi2cslave #(
 
 	// Read from memory
 	// {{{
-	always @(posedge i_clk)
-	if(bus_rd_stb)
-		pipe_mem <= mem[i2c_addr[(MEM_ADDR_BITS-1):2]];
+	generate if (OPT_HDMI && MEM_ADDR_BITS > 8)
+	begin : GEN_SEGMENT_READ
+		reg	[MEM_ADDR_BITS-3:0]	read_addr;
+
+		always @(*)
+		begin
+			read_addr = 0;
+			read_addr = { 8'h0, segment_addr} << 6;
+
+			// read_addr is a 32b *word* address, even though
+			// i2c_addr is a 7b *byte* address.
+			read_addr[7:2] = i2c_addr[7:2];
+		end
+
+		always @(posedge i_clk)
+		if(bus_rd_stb)
+			pipe_mem <= mem[read_addr];
+
+	end else begin : NO_SEGMENT_NECESSARY
+		always @(posedge i_clk)
+		if(bus_rd_stb)
+			pipe_mem <= mem[i2c_addr[(MEM_ADDR_BITS-1):2]];
+
+		// Verilator lint_off UNUSED
+		wire	unused_segment;
+		assign	unused_segment = &{ 1'b0, segment_addr, segment_dev };
+		// Verilator lint_on  UNUSED
+	end endgenerate
 	// }}}
 
 	// pipe_sel
