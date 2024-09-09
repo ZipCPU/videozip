@@ -741,7 +741,7 @@ i_sd_cd_n,
 
 	sdfrontend #(
 		.OPT_SERDES(1'b1),
-		.OPT_DDR(1'b0),
+		.OPT_DDR(1'b1),
 		.NUMIO(4),
 		.BUSY_CLOCKS(16),
 		.OPT_CRCTOKEN(1)
@@ -879,7 +879,9 @@ i_sd_cd_n,
 		.o_ddr_ba(ddr3_ba), .o_ddr_addr(ddr3_addr),
 		.o_ddr_odt(ddr3_odt), .o_ddr_dm(ddr3_dm),
 		.io_ddr_dqs_p(ddr3_dqs_p), .io_ddr_dqs_n(ddr3_dqs_n),
-		.io_ddr_data(ddr3_dq)
+		.io_ddr_data(ddr3_dq),
+		//
+		.o_ram_dbg(sdram_debug)
 		// }}}
 	);
 

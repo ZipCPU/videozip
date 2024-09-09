@@ -526,13 +526,14 @@ int	SDSPISIM::operator()(const int csn, const int sck, const int mosi) {
 				case 58: {// CMD58 -- READ_OCR, respond R7
 					// argument is stuff bits/dont care
 					unsigned	ocr = OCR();
-					m_rspbuf[0] = (ocr >> 24)&0x0ff;
+					m_rspbuf[0] = 0x00;	// R1, no errs
+					m_rspbuf[1] = (ocr >> 24)&0x0ff;
 					// See p112, Tbl 5-1 for this format
 					// m_rspbuf[1] = ((m_powerup_busy)?0x80:0)
 					//		|(CCS?0x40:0);
-					m_rspbuf[1] = (ocr >> 16)&0x0ff;
-					m_rspbuf[2] = (ocr >>  8)&0x0ff;
-					m_rspbuf[3] = (ocr      )&0x0ff;
+					m_rspbuf[2] = (ocr >> 16)&0x0ff;
+					m_rspbuf[3] = (ocr >>  8)&0x0ff;
+					m_rspbuf[4] = (ocr      )&0x0ff;
 					// m_rspbuf[2] = 0xff;// 2.7-3.6V supported
 					// m_rspbuf[3] = 0x80;
 					// m_rspbuf[4] = 0; // No low-voltage supt

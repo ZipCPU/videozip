@@ -116,6 +116,8 @@ public:
 		// register_trace("dbl_rxdata",     4, 15);
 		// register_trace("dbl_txvalid",    1,  4);
 		// register_trace("dbl_txdata",     4,  0);
+		register_trace("dbl_crcack",     1,  4);
+		register_trace("dbl_crcnak",     1,  3);
 	}
 };
 

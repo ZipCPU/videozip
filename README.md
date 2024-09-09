@@ -13,6 +13,8 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
 1. Debugging bus.  It's important to be able to interact with a board.  This
    interaction is possible via both UART and GbE network.
 
+   Status: PASSES
+
 1. GPIO and SPIO: The first step to any board control is to be able to control
    individual bits.  Some bits can be simply bit-banged.  A set of these
    have been grouped together for control via a GPIO controller.  A second
@@ -22,8 +24,12 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    Since all board debugging starts with blinky, I'll list these two
    capabilities first.
 
+   Status: PASSES
+
 2. UART: One of the first and fundamental interfaces used on all my boards is
    the UART interface.  From that interface, other interfaces can be debugged.
+
+   Status: PASSES
 
 3. EXBUS: This is my debugging bus interface.  This particular one is a 4th
    generation interface, using a binary encoding to allow an external host
@@ -31,11 +37,15 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    a (rough) 16% faster than the last one.  (No, that's not a great
    improvement, but 16% is still 16%.)
 
+   Status: PASSES
+
 4. MegaNet: This is my term for a Gb Ethernet (GbE) interface that handles
    a lot of packets in hardware.  Automatically handled packets include
    ARP and ICMP.  Debug packets (if enabled) are forwarded to the debug
    interface.  Everything else gets sent to the CPU's virtual packet FIFO--if
    so enabled.
+
+   Status: PASSES
 
 5. NEXBUS: This is basically the EXBUS interface, save that it runs over a
    Gb Ethernet interface.
@@ -43,11 +53,15 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    This has been ported from a SONAR design, where the only access to the
    FPGA was over the Ethernet port.
 
+   Status: PASSES
+
 6. MDIO: I have a controller to interact with the Ethernet Management Data
    Input/Output interfaces associated with the Ethernet port.  This is more
    for demonstration purposes than anything else, but it is useful when you
    want to get a design up and running and you aren't necessarily sure what
    (if anything) is wrong with the Ethernet interface.
+
+   Status: PASSES
 
 7. VIDPIPE: Demonstrates a basic HDMI pipeline.  Video may be brought in from
    an external source, or generated locally.  An overlay may be placed on top
@@ -55,6 +69,8 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
 
    Unlike prior versions of the VideoZip project, this version is designed to
    handle subclock IO synchronization delays automatically.
+
+   Status: FAILS, still under investigation
 
 8. [I2C](rtl/wbi2c/wbi2ccpu.v): A key component of several projects has now
    been my "[I2C CPU](https://github.com/ZipCPU/wbi2c)".  This is
@@ -73,20 +89,31 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    have the ability to accept manual control.  Hence, a CPU can still bit-bang
    the port if desired.
 
+   Status: PASSES (Although it looks like the HDMI might require a special
+   capability.)
+
 9. [I2S Audio](rtl/audio/axisi2s.v).  I've got an audio capability I built
    for a SONAR test.  I've used it, and so I know it works.  However, I'm not
    (yet) certain what I'll do with it for the demo project.
+
+   Status: Not (yet) tested.
 
 10. [ZipCPU](https://github.com/ZipCPU/zipcpu): Because of course.  As the
     saying goes, if all you have is a hammer, then the whole world looks like
     a nail.  Any problem that cannot be accomplished in RTL may then be
     accomplished by the ZipCPU in software.
 
+    Status: PASSES.
+
 11. QSPI Flash controller:  This is used for both configuring the FPGA, as well
-   as loading software onto the ZipCPU.
+    as loading software onto the ZipCPU.
+
+    Status: PASSES
 
 12. DDR3 SDRAM:  My intent is to use an open source DDR3 controller, although
     for now the MIG DDR3 SDRAM controller works quite nicely.
+
+    Status: MIG DDR3 controller PASSES.  UberDDR3, not yet tested.
 
 13. [SD Card](rtl/sdspi/sdio.v):  I have an
     [SDIO based controller](rtl/sdspi/sdio.v), which will replace my
@@ -112,6 +139,8 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
     has been very useful for deploying FPGA designs to customers who don't have
     access to the Vivado JTAG loader.
 
+    Status: SD Card PASSES, automatic boot is not (yet) tested.
+
 14. [ICAPE2](rtl/wbicapetwo.v):  My [ICAPE2 controller](rtl/wbicapetwo.v)
     provides access to the Xilinx's internal
     configuration access port.  I use this for two commands: setting the
@@ -123,6 +152,8 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
     reading the boot status and configuration register(s) to know the settings
     of the mode bits, or to know why a prior attempted FPGA configuration
     attempt failed.
+
+    Status: Worked here long ago, not tested in a while.
 
 15. [Real Time Clock](rtl/rtc/rtclight.v).  This ... is a basic real-time clock
     RTL.  It doesn't control an external clock, it doesn't run off of a
@@ -139,16 +170,22 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
     used, although it requires set up (not included), external hardware,
     and some software to get the actual time.
 
+    Status: Not (yet) tested.
+
 16. [Wishbone SCOPE(s)](rtl/wbscope/wbscope.v):  I tend not to use vendor
     tools, such as Vivado, for any debugging purposes.  If and when I need an
     ILA, I use my own--a Wishbone scope.  Looking around, you'll find several
     examples of how Wishbone Scopes have been used in this project to debug
     various interfaces along the way.
 
+    Status: PASSES
+
 17. [SPI CPU](rtl/wbspi/spicpu.v): Very similar to the I2C CPU is a SPI
     CPU capability.  As with the I2C CPU, this can accept and run a script
     from memory.  This component is currently wired up to control the OLED
     present on the Nexys Video board.
+
+    Status: PASSES
 
 ## Capabilities not currently included:
 
@@ -300,7 +337,7 @@ Particular demonstration programs include:
 - [helloworld](sw/board/helloworld.c): A basic program, built upon the
   C-library, that just prints "Hello, World!" to the console port.
 
-- [logo](sw/board/logo.c): Puts a couple of logos on the B/W OLED, demonstrating that the SPI controller works.
+- [logo](sw/board/logo.c): Puts a couple of logos on the B/W OLED, to include my handsome mug.  This demonstrates that the (write-half of the) SPI controller works.
 
 - [memtest](sw/board/memtest.c): Tests the DDR3 SDRAM memory.
 
@@ -316,27 +353,26 @@ that have been built, work.  It's now time for hardware testing.
 
 Test results:
 
-- Connection testing and CPU testing work.  This includes hello world, and
-  requires the flash to work.
+- [Connection testing](sw/board/contest.c) and [CPU testing](sw/board/cputest.c)
+  work.
 
-- Controlling the B/W OLED works nicely.
+- [helloworld](sw/board/helloworld.c) also works.  This test involves first
+  programming the flash as well.
 
-  The next step here will be to create a glyph library, and the ability to write
-  text to the OLED to provide user feedback.
+- [Controlling the B/W OLED](sw/board/logo.c) works nicely.
+
+  The next step here will be to create a glyph library, and the ability to
+  write text to the OLED to provide user feedback.
 
 - Hardware network connectivity (ARP+ICMP) works nicely
 
   I haven't (yet) verified that the CPU can access the network.
 
-- Reading the SD card works
-
-- Writing the SD card ... has problems when it gets to the second block.  I'm
-  not yet certain if these are due to the read that attempts to verify the
-  second block, or the write that provides the second block.
+- Both reading and writing the SD card works
 
 - Reading and forwarding EDID information just works
 
-  But I haven't managed to get the upstream HDMI generator to provide a clock (yet)
+  But ... I haven't managed to get the upstream HDMI generator to provide a clock (yet).  This is an issue for active debugging.  It appears to indicate an EDID problem associated with a separate device address, the segment address at 0x60, and not just the standard EDID address of 0xa0/0xa1.
 
 ## License
 

@@ -73,7 +73,7 @@ SCOPC  := $(addprefix $(SCOPCD)/,wbscopc.v)
 ZIPCPUD := cpu
 ZIPCPU  := $(addprefix $(ZIPCPUD)/,zipsystem.v zipcore.v zipwb.v cpuops.v pfcache.v pipemem.v dblfetch.v pffifo.v pfcache.v idecode.v wbpriarbiter.v zipsystem.v zipcounter.v zipjiffies.v ziptimer.v icontrol.v wbwatchdog.v busdelay.v zipdma_ctrl.v zipdma_fsm.v zipdma_mm2s.v zipdma_rxgears.v zipdma_s2mm.v zipdma_txgears.v zipdma.v)
 SDIOD := sdspi
-SDIO  := $(addprefix $(SDIOD)/,sdio_top.v sdio.v sdfrontend.v sdckgen.v sdwb.v sdtxframe.v sdrxframe.v sdcmd.v sddma.v sddma_mm2s.v sddma_rxgears.v sdfifo.v sddma_txgears.v sddma_s2mm.v xsdddr.v xsdserdes8x.v)
+SDIO  := $(addprefix $(SDIOD)/,sdio.v sdfrontend.v sdckgen.v sdwb.v sdtxframe.v sdrxframe.v sdcmd.v sddma.v sddma_mm2s.v sddma_rxgears.v sdfifo.v sddma_txgears.v sddma_s2mm.v xsdddr.v xsdserdes8x.v)
 GPIO := wbgpio.v
 
 EDIDD := wbi2c

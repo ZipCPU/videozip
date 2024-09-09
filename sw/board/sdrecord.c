@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
 
 #ifdef	_BOARD_HAS_SDWBSCOPE
 	// Reset the SDWB scope ... if we have it present
-	_sdwbscope->s_ctrl = 0x04000000;
+	// _sdwbscope->s_ctrl = 0x04000000;
 #endif
 
 	s = malloc(TESTLN);
@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
 	// }}}
 
 #ifdef	_BOARD_HAS_SDWBSCOPE
-	_sdwbscope->s_ctrl |= 0xff000000;
+	// _sdwbscope->s_ctrl |= 0xff000000;
 #endif
 
 	// Write Time report

@@ -186,6 +186,8 @@ public:
 #ifdef	SDIO_ACCESS
 		m_sdio = new SDIOSIM("sdcard.img");
 		m_core->i_sdio_detect = 1;
+		m_core->i_sdio_crcack = 0;
+		m_core->i_sdio_crcnak = 0;
 #endif
 		// From wbu
 		m_wbu = new DBLUARTSIM();
@@ -291,6 +293,10 @@ public:
 		m_core->i_sdio_ad_valid =  tmp_async & 1;
 		m_core->i_sdio_detect = 1;
 		m_core->i_sdio_card_busy = m_sdio->card_busy() ? 1:0;
+		m_core->i_sdio_crcack = m_sdio->crctoken();
+		m_core->i_sdio_crcnak = (m_core->i_sdio_crcack & 2)?1:0;
+		m_core->i_sdio_crcack &= 1;
+
 		if (!m_core->o_sdio_cfg_dscmd) {
 			m_core->i_sdio_ac_valid = 0;
 			m_core->i_sdio_ac_data = 0;

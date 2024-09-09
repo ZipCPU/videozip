@@ -279,7 +279,7 @@ module	migsdram(i_clk, i_clk_200mhz, o_sys_clk, i_rst, o_sys_reset,
 			.o_wb_data(	o_wb_data),
 			.o_wb_err(	o_wb_err)
 		//
-			// , .o_dbg(	o_ram_dbg)
+			, .o_dbg(	o_ram_dbg)
 		// }}}
 	);
 

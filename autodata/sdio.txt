@@ -54,9 +54,9 @@
 @INT.SDCARD.PIC= syspic
 @CARD_DETECT=1'b1
 @OPT_SERDES=1'b1
-@OPT_DMA=1'b1
-@OPT_DDR=1'b0
+@OPT_DDR=1'b1
 @OPT_EMMC=1'b0
+@OPT_DMA=1'b1
 @TOP.IOPREFIX=sd
 @OPT_HWRESET=@$(OPT_EMMC)
 @SDIO.IORESET=
@@ -420,6 +420,8 @@ struct @$(DEVID)_S;
 #ifdef	@$(ACCESS)
 		m_@$(PREFIX) = new SDIOSIM(@$(SIM.FILE));
 		m_core->i_sdio_detect = 1;
+		m_core->i_@$(PREFIX)_crcack = 0;
+		m_core->i_@$(PREFIX)_crcnak = 0;
 #endif
 @SIM.TICK=
 #ifdef	@$(ACCESS)
@@ -442,6 +444,10 @@ struct @$(DEVID)_S;
 		m_core->i_@$(PREFIX)_ad_valid =  tmp_async & 1;
 		m_core->i_@$(PREFIX)_detect = 1;
 		m_core->i_@$(PREFIX)_card_busy = m_@$(PREFIX)->card_busy() ? 1:0;
+		m_core->i_@$(PREFIX)_crcack = m_@$(PREFIX)->crctoken();
+		m_core->i_@$(PREFIX)_crcnak = (m_core->i_@$(PREFIX)_crcack & 2)?1:0;
+		m_core->i_@$(PREFIX)_crcack &= 1;
+
 		if (!m_core->o_@$(PREFIX)_cfg_dscmd) {
 			m_core->i_@$(PREFIX)_ac_valid = 0;
 			m_core->i_@$(PREFIX)_ac_data = 0;
@@ -452,10 +458,10 @@ struct @$(DEVID)_S;
 #endif
 @RTL.MAKE.GROUP= SDIO
 @RTL.MAKE.SUBD=sdspi
-@RTL.MAKE.FILES= sdio_top.v sdio.v sdfrontend.v sdckgen.v sdwb.v sdtxframe.v sdrxframe.v sdcmd.v sddma.v sddma_mm2s.v sddma_rxgears.v sdfifo.v sddma_txgears.v sddma_s2mm.v xsdddr.v xsdserdes8x.v
+@RTL.MAKE.FILES= sdio.v sdfrontend.v sdckgen.v sdwb.v sdtxframe.v sdrxframe.v sdcmd.v sddma.v sddma_mm2s.v sddma_rxgears.v sdfifo.v sddma_txgears.v sddma_s2mm.v xsdddr.v xsdserdes8x.v
 @XDC.SERDES=
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/u_sdcmd/cmd_tristate*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.cmd_serdes/u_oserdes*}] 4.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(PREFIX)/u_txframe/r_tristate*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.r_debug*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.cmd_serdes/u_oserdes*}] 4.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.r_debug*}] -to [get_cells -hier -filter {NAME=~ u_@$(PREFIX)_frontend/GEN_WIDE_IO.GEN_WIDE_DATIO*.io_serdes/u_oserdes*}] 4.0
 @XDC.INSERT=
 set_property -dict { PULLTYPE PULLUP } [get_ports io_@$(TOP.IOPREFIX)_cmd]
 @$(XDC.SERDES)
