@@ -12,6 +12,7 @@ exregs
 exuart
 flashid
 flashscope
+/frames/
 gpscoeffs
 i2casm
 /i2casm.l
