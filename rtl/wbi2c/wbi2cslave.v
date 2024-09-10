@@ -577,7 +577,8 @@ module	wbi2cslave #(
 				(i2c_start||i2c_stop) ? {i2c_start, i2c_stop}
 						: i2c_state[1:0],
 			i_wb_stb, i_wb_we && i_wb_stb, o_wb_stall,
-				o_wb_ack, dbits[1:0],i_wb_addr[5:0],	// 12b
+				o_wb_ack, dbits[1:0],
+				(i_wb_stb ? i_wb_addr[5:0] : 6'h0),	// 12b
 			s_valid, s_ready, s_last, 1'b0, s_data,	// 12b
 			this_scl, this_sda, o_i2c_scl, o_i2c_sda	//  4b
 			};
