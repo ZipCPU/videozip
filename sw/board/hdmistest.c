@@ -10,7 +10,7 @@
 //		Gisselquist Technology, LLC
 //
 ////////////////////////////////////////////////////////////////////////////////
-//
+// }}}
 // Copyright (C) 2017-2024, Gisselquist Technology, LLC
 // {{{
 // This program is free software (firmware): you can redistribute it and/or
@@ -42,6 +42,7 @@
 #include "zipcpu.h"
 #include "zipsys.h"
 #include "txfns.h"
+// }}}
 
 asm("\t.section\t.start\n"
 	"\t.global\t_start\n"

@@ -32,10 +32,12 @@ spiasm
 spiscope
 tags
 tstgps
+vidscope
 wbregs
 zipdbg
 zipload
 zipscope
+zipscope.txt
 zipstate
 edidsrc.bin
 qspidump-original.bin

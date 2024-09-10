@@ -380,7 +380,7 @@ module	vidpipe #(
 		if (i_wb_stb && i_wb_we && i_wb_addr[9:5]==5'h0)
 		begin
 			case(i_wb_addr[4:0])
-			ADR_CONTROL: begin
+			ADR_CONTROL: begin		// VIDPIPE
 				// {{{
 				if (i_wb_sel[0])
 				begin
@@ -408,7 +408,7 @@ module	vidpipe #(
 			// ADR_INPORCH: begin end
 			// ADR_INSYNC: begin end
 			// ADR_INRAW: begin end
-			ADR_SIZE: begin
+			ADR_SIZE: begin			// HDMISIZE
 				// {{{
 				if (&i_wb_sel[1:0])
 					hm_width_sys <= i_wb_data[0 +: LGDIM];
@@ -416,7 +416,7 @@ module	vidpipe #(
 					vm_height_sys<= i_wb_data[16 +: LGDIM];
 				end
 				// }}}
-			ADR_PORCH: begin
+			ADR_PORCH: begin		// HDMIPORCH
 				// {{{
 				if (&i_wb_sel[1:0])
 					hm_front_sys <= i_wb_data[0 +: LGDIM];
@@ -424,7 +424,7 @@ module	vidpipe #(
 					vm_front_sys <= i_wb_data[16 +: LGDIM];
 				end
 				// }}}
-			ADR_SYNC: begin
+			ADR_SYNC: begin			// HDMISYNC
 				// {{{
 				if (&i_wb_sel[1:0])
 				begin
@@ -439,7 +439,7 @@ module	vidpipe #(
 						vm_syncpol_sys <= i_wb_data[31];
 				end end
 				// }}}
-			ADR_RAW: begin
+			ADR_RAW: begin			// HDMIRAW
 				// {{{
 				if (&i_wb_sel[1:0])
 					hm_raw_sys <= i_wb_data[0 +: LGDIM];
@@ -447,7 +447,7 @@ module	vidpipe #(
 					vm_raw_sys <= i_wb_data[16 +: LGDIM];
 				end
 				// }}}
-			ADR_OVLYBASE: begin
+			ADR_OVLYBASE: begin		// OVADDR
 				// {{{
 				cfg_ovly_enable_sys <= (&i_wb_sel)
 						&& (i_wb_data[WBLSB +: AW]!=0);
@@ -455,7 +455,7 @@ module	vidpipe #(
 					cfg_framebase <= i_wb_data[WBLSB +: AW];
 				end
 				// }}}
-			ADR_OVLYSIZE: begin
+			ADR_OVLYSIZE: begin		// OVSIZE
 				// {{{
 				if (&i_wb_sel[1:0])
 					// cfg_mem_words <= { {(WBLSB){1'b0}}, i_wb_data[LGDIM-1:WBLSB] };
@@ -464,7 +464,7 @@ module	vidpipe #(
 					cfg_mem_height <= i_wb_data[16 +: LGDIM];
 				end
 				// }}}
-			ADR_OVLYOFFSET: begin
+			ADR_OVLYOFFSET: begin		// OVOFFSET
 				// {{{
 				if (&i_wb_sel[1:0])
 					cfg_ovly_hpos_sys <= i_wb_data[ 0 +: LGDIM];
@@ -472,7 +472,7 @@ module	vidpipe #(
 					cfg_ovly_vpos_sys <= i_wb_data[16 +: LGDIM];
 				end
 				// }}}
-			ADR_FPS: begin
+			ADR_FPS: begin			// FPS
 				// {{{
 				if (i_wb_sel[1])
 					iodelay_request_sys[4:0] <= i_wb_data[ 8+:5];
@@ -484,7 +484,7 @@ module	vidpipe #(
 					dbg_sel_sys <= i_wb_data[31:29];
 				end
 				// }}}
-			ADR_CAPTURE: begin
+			ADR_CAPTURE: begin		// CAPTURE
 				// {{{
 				if (i_wb_sel[3])
 				begin
@@ -498,24 +498,24 @@ module	vidpipe #(
 					cfg_capcount <= i_wb_data[LGDIM-1:0];
 				end end
 				// }}}
-			ADR_CAPBASE: begin
+			ADR_CAPBASE: begin		// CAPBASE
 				// cfg_capen <= (&i_wb_sel)
 				//		&& (i_wb_data[WBLSB +: AW]!=0);
 				if (&i_wb_sel)
 					cfg_capbase <= i_wb_data[WBLSB +: AW];
 				end
-			ADR_CAPWORDS: begin
+			ADR_CAPWORDS: begin		// CAPWORDS
 				if (&i_wb_sel)
 					cfg_capwords <= i_wb_data[WBLSB +: (LGDIM-1)]
 					    + ((|i_wb_data[WBLSB-1:0]) ? 1 : 0);
 				end
-			ADR_CAPPOSN: begin
+			ADR_CAPPOSN: begin		// CAPPOSN
 				if (&i_wb_sel)
 				begin
 					cfg_crop_vpos <= i_wb_data[16 +: LGDIM];
 					cfg_crop_hpos <= i_wb_data[0 +: LGDIM];
 				end end
-			ADR_CAPSIZE: begin
+			ADR_CAPSIZE: begin		// CAPSIZE
 				if (&i_wb_sel)
 				begin
 					cfg_crop_en <= (i_wb_data[16 +: LGDIM] > 2)
@@ -597,7 +597,7 @@ module	vidpipe #(
 		pre_wb_data <= 0;
 		if (i_wb_addr[9:5] == 5'h0)
 		case(i_wb_addr[4:0])
-		ADR_CONTROL: begin
+		ADR_CONTROL: begin		// VIDPIPE
 				pre_wb_data[10:0] <= { cfg_cmap_mode_sys,
 					1'b0, cfg_src_sel_sys, o_pxclk_sel,
 					2'b0, pxpll_locked_sys, pix_reset_sys };
@@ -606,63 +606,63 @@ module	vidpipe #(
 				pre_wb_data[18] <= px2sys_valid;
 				pre_wb_data[19] <= sys2px_ready;
 			end
-		ADR_HDMIFREQ:	pre_wb_data <= hdmick_counts;
-		ADR_SIFREQ:	pre_wb_data <= sick_counts;
-		ADR_PXFREQ:	pre_wb_data <= pixck_counts;
-		ADR_INSIZE: begin
+		ADR_HDMIFREQ:	pre_wb_data <= hdmick_counts;	// HDMIFREQ
+		ADR_SIFREQ:	pre_wb_data <= sick_counts;	// SIFREQ
+		ADR_PXFREQ:	pre_wb_data <= pixck_counts;	// PXFREQ
+		ADR_INSIZE: begin		// INSIZE
 			pre_wb_data[16 +: LGDIM] <= vin_height_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hin_width_sys;
 			end
-		ADR_INPORCH: begin
+		ADR_INPORCH: begin		// INPORCH
 			pre_wb_data[16 +: LGDIM] <= vin_front_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hin_front_sys;
 			end
-		ADR_INSYNC: begin
+		ADR_INSYNC: begin		// INSYNC
 			pre_wb_data[15] <= hin_syncpol_sys;
 			pre_wb_data[31] <= vin_syncpol_sys;
 
 			pre_wb_data[16 +: LGDIM] <= vin_synch_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hin_synch_sys;
 			end
-		ADR_INRAW: begin
+		ADR_INRAW: begin		// INRAW
 			pre_wb_data[16 +: LGDIM] <= vin_raw_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hin_raw_sys;
 			end
-		ADR_SIZE: begin
+		ADR_SIZE: begin			// HDMISIZE
 			pre_wb_data[16 +: LGDIM] <= vm_height_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hm_width_sys;
 			end
-		ADR_PORCH: begin
+		ADR_PORCH: begin		// HDMIPORCH
 			pre_wb_data[16 +: LGDIM] <= vm_front_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hm_front_sys;
 			end
-		ADR_SYNC: begin
+		ADR_SYNC: begin			// HDMISYNC
 			pre_wb_data[16 +: LGDIM] <= vm_synch_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hm_synch_sys;
 
 			pre_wb_data[15] <= hm_syncpol_sys;
 			pre_wb_data[31] <= vm_syncpol_sys;
 			end
-		ADR_RAW: begin
+		ADR_RAW: begin			// HDMIRAW
 			pre_wb_data[16 +: LGDIM] <= vm_raw_sys;
 			pre_wb_data[ 0 +: LGDIM] <= hm_raw_sys;
 			end
-		ADR_OVLYBASE: begin
+		ADR_OVLYBASE: begin		// OVADDR
 			if (cfg_ovly_enable_sys)
 				pre_wb_data[WBLSB +: AW] <= cfg_framebase;
 			end
-		ADR_OVLYSIZE: begin
+		ADR_OVLYSIZE: begin		// OVSIZE
 			pre_wb_data[16 +: LGDIM] <= cfg_mem_height;
 			pre_wb_data[ 0 +: LGDIM] <= {
 					cfg_mem_width_sys[LGDIM-1:0] };
 			end
-		ADR_OVLYOFFSET: begin
+		ADR_OVLYOFFSET: begin		// OVOFFSET
 				// {{{
 				pre_wb_data[16 +: LGDIM] <= cfg_ovly_hpos_sys;
 				pre_wb_data[ 0 +: LGDIM] <= cfg_ovly_vpos_sys;
 				end
 				// }}}
-		ADR_FPS: begin
+		ADR_FPS: begin			// FPS
 			// {{{
 				pre_wb_data[7:0] <= frames_per_second;
 				pre_wb_data[ 8 +: 5] <= iodelay_actual_sys[ 4: 0];
@@ -671,7 +671,7 @@ module	vidpipe #(
 				pre_wb_data[31:29] <= dbg_sel_sys;
 			end
 			// }}}
-		ADR_CAPTURE: begin
+		ADR_CAPTURE: begin		// CAPTURE
 			pre_wb_data[31] <= 1'b1;
 			pre_wb_data[30:29] <= cfg_capmode;
 			pre_wb_data[28] <= cfg_capsrc;
@@ -681,17 +681,17 @@ module	vidpipe #(
 			if (cfg_capen && !wbcap_done)
 				pre_wb_data[LGDIM-1:0] <= cfg_capcount;
 			end
-		ADR_CAPBASE: begin
+		ADR_CAPBASE: begin		// CAPBASE
 				pre_wb_data[WBLSB +: AW] <= cfg_capbase;
 			end
-		ADR_CAPWORDS: begin
+		ADR_CAPWORDS: begin		// CAPWORDS
 				pre_wb_data[WBLSB +: LGDIM] <= cfg_capwords;
 			end
-		ADR_CAPPOSN: begin
+		ADR_CAPPOSN: begin		// CAPPOSN
 				pre_wb_data[ 0 +: LGDIM] <= cfg_crop_hpos;
 				pre_wb_data[16 +: LGDIM] <= cfg_crop_vpos;
 			end
-		ADR_CAPSIZE: begin
+		ADR_CAPSIZE: begin		// CAPSIZE
 				if (cfg_crop_en)
 				begin
 				pre_wb_data[ 0 +: LGDIM] <= cfg_crop_width;
@@ -701,7 +701,7 @@ module	vidpipe #(
 				pre_wb_data[16 +: LGDIM] <= vm_height_sys;
 				end
 			end
-		ADR_SYNCWORD: begin
+		ADR_SYNCWORD: begin		// VSYNCWORD
 				pre_wb_data <= sync_word;
 			end
 		default: begin end
@@ -861,6 +861,10 @@ module	vidpipe #(
 		assign	hin_syncpol = 1'b0;
 
 		assign	in_locked  = 1'b0;
+
+		//
+		assign	src_debug = 32'h0;
+		assign	vga_debug = 32'h0;
 		// }}}
 	end endgenerate
 
@@ -1834,6 +1838,7 @@ module	vidpipe #(
 	3'b100:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
 	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
 			{ di_alt_valid, di_alt_valid, di_alt_debug };
+	3'b110: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, vga_debug[31], vga_debug };
 	default:
 		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31], tx_debug };
 	endcase
