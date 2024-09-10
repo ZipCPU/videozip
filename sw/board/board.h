@@ -209,6 +209,11 @@ typedef struct ENETSTREAM_S {
         unsigned long   n_mac;
 	unsigned	n_ipaddr;
         unsigned        n_rxmiss, n_rxerr, n_rxcrc;
+	//
+	unsigned	n_rxpkt, n_rxarp, n_rxicmp;
+	unsigned	n_txpkt, n_txarp, n_txicmp;
+	unsigned	n_data, n_aborts;
+	unsigned	n_rxdbg, n_txdbg;
 } ENETSTREAM;
 #endif
 // }}}

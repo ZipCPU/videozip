@@ -68,13 +68,13 @@ void	closeup(int v) {
 class	VIDSCOPE : public SCOPE {
 public:
 	VIDSCOPE(DEVBUS *fpga, unsigned addr, bool vecread = true)
-		: SCOPE(fpga, addr, true, vecread) {};
+		: SCOPE(fpga, addr, false, vecread) {};
 	~VIDSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
 	}
 
 	virtual	void	define_traces(void) {
-		const	unsigned VMODE = 4;
+		const	unsigned VMODE = 6;
 		switch(VMODE) {
 		case 0: // SRC DEBUG
 			register_trace("FRAME_LAST", 1, 30);
@@ -124,6 +124,16 @@ public:
 			register_trace("IPKT_HDR",     1,  9);
 			register_trace("IPKT_LAST",    1,  8);
 			register_trace("IPKT_DATA",    8,  0);
+			break;
+		case 6: // (CLR=GREEN) HDMI decoding debug
+			// register_trace("trigger", 32, 0);
+			register_trace("sync_valid",       1, 30);
+			register_trace("chosen_match_loc", 4, 26);
+			register_trace("match_loc",        4, 22);
+			register_trace("sync",            10, 12);
+			register_trace("valid_match",      1, 11);
+			register_trace("any_sync",         1, 10);
+			register_trace("i_px",            10, 0);
 			break;
 		default:
 			break;

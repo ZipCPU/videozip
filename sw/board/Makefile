@@ -37,7 +37,7 @@
 ##
 .PHONY: all
 ## }}}
-PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd sdrecord hdmistart logo rotary
+PROGRAMS := cputest memtest simple_ping helloworld contest sdreadd sdrecord hdmistart logo rotary monitor
 all:	$(PROGRAMS)
 #
 #
@@ -75,6 +75,7 @@ CFLAGS  := -O3 $(INCS)
 $(OBJDIR)/%.o: %.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -c $< -o $@
+DUMPRTL := -fdump-rtl-all
 $(OBJDIR)/%.s: %.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) $(DUMPRTL) -S $< -o $@
@@ -126,8 +127,12 @@ hdmistart: $(HDMISTARTOBJS)
 	$(CC) $(CFLAGS) $(LFLAGS) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
 
 ROTARY:= $(addprefix $(OBJDIR)/,rotary.o txfns.o)
-rotary: $(ROTARY) board.ld $(FAT) $(ZLIBD)/$(ZIPLIB)
+rotary: $(ROTARY) board.ld $(ZLIBD)/$(ZIPLIB)
 	$(CC) $(CFLAGS) $(LFLAGS) $(ROTARY) $(LIBS) -o $@
+
+MONITOR:= $(addprefix $(OBJDIR)/,monitor.o)
+monitor: $(MONITOR) board.ld $(ZLIBD)/$(ZIPLIB)
+	$(CC) $(CFLAGS) $(LFLAGS) $(MONITOR) $(LIBS) -o $@
 
 SDREADD:= $(addprefix $(OBJDIR)/,sdreadd.o txfns.o)
 $(OBJDIR)/sdreadd.o: sdreadd.c

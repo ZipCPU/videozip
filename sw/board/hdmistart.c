@@ -251,12 +251,14 @@ main(int argc, char ** argv) {
 
 	// EDID is automatically forwarded
 
-	// Assert the upstream hotplug
-	*_gpio = GPIO_HDMIRX_HPA_SET;
+	// Assert the upstream hotplug, and enable the HDMI port--necessary
+	// to get the HDMI clock.
+	*_gpio = GPIO_HDMIRX_HPA_SET | GPIO_HDMITX_EN_SET;
 	// Select 16b pixels (internally)
 	//	external video source
 	//	HDMI clock (comes externally)
 	_hdmi->v_control = 0x0661;	// External video source, HDMI clock
+	_hdmi->v_control = 0x0660;	// Release the reset
 
 	*_spio = 0x0f06;
 
