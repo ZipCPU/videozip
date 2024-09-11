@@ -95,8 +95,8 @@ module	vidpipe #(
 		// Clock control
 		// Verilator lint_off SYNCASYNCNET
 		output	wire		o_pix_reset_n,
-		// Verilator lint_on  SYNCASYNCNET
 		input	wire		i_pxpll_locked,
+		// Verilator lint_on  SYNCASYNCNET
 		output	reg	[1:0]	o_pxclk_sel,
 		output	wire	[14:0]	o_iodelay,
 		input	wire	[14:0]	i_iodelay,
@@ -135,6 +135,8 @@ module	vidpipe #(
 				ADR_CAPWORDS  = 5'h12,
 				ADR_CAPPOSN   = 5'h13,
 				ADR_CAPSIZE   = 5'h14,
+			//
+				ADR_MEMWORDS  = 5'h15,
 			//
 				ADR_SYNCWORD  = 5'h18;
 //	16. Capture control: pxcap_count, pxcap_en, pixel mode(s)
@@ -303,6 +305,11 @@ module	vidpipe #(
 	reg	last_pll_locked, last_sync;
 	reg	new_frame;
 	wire	rx_frame_sys, new_frame_sys;
+
+	reg	[LGDIM-1:0]	cfg24_xpos, cfg24_words, last_cfg_mem_width;
+	reg	[LGDIM+1:0]	cfg24_bytecount;
+	reg			cfg24_set;
+	
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -562,6 +569,30 @@ module	vidpipe #(
 	// cfg_mem_words
 	// {{{
 	always @(posedge i_clk)
+		last_cfg_mem_width <= cfg_mem_width_sys;
+
+	always @(posedge i_clk)
+	if (i_reset || cfg_mem_width_sys == 0
+			|| cfg_mem_width_sys != last_cfg_mem_width)
+	begin
+		cfg24_bytecount <= 0;
+		cfg24_xpos  <= 0;
+		cfg24_words <= 0;
+		cfg24_set <= 0;
+	end else if(cfg24_xpos < last_cfg_mem_width)
+	begin
+		cfg24_xpos <= cfg24_xpos + 1;
+		if (cfg24_bytecount < 3)
+		begin
+			cfg24_bytecount <= cfg24_bytecount + (DW/8 - 3);
+			cfg24_words <= cfg24_words + 1;
+		end else begin
+			cfg24_bytecount <= cfg24_bytecount - 3;
+		end
+	end else
+		cfg24_set <= 1;
+
+	always @(posedge i_clk)
 	case(cfg_cmap_mode_sys)
 	3'h0: // 1-bit pixels
 		cfg_mem_words <= (cfg_mem_width_sys +  DW    -1) /  DW;
@@ -569,14 +600,14 @@ module	vidpipe #(
 		cfg_mem_words <= (cfg_mem_width_sys + (DW/2) -1) / (DW/2);
 	3'h2: // 4-bit pixels
 		cfg_mem_words <= (cfg_mem_width_sys + (DW/4) -1) / (DW/4);
-	3'h3: // 4-bit pixels
-		cfg_mem_words <= (cfg_mem_width_sys + (DW/4) -1) / (DW/4);
+	3'h3: // 8-bit pixels
+		cfg_mem_words <= (cfg_mem_width_sys + (DW/8) -1) / (DW/8);
 	3'h4: // 8-bit pixels
 		cfg_mem_words <= (cfg_mem_width_sys + (DW/8) -1) / (DW/8);
-	3'h5: // 8-bit pixels
-		cfg_mem_words <= (cfg_mem_width_sys + (DW/8) -1) / (DW/8);
-	3'h6: // 16-bit pixels
-		cfg_mem_words <= (cfg_mem_width_sys + (DW/16)-1) / (DW/16);
+	3'h5: // 16-bit pixels
+		cfg_mem_words <= (cfg_mem_width_sys + (DW/16) -1) / (DW/16);
+	3'h6: // 24-bit pixels -- this is an overestimation
+		cfg_mem_words <= cfg24_words;
 	3'h7: // 24-bit pixels, using 32b at a tim
 		cfg_mem_words <= (cfg_mem_width_sys + (DW/32)-1) / (DW/32);
 	endcase
@@ -591,6 +622,13 @@ module	vidpipe #(
 
 	// o_wb_data, pre_wb_data: Bus reads
 	// {{{
+	reg	[31:0]	chkreset;
+	always @(posedge i_clk)
+	if (!pxpll_locked_sys)
+		chkreset <= 0;
+	else if (!chkreset[31])
+		chkreset <= chkreset + 1;
+
 	always @(posedge i_clk)
 	if (i_wb_stb && !i_wb_we)
 	begin
@@ -605,6 +643,7 @@ module	vidpipe #(
 				pre_wb_data[17] <= ovly_err_sys;
 				pre_wb_data[18] <= px2sys_valid;
 				pre_wb_data[19] <= sys2px_ready;
+				pre_wb_data[31:20] <= chkreset[31:20];
 			end
 		ADR_HDMIFREQ:	pre_wb_data <= hdmick_counts;	// HDMIFREQ
 		ADR_SIFREQ:	pre_wb_data <= sick_counts;	// SIFREQ
@@ -653,8 +692,7 @@ module	vidpipe #(
 			end
 		ADR_OVLYSIZE: begin		// OVSIZE
 			pre_wb_data[16 +: LGDIM] <= cfg_mem_height;
-			pre_wb_data[ 0 +: LGDIM] <= {
-					cfg_mem_width_sys[LGDIM-1:0] };
+			pre_wb_data[ 0 +: LGDIM] <= cfg_mem_width_sys;
 			end
 		ADR_OVLYOFFSET: begin		// OVOFFSET
 				// {{{
@@ -700,6 +738,9 @@ module	vidpipe #(
 				pre_wb_data[ 0 +: LGDIM] <= hm_width_sys;
 				pre_wb_data[16 +: LGDIM] <= vm_height_sys;
 				end
+			end
+		ADR_MEMWORDS: begin
+				pre_wb_data[WBLSB +: LGDIM] <= cfg_mem_words;
 			end
 		ADR_SYNCWORD: begin		// VSYNCWORD
 				pre_wb_data <= sync_word;
@@ -861,7 +902,7 @@ module	vidpipe #(
 		assign	hin_syncpol = 1'b0;
 
 		assign	in_locked  = 1'b0;
-
+		assign	sync_word  = 32'h0;
 		//
 		assign	src_debug = 32'h0;
 		assign	vga_debug = 32'h0;
@@ -1164,7 +1205,7 @@ module	vidpipe #(
 		) u_framebuf (
 			// {{{
 			.i_clk(i_clk), .i_pixclk(i_pixclk), .i_reset(pix_reset_sys),
-			.i_wb_en(cfg_ovly_enable_sys),
+			.i_wb_en(cfg_ovly_enable_sys && cfg24_set),
 			.i_pix_en(1'b1),
 			.i_height(cfg_mem_height), .i_mem_words(cfg_mem_words),
 			.i_width(cfg_mem_width_sys),
@@ -1836,8 +1877,9 @@ module	vidpipe #(
 	3'b010:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, pip_debug[31],  pip_debug };
 	3'b011:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31],   tx_debug };
 	3'b100:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
-	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
-			{ di_alt_valid, di_alt_valid, di_alt_debug };
+	// 3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
+	//		{ di_alt_valid, di_alt_valid, di_alt_debug };
+	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, vga_debug[31], 2'b00, i_hdmi_blu, i_hdmi_grn, i_hdmi_red };
 	3'b110: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, vga_debug[31], vga_debug };
 	default:
 		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31], tx_debug };

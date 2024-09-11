@@ -93,8 +93,14 @@ main(int argc, char ** argv) {
 #ifdef	NO_HDMI_PORT
 	txstr("No HDMI port within this repository\n");
 #else
-	unsigned	v;
+	unsigned	v, vidcfg;
 	int		valid_edid = 0;
+
+	// Select 16b pixels (internally)
+	//	external video source
+	//	HDMI clock (comes externally)
+	vidcfg = VIDCMAP_16CLR | VIDPIPE_RXCLOCK | VIDPIPE_RXSRC;
+	_hdmi->v_control = vidcfg | VIDPIPE_RESET;
 
 	EDIDSCOPE_SET;
 	*_spio = 0x0ff00;
@@ -107,8 +113,7 @@ main(int argc, char ** argv) {
 		"De-asserting the upstream HDMI detect flag, and the\n"
 		"downstream TX enable\n");
 
-	v = GPIO_HDMIRX_CEC_SET | GPIO_HDMITX_CEC_SET
-		| GPIO_HDMIRX_HPA_CLR | GPIO_HDMITX_EN_CLR;
+	v = GPIO_HDMIRX_HPA_CLR | GPIO_HDMIRX_TXEN_CLR;
 	txstr("Setting GPIO to "); txhex(v); txstr("\n");
 	*_gpio = v;
 
@@ -172,7 +177,7 @@ main(int argc, char ** argv) {
 	}
 	// }}}
 
-	*_spio = 0x0101;
+	*_spio = 0x0302;
 
 	// DUMP the EDID
 	// {{{
@@ -255,61 +260,31 @@ main(int argc, char ** argv) {
 
 	// Assert the upstream hotplug, and enable the HDMI port--necessary
 	// to get the HDMI clock.
-	*_gpio = GPIO_HDMIRX_HPA_SET | GPIO_HDMITX_EN_SET;
-	// Select 16b pixels (internally)
-	//	external video source
-	//	HDMI clock (comes externally)
-	_hdmi->v_control = 0x0661;	// External video source, HDMI clock
-	_hdmi->v_control = 0x0660;	// Release the reset
+	*_gpio = GPIO_HDMIRX_HPA_SET | GPIO_HDMIRX_TXEN_SET;
+	_zip->z_tmb = 20;
+	while(_zip->z_tmb)
+		;
+	_hdmi->v_control = vidcfg;	// Release the reset
 
-	*_spio = 0x0f06;
+	*_spio = 0x0f04;
 
 	// Wait for the upstream video to be valid
-	while(0 == (_hdmi->v_control & 0x010000)) {
-		while(0 == (_hdmi->v_control & 0x010000))
-			;
-		// Wait for another 200ms or so
+	if (0 == (_hdmi->v_control & VIDPIPE_RXSYNCD)) {
+		while(0 == (_hdmi->v_control & VIDPIPE_RXSYNCD)) {
+			// Wait for 200ms or so
+			_zip->z_tmb = 20000000;
+			while(_zip->z_tmb)
+				;
+
+			*_spio = 0x0100 ^ (*_spio & 1);
+		}
+
 		_zip->z_tmb = 20000000;
 		while(_zip->z_tmb)
 			;
 	}
 
-	/*
-	do {
-		for(int i=0; i<4; i++) {
-			_edout->o_cmd = READ_EDID((i<<6),(1<<6));
-			wait_while_edout_busy();
-
-			if (_edout->o_cmd & EDID_SRC_ERR) {
-				txstr("EDID-ERR detected, aborting\n");
-				zip_halt();
-			}
-		}
-
-		// Check the EDID CRC
-		if ((_edout->o_data[0] == 0x00ffffff)
-			&&(_edout->o_data[1] == 0xffffff00)) {
-			valid_edid = 1;
-		} else if ((_edout->o_data[0] == 0)
-			&&(_edout->o_data[1] == 0)) {
-			valid_edid = 0;
-			wait_ms(200);
-		} else {
-			txstr("Invalid EDID-SRC data: 0x");
-			txhex(_edout->o_data[0]);
-			txstr(" : 0x");
-			txhex(_edout->o_data[1]);
-			txstr("\n");
-
-			zip_halt();
-		}
-	} while(valid_edid == 0);
-	*/
-
-	*_spio = 0x0f07;
-
-	txstr("Enabling the HDMI source port\n");
-	*_gpio = GPIO_HDMITX_EN_SET;
+	*_spio = 0x0707;
 
 	txstr("\n\n* * All done! * *\n");
 	zip_halt();

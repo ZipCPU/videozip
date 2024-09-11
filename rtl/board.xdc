@@ -366,6 +366,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clksysclkct
 ## No XDC.INSERT tag in mem_flash_bkram
 ## No XDC.INSERT tag in edidslvscope
 ## No XDC.INSERT tag in zipscope
+## No XDC.INSERT tag in cec
 ## No XDC.INSERT tag in oled
 ## From netbus
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_net/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_net/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0

@@ -110,12 +110,12 @@ module	xpxclk #(
 
 	PLLE2_BASE #(
 		// {{{
-		.CLKFBOUT_MULT(20),
+		.CLKFBOUT_MULT(15),	// 80MHz * 15 = 1200MHz
 		.CLKFBOUT_PHASE(0.0),
 		// .CLKIN1_PERIOD(6.6),	// Up to 200MHz input
-		.CLKIN1_PERIOD(12.5),	// Up to 200MHz input
-		.CLKOUT0_DIVIDE(20),
-		.CLKOUT1_DIVIDE(4)
+		.CLKIN1_PERIOD(12.5),	// Up to 80MHz input
+		.CLKOUT0_DIVIDE(15),	// 1200MHz / 15 =>  80MHz
+		.CLKOUT1_DIVIDE(3)	// 1200MHz /  3 => 400MHz
 		// }}}
 	) u_hdmi_pll (
 		// {{{
