@@ -268,6 +268,24 @@
 #ifndef @$(DEVID)_H
 #define @$(DEVID)_H
 
+#define	VIDPIPE_RESET	0x000001
+#define	VIDPIPE_RXPLLCK	0x000002
+#define	VIDPIPE_LOCALCK	0x000000
+#define	VIDPIPE_RXCLOCK	0x000020
+#define	VIDPIPE_LCLSRC	0x000000
+#define	VIDPIPE_RXSRC	0x000040
+#define	VIDPIPE_RXSYNCD	0x010000
+#define	VIDPIPE_OVLYERR	0x020000
+
+#define	VIDCMAP_BW	0x000000
+#define	VIDCMAP_2GRAY	0x000100
+#define	VIDCMAP_4CMAP	0x000200
+#define	VIDCMAP_8CMAP	0x000300
+#define	VIDCMAP_8CLR	0x000400
+#define	VIDCMAP_16CLR	0x000500
+#define	VIDCMAP_24CLR	0x000600
+#define	VIDCMAP_32CLR	0x000700
+
 typedef struct __attribute__((packed)) VIDMODE_S {
 	uint16_t	m_height,     m_width;
 	uint16_t	m_vporch,     m_hporch;
@@ -279,11 +297,16 @@ typedef struct __attribute__((packed)) @$(DEVID)_S {
 	uint32_t	v_control, v_hdmifreq, v_sifreq, v_pxfreq;
 	VIDMODE		v_in, v_src;
 	const char	*v_overlay;
-	uint16_t	v_ovheight, v_ovmemwords;
+	uint16_t	v_ovheight, v_ovwidth;
 	uint16_t	v_ovypos,  v_ovhpos;
 	unsigned	v_fps;
+	uint32_t	v_capture;
+	const char	*v_capbase;
+	uint32_t	v_capwords, v_capposn, v_capsize;
+	unsigned	v_ovwords;
+	unsigned	v_unused2[2];
 	unsigned	v_syncword;
-	uint32_t	v_unused[512-17];
+	uint32_t	v_unused[512-25];
 	uint32_t	v_clrmap[256];
 } @$(DEVID);
 

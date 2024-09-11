@@ -42,25 +42,21 @@
 @SLAVE.TYPE=SINGLE
 @SLAVE.BUS=wb32
 @NUMOUTPUT=10
-@NUMINPUT=7
+@NUMINPUT=8
 @INT.GPIO.WIRE=gpio_int
 @INT.GPIO.PIC=syspic
 @TOP.PORTLIST=
 		// @$(DEVID) ports
-		io_hdmirx_cec,
 		o_hdmirx_hpa,	// Hotplug assert
 		o_hdmirx_txen,
-		io_hdmitx_cec,
 		i_hdmitx_hpd_n, // Hotplug detect
 		o_sd_reset,
 		i_gps_3df,
 		o_oled_reset_n, o_oled_panel_en, o_oled_logic_en
 @TOP.IODECL=
 	// @$(DEVID) ports
-	inout	wire	io_hdmirx_cec;
 	output	wire	o_hdmirx_hpa;
 	output	wire	o_hdmirx_txen;
-	inout	wire	io_hdmitx_cec;
 	input	wire	i_hdmitx_hpd_n;		// Hotplug detect
 	output	wire	o_sd_reset;
 	input	wire	i_gps_3df;
@@ -78,7 +74,7 @@
 		// @$(DEVID) wires
 		i_@$(PREFIX), o_@$(PREFIX)
 @TOP.INSERT=
-	assign	i_@$(PREFIX) = { 9'h0,
+	assign	i_@$(PREFIX) = { 8'h0,
 			pxrx_locked,
 			sysclk_locked,
 `ifdef	GPSTRK_ACCESS
@@ -89,9 +85,7 @@
 			!i_hdmitx_hpd_n,	// Hotplug detect
 			!i_sd_cd_n,
 			1'b0,
-			io_hdmitx_cec, io_hdmirx_cec };
-	assign	io_hdmirx_cec = o_gpio[0] ? 1'bz : 1'b0;
-	assign	io_hdmitx_cec = o_gpio[1] ? 1'bz : 1'b0;
+			i_hdmitx_cec, i_hdmirx_cec };
 	assign	o_hdmirx_txen = o_gpio[2];
 	assign	o_hdmirx_hpa  = o_gpio[3];	// Hotplug assert
 	assign	o_sd_reset  = !w_sdio_hwreset_n;
@@ -169,11 +163,11 @@
 //
 #define	GPIO_HDMIRX_CEC		0x000010000
 #define	GPIO_HDMITX_CEC		0x000020000
-#define	GPIO_SD_DETECTED	0x000040000
-#define	GPIO_HDMITX_DETECT	0x000080000
-#define	GPIO_GPS_3DF		0x000100000
-#define	GPIO_SYSCLK_LOCKED	0x000200000
-#define	GPIO_VIDCLK_LOCKED	0x000400000
+#define	GPIO_SD_DETECTED	0x000080000
+#define	GPIO_HDMITX_DETECT	0x000100000
+#define	GPIO_GPS_3DF		0x000200000
+#define	GPIO_SYSCLK_LOCKED	0x000400000
+#define	GPIO_VIDCLK_LOCKED	0x000800000
 //
 // @$(DEVID) output wires
 //
@@ -185,7 +179,7 @@
 #define	GPIO_HDMITX_CEC_SET	0x000020002
 #define	GPIO_HDMITX_CEC_CLR	0x000020000
 //
-#define	GPIO_HDMITX_EN		0x000000004
+#define	GPIO_HDMIRX_TXEN	0x000000004
 #define	GPIO_HDMIRX_HPA		0x000000008
 #define	GPIO_SD_RESET		0x000000010
 #define	GPIO_OLED_RESET		0x000000020
@@ -202,8 +196,8 @@
 #define	GPIO_HDMIRX_HPA_CLR	GPIO_CLR(GPIO_HDMIRX_HPA)
 #define	GPIO_SD_RESET_SET	GPIO_SET(GPIO_SD_RESET)
 #define	GPIO_SD_RESET_CLR	GPIO_CLR(GPIO_SD_RESET)
-#define	GPIO_HDMITX_EN_SET	GPIO_SET(GPIO_HDMITX_EN)
-#define	GPIO_HDMITX_EN_CLR	GPIO_CLR(GPIO_HDMITX_EN)
+#define	GPIO_HDMIRX_TXEN_SET	GPIO_SET(GPIO_HDMIRX_TXEN)
+#define	GPIO_HDMIRX_TXEN_CLR	GPIO_CLR(GPIO_HDMIRX_TXEN)
 #define	OLED_RESET		GPIO_SET(GPIO_OLED_RESET)
 #define	OLED_RUN		GPIO_CLR(GPIO_OLED_RESET)
 #define	OLED_PANELEN		GPIO_SET(GPIO_OLED_PANELEN)
