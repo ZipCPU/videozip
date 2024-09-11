@@ -74,7 +74,7 @@ public:
 	}
 
 	virtual	void	define_traces(void) {
-		const	unsigned VMODE = 6;
+		const	unsigned VMODE = 5;
 		switch(VMODE) {
 		case 0: // SRC DEBUG
 			register_trace("FRAME_LAST", 1, 30);
@@ -112,6 +112,7 @@ public:
 		case 4: // Data Island debug
 			register_trace("DI_DATA", 32, 0);
 			break;
+		/*
 		case 5: // RAW Data Island debug
 			register_trace("OPKT_VALID",   1, 31);
 			register_trace("DI_VALID",     1, 30);
@@ -124,6 +125,12 @@ public:
 			register_trace("IPKT_HDR",     1,  9);
 			register_trace("IPKT_LAST",    1,  8);
 			register_trace("IPKT_DATA",    8,  0);
+			break;
+		*/
+		case 5: // Raw input capture
+			register_trace("iBLUE",  10, 20);
+			register_trace("iGREEN", 10, 10);
+			register_trace("iRED",   10,  0);
 			break;
 		case 6: // (CLR=GREEN) HDMI decoding debug
 			// register_trace("trigger", 32, 0);

@@ -128,6 +128,8 @@ main(int argc, char ** argv) {
 			;
 	}
 
+	printf("GPIO now equal to %08x\n", *_gpio);
+
 	*_spio = 0x0101;
 
 	// Read EDID
