@@ -168,7 +168,7 @@ void	update_gpio(int yp, int xp) {
 	mvaddstr(yp+1,xp+ 0, "------------------------------");
 	mvaddstr(yp+1,xp+40, "------------------------------");
 
-	mvprintw(yp+2,xp+ 1, "%-20s", (gpiov & GPIO_HDMITX_EN) ? "HDMI TX EN":"");
+	mvprintw(yp+2,xp+ 1, "%-20s", (gpiov & GPIO_HDMIRX_TXEN) ? "HDMI RX TXEN":"");
 	mvprintw(yp+3,xp+ 1, "%-20s", (gpiov & 0x08) ? "HDMI RX HPA":"");
 	mvprintw(yp+4,xp+ 1, "%-20s", (gpiov & 0x20) ? "OLED-RESET":"");
 	mvprintw(yp+5,xp+ 1, "%-20s", (gpiov & 0x40) ? "OLED PANEL EN":"");
@@ -241,8 +241,8 @@ void	update_video(int yp, int xp) {	// yp+0, xp+40
 		mvprintw(yp+3,xp+ 1, "%-20s","Porch:");
 		mvprintw(yp+4,xp+ 1, "%-20s","Sync:");
 		mvprintw(yp+5,xp+ 1, "%-20s","Raw:");
-		mvprintw(yp+2,xp+21, "%-20s","FPS:");
-		mvprintw(yp+3,xp+21, "%-20s","Sync:");
+		mvprintw(yp+2,xp+22, "%-20s","FPS:");
+		mvprintw(yp+3,xp+22, "%-20s","Sync:");
 	} else {
 		unsigned	syncw;
 

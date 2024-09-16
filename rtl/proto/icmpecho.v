@@ -36,6 +36,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 `default_nettype	none
+`timescale	1ns/1ps
 // }}}
 module	icmpecho #(
 		parameter [0:0]	OPT_IPADDR_CHECK = 1'b0

@@ -46,11 +46,11 @@ module	netdbgrx #(
 		input	wire	S_AXI_ACLK, S_AXI_ARESETN,
 		// Incoming interface
 		// {{{
-		input	wire		S_AXI_TVALID,
-		output	wire		S_AXI_TREADY,
-		input	wire [31:0]	S_AXI_TDATA,
-		// No S_AXI_TLAST.  Packet size is captured by the first word
-		// in the packet
+		input	wire		S_AXI_VALID,
+		output	wire		S_AXI_READY,
+		input	wire	[31:0]	S_AXI_DATA,
+		input	wire	[1:0]	S_AXI_BYTES,
+		input	wire		S_AXI_LAST,
 		// }}}
 		// Outgoing GPIO registers
 		// {{{
@@ -79,7 +79,6 @@ module	netdbgrx #(
 
 	// Local declarations
 	// {{{
-	reg	[15:0]	pktlen;
 	reg	[5:0]	addr;
 	reg		nomatch, drop, r_syncd;
 	reg		word_valid;
@@ -106,7 +105,7 @@ module	netdbgrx #(
 	//
 	//
 
-	assign	S_AXI_TREADY = (addr < 10)|| drop ||(!word_valid || word_ready);
+	assign	S_AXI_READY = (addr < 10)|| drop ||(!word_valid || word_ready);
 	assign	word_ready = (!M_AXI_TVALID ||(M_AXI_TREADY && !m_loaded[2]));
 
 	// addr
@@ -114,36 +113,12 @@ module	netdbgrx #(
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 		addr    <= 0;
-	else if (S_AXI_TVALID && S_AXI_TREADY)
+	else if (S_AXI_VALID && S_AXI_READY)
 	begin
-		if (pktlen > 4 || (addr == 0 && S_AXI_TDATA[15:0] > 4))
-		begin
-			if (!addr[5])
-				addr <= addr + 1;
-		end else
+		if (!addr[5])
+			addr <= addr + 1;
+		if (S_AXI_LAST)
 			addr <= 0;
-	end
-`ifdef	FORMAL
-	always @(*)
-	if (S_AXI_ARESETN)
-		assert((addr == 0) == (pktlen == 0));
-`endif
-	// }}}
-
-	// pktlen
-	// {{{
-	initial	pktlen = 0;
-	always @(posedge S_AXI_ACLK)
-	if (!S_AXI_ARESETN)
-		pktlen	<= 0;
-	else if (S_AXI_TVALID && S_AXI_TREADY)
-	begin
-		if (addr == 0)
-			pktlen <= (S_AXI_TDATA[15:0] > 4) ? (S_AXI_TDATA[15:0] - 4) : 0;
-		else if (pktlen <= 4)
-			pktlen <= 0;
-		else
-			pktlen <= pktlen - 4;
 	end
 	// }}}
 
@@ -152,12 +127,12 @@ module	netdbgrx #(
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN || !r_syncd)
 		o_null_pkt    <= 0;
-	else if (S_AXI_TVALID && S_AXI_TREADY && addr == 10 && !nomatch
+	else if (S_AXI_VALID && S_AXI_READY && addr == 10 && !nomatch
 				&& r_syncd
-				&& S_AXI_TDATA[31:16] != o_host_frameid
-				&& S_AXI_TDATA[31:16] != 0)
-		o_null_pkt <= (pktlen == 4) && (!i_handler_busy)
-				&& !word_valid && !m_valid;
+				&& S_AXI_DATA[31:16] != o_host_frameid
+				&& S_AXI_DATA[31:16] != 0)
+		o_null_pkt <= S_AXI_LAST && (!i_handler_busy)
+						&& !word_valid && !m_valid;
 	else
 		o_null_pkt <= 1'b0;
 	// }}}
@@ -173,53 +148,49 @@ module	netdbgrx #(
 		o_gpio  <= DEF_GPIO;
 		o_repeat_stb  <= 1'b0;
 		// }}}
-	end else if (S_AXI_TVALID && S_AXI_TREADY)
+	end else if (S_AXI_VALID && S_AXI_READY)
 	begin
 		o_gpio <= o_gpio & ~GPIO_AUTO_CLEAR;
 		o_repeat_stb <= 0;
 
 		case(addr)
-		0: begin // Capture the packet length
+		0: begin // Match the source MAC address
 			// {{{
 			nomatch <= 0;
 			drop <= 0;
-			end
-			// }}}
-		1: begin // Match the source MAC address
-			// {{{
-			if (S_AXI_TDATA != o_host_mac[47:16])
+			if (S_AXI_DATA != o_host_mac[47:16])
 			begin
-				tmp_mac[47:16] <= S_AXI_TDATA;
+				tmp_mac[47:16] <= S_AXI_DATA;
 				nomatch <= 1;
 			end end
 			// }}}
-		2: begin // Match the second half of the source MAC address
+		1: begin // Match the second half of the source MAC address
 			// {{{
-			if (S_AXI_TDATA[31:16] != o_host_mac[15:0])
+			if (S_AXI_DATA[31:16] != o_host_mac[15:0])
 			begin
-				tmp_mac[15:0] <= S_AXI_TDATA[31:16];
+				tmp_mac[15:0] <= S_AXI_DATA[31:16];
 				nomatch <= 1;
 			end end
 			// }}}
-		6: begin // Match source IP address
+		5: begin // Match source IP address
 			// {{{
-			if (S_AXI_TDATA != o_host_ip[31:0])
+			if (S_AXI_DATA != o_host_ip[31:0])
 			begin
-				tmp_ip <= S_AXI_TDATA;
+				tmp_ip <= S_AXI_DATA;
 				nomatch <= 1;
 			end end
 			// }}}
-		8: begin // Match source UDP port
+		7: begin // Match source UDP port
 			// {{{
-			if (S_AXI_TDATA[31:16] != o_host_udpport[15:0])
+			if (S_AXI_DATA[31:16] != o_host_udpport[15:0])
 			begin
-				tmp_sport <= S_AXI_TDATA[31:16];
+				tmp_sport <= S_AXI_DATA[31:16];
 				nomatch <= 1;
 			end end
 			// }}}
-		10: begin // Sync on new frame
+		9: begin // Sync on new frame
 			// {{{
-			if (S_AXI_TDATA[31:16] != 0 && nomatch)
+			if (S_AXI_DATA[31:16] != 0 && nomatch)
 				drop <= 1;
 			else begin
 				if (!i_handler_busy && !word_valid && !m_valid)
@@ -227,13 +198,13 @@ module	netdbgrx #(
 					o_host_mac <= tmp_mac;
 					o_host_ip <= tmp_ip;
 					o_host_udpport <= tmp_sport;
-					o_host_frameid <= S_AXI_TDATA[31:16];
+					o_host_frameid <= S_AXI_DATA[31:16];
 				end
 
-				if (S_AXI_TDATA[31:16] == 0)
+				if (S_AXI_DATA[31:16] == 0)
 					drop <= 1;
 				if (OPT_REPEAT_SUPPRESSION
-					&& S_AXI_TDATA[31:16]== o_host_frameid
+					&& S_AXI_DATA[31:16]== o_host_frameid
 					&& o_host_frameid != 0)
 				begin
 					drop <= 1;
@@ -243,18 +214,16 @@ module	netdbgrx #(
 				if (i_handler_busy || m_valid || word_valid || !r_syncd)
 					{ drop, o_repeat_stb } <= 2'b10;
 
-				o_gpio <= (o_gpio & ~(S_AXI_TDATA[15:8]
+				o_gpio <= (o_gpio & ~(S_AXI_DATA[15:8]
 						| GPIO_AUTO_CLEAR))
-					| (S_AXI_TDATA[15:8]& S_AXI_TDATA[7:0]);
+					| (S_AXI_DATA[15:8]& S_AXI_DATA[7:0]);
 			end end
 			// }}}
 		default: begin // Process (or skip) the payload data
 			// {{{
-			if (pktlen <= 4)
-			begin
-				nomatch <= 0;
-				drop    <= 0;
-			end end
+			nomatch <= 0;
+			drop    <= 0;
+			end
 			// }}}
 		endcase
 	end else begin
@@ -277,12 +246,14 @@ module	netdbgrx #(
 
 		if (addr > 10 && !drop)
 		begin
-			word_valid <= S_AXI_TVALID && S_AXI_TREADY;
-			word_data  <= S_AXI_TDATA;
-			word_last[3] <= (pktlen == 1) && S_AXI_TVALID && S_AXI_TREADY;
-			word_last[2] <= (pktlen == 2) && S_AXI_TVALID && S_AXI_TREADY;
-			word_last[1] <= (pktlen == 3) && S_AXI_TVALID && S_AXI_TREADY;
-			word_last[0] <= (pktlen == 4) && S_AXI_TVALID && S_AXI_TREADY;
+			word_valid <= S_AXI_VALID && S_AXI_READY;
+			word_data  <= S_AXI_DATA;
+			word_last[3] <= S_AXI_BYTES == 2'd1;
+			word_last[2] <= S_AXI_BYTES == 2'd2;
+			word_last[1] <= S_AXI_BYTES == 2'd3;
+			word_last[0] <= 1'b1;
+			if (!S_AXI_LAST || !S_AXI_VALID || !S_AXI_READY)
+				word_last <= 0;
 		end
 	end
 
@@ -297,8 +268,8 @@ module	netdbgrx #(
 	begin
 		o_sync <= 0;
 		r_syncd <= 0;
-	end else if (S_AXI_TVALID && S_AXI_TREADY && (addr == 10)
-			&& (S_AXI_TDATA[31:16] == 0) && !i_handler_busy)
+	end else if (S_AXI_VALID && S_AXI_READY && (addr == 10)
+			&& (S_AXI_DATA[31:16] == 0) && !i_handler_busy)
 	begin
 		o_sync <= 1'b1;
 		r_syncd <= 1'b1;
@@ -359,12 +330,12 @@ module	netdbgrx #(
 	// }}}
 
 	assign	o_debug = {
-			S_AXI_TVALID,
+			S_AXI_VALID,
 			M_AXI_TVALID, o_sync,
 			nomatch, drop, i_handler_busy,
 
-			S_AXI_TVALID, S_AXI_TREADY, m_loaded[2:0],
-				addr[4:0], S_AXI_TDATA[15:0]
+			S_AXI_VALID, S_AXI_READY, m_loaded[2:0],
+				addr[4:0], S_AXI_DATA[15:0]
 			};
 
 	// Keep Verilator happy

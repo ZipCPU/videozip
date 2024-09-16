@@ -148,15 +148,19 @@ module	netdebug #(
 		//	2. (Was that my two reasons?)
 		//	3. We want to treat each packet as atomic: it will
 		//		be guaranteed complete.
-		input	wire			S_AXI_TVALID,
-		output	wire			S_AXI_TREADY,
-		input	wire	[DW-1:0]	S_AXI_TDATA,
+		input	wire			S_AXI_VALID,
+		output	wire			S_AXI_READY,
+		input	wire	[DW-1:0]	S_AXI_DATA,
+		input	wire	[1:0]		S_AXI_BYTES,
+		input	wire			S_AXI_LAST,
 		// }}}
 		// Outgoing packet-stream interface
 		//  {{{
-		output	wire			M_AXI_TVALID,
-		input	wire			M_AXI_TREADY,
-		output	wire	[DW-1:0]	M_AXI_TDATA,
+		output	wire			M_AXI_VALID,
+		input	wire			M_AXI_READY,
+		output	wire	[DW-1:0]	M_AXI_DATA,
+		// output wire			M_AXI_BYTES = 0,
+		output	wire			M_AXI_LAST,
 		// }}}
 		output	wire	[31:0]	o_debug
 		// }}}
@@ -227,7 +231,6 @@ module	netdebug #(
 	wire		udp_hdr_valid, udp_hdr_ready, udp_hdr_last;
 	wire	[31:0]	udp_hdr_data;
 
-	wire		M_AXI_TLAST;
 	wire		dbgtx_overflow;
 	reg		interrupt_flag, int_ackd, err_flag, overflow_flag;
 	reg	[15:0]	return_gpio;
@@ -266,9 +269,11 @@ module	netdebug #(
 		.S_AXI_ACLK(i_clk), .S_AXI_ARESETN(!i_reset),
 		// Incoming packet
 		// {{{
-		.S_AXI_TVALID(S_AXI_TVALID),
-		.S_AXI_TREADY(S_AXI_TREADY),
-		.S_AXI_TDATA(S_AXI_TDATA),
+		.S_AXI_VALID(S_AXI_VALID),
+		.S_AXI_READY(S_AXI_READY),
+		.S_AXI_DATA( S_AXI_DATA),
+		.S_AXI_BYTES(S_AXI_BYTES),
+		.S_AXI_LAST( S_AXI_LAST),
 		// }}}
 		.o_gpio(proto_gpio),
 		.o_sync(w_sync), .o_repeat_stb(w_repeat_stb),
@@ -649,8 +654,8 @@ module	netdebug #(
 		//
 		.i_udp_sport(DBG_UDPPORT), .i_udp_dport(host_sport),
 		//
-		.M_AXIS_VALID(M_AXI_TVALID), .M_AXIS_READY(M_AXI_TREADY),
-		.M_AXIS_DATA( M_AXI_TDATA),  .M_AXIS_LAST( M_AXI_TLAST),
+		.M_AXIS_VALID(M_AXI_VALID), .M_AXIS_READY(M_AXI_READY),
+		.M_AXIS_DATA( M_AXI_DATA),  .M_AXIS_LAST( M_AXI_LAST),
 		//
 		.o_debug(udp_debug)
 		// }}}
@@ -658,7 +663,7 @@ module	netdebug #(
 
 	/*
 	assign	udp_debug = {
-			M_AXI_TVALID, 8'h0,
+			M_AXI_VALID, 8'h0,
 			(host_ip == 32'h010fa8c0) ? 1'b1:1'b0,
 			(host_ip == 32'hc0a80f01) ? 1'b1:1'b0,
 			(host_ip != 32'h00) ? 1'b1:1'b0,
@@ -666,8 +671,8 @@ module	netdebug #(
 			pkt_pvalid, pkt_pready, pkt_plast,
 				soft_reset, // pkt_pdata
 			udp_hdr_valid, udp_hdr_ready, udp_hdr_last,
-			M_AXI_TVALID, M_AXI_TREADY, M_AXI_TLAST,
-			M_AXI_TDATA[8:0]
+			M_AXI_VALID, M_AXI_READY, M_AXI_LAST,
+			M_AXI_DATA[8:0]
 		};
 	*/
 	// }}}
@@ -675,13 +680,13 @@ module	netdebug #(
 	assign	main_debug = {
 			w_sync || w_bus_reset || in_stb,
 
-			S_AXI_TVALID, // S_AXI_TREADY,
+			S_AXI_VALID, // S_AXI_TREADY,
 
 			w_sync, in_stb, 2'b00,
 			pl_valid, pl_ready, pl_last, pl_data[6:0],
 
-			M_AXI_TVALID, M_AXI_TREADY,			// 16
-			M_AXI_TLAST, pkt_pvalid, pkt_pready, pkt_plast, //
+			M_AXI_VALID, M_AXI_READY,			// 16
+			M_AXI_LAST, pkt_pvalid, pkt_pready, pkt_plast, //
 			10'h0
 			};
 
@@ -695,7 +700,7 @@ module	netdebug #(
 	// verilator lint_off UNUSED
 	wire	unused;
 	assign	unused = &{ 1'b0, ofifo_err, i_gpio, pl_last, pkt_pabort,
-			M_AXI_TLAST, ignored_reset,
+			ignored_reset,
 			ign_ofifo_fill };
 	// verilator lint_on  UNUSED
 	// }}}

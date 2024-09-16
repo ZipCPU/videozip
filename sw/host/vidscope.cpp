@@ -74,7 +74,7 @@ public:
 	}
 
 	virtual	void	define_traces(void) {
-		const	unsigned VMODE = 5;
+		const	unsigned VMODE = 1;
 		switch(VMODE) {
 		case 0: // SRC DEBUG
 			register_trace("FRAME_LAST", 1, 30);

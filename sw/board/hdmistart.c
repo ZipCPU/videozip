@@ -54,6 +54,12 @@
 #include "i2c.c"
 
 // #define	_BOARD_HAS_EDIDSCOPE
+#ifdef	_BOARD_HAS_EDIDSLVSCOPE
+
+#define	EDIDSCOPE_SET		_edidslvscope->s_ctrl = WBSCOPE_DISABLE
+#define	EDIDSCOPE_TRIGGER	_edidslvscope->s_ctrl = WBSCOPE_TRIGGER|WBSCOPE_DISABLE
+
+#else
 #ifdef	_BOARD_HAS_EDIDSCOPE
 
 #define	EDIDSCOPE_SET		_edidscope->s_ctrl = WBSCOPE_DISABLE
@@ -65,6 +71,7 @@
 #define	EDIDSCOPE_SET
 #define	EDIDSCOPE_TRIGGER
 
+#endif
 #endif
 
 /*
@@ -88,11 +95,23 @@ void	wait_ms(int ms) {
 #define	NO_HDMI_PORT
 #endif
 
+#ifdef	_BOARD_HAS_VIDSCOPE
+#define	VIDSCOPE_SET	_vidscope->s_ctrl = 0x0010; _hdmi->v_fps = 0x00000000
+// SETM: Set for a manually trigger collect
+#define	VIDSCOPE_SETM	_vidscope->s_ctrl = 0x0010 | WBSCOPE_DISABLE; _hdmi->v_fps = 0x00000000
+#define	VIDSCOPE_TRIGGER	_vidscope->s_ctrl = 0xff000010
+#else
+#define	VIDSCOPE_SET
+#define	VIDSCOPE_SETM
+#define	VIDSCOPE_TRIGGER
+#endif
+
 int
 main(int argc, char ** argv) {
 #ifdef	NO_HDMI_PORT
 	txstr("No HDMI port within this repository\n");
 #else
+	const	unsigned	WAITTIME = 400000000;	// 4 seconds
 	unsigned	v, vidcfg;
 	int		valid_edid = 0;
 
@@ -118,7 +137,7 @@ main(int argc, char ** argv) {
 	*_gpio = v;
 
 	// Wait for 200ms or so
-	_zip->z_tmb = 20000000;
+	_zip->z_tmb = WAITTIME;
 	while(_zip->z_tmb)
 		;
 
@@ -128,7 +147,7 @@ main(int argc, char ** argv) {
 			;
 
 		// Wait for another 200ms or so
-		_zip->z_tmb = 20000000;
+		_zip->z_tmb = WAITTIME;
 		while(_zip->z_tmb)
 			;
 	}
@@ -157,7 +176,9 @@ main(int argc, char ** argv) {
 	_zip->z_tmc = 1000000;	// 10ms
 	while(_zip->z_tmc != 0)
 		;
+#ifndef	_BOARD_HAS_EDIDSLVSCOPE
 	EDIDSCOPE_TRIGGER;
+#endif
 
 	while(0 == (_edid->ic_control & I2CC_STOPPED)) {
 		if (_zip->z_tmc == 0) {
@@ -268,25 +289,36 @@ main(int argc, char ** argv) {
 
 	*_spio = 0x0f04;
 
+	VIDSCOPE_SET;
 	// Wait for the upstream video to be valid
 	if (0 == (_hdmi->v_control & VIDPIPE_RXSYNCD)) {
 		while(0 == (_hdmi->v_control & VIDPIPE_RXSYNCD)) {
 			// Wait for 200ms or so
-			_zip->z_tmb = 20000000;
+			_zip->z_tmb = WAITTIME;
 			while(_zip->z_tmb)
 				;
 
-			*_spio = 0x0100 ^ (*_spio & 1);
+			*_spio = 0x0100 | (*_spio ^ 1);
 		}
 
-		_zip->z_tmb = 20000000;
+		_zip->z_tmb = WAITTIME;
 		while(_zip->z_tmb)
 			;
 	}
+#ifdef	_BOARD_HAS_EDIDSLVSCOPE
+	EDIDSCOPE_TRIGGER;
+#endif
 
+	VIDSCOPE_SETM;
 	*_spio = 0x0707;
 
 	txstr("\n\n* * All done! * *\n");
+
+	while (_hdmi->v_control & VIDPIPE_RXSYNCD)
+		;
+	VIDSCOPE_TRIGGER;
+	txstr("\n\nSync lost\n");
+
 	zip_halt();
 
 	return 0;
