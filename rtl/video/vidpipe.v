@@ -96,6 +96,7 @@ module	vidpipe #(
 		// Verilator lint_off SYNCASYNCNET
 		output	wire		o_pix_reset_n,
 		input	wire		i_pxpll_locked,
+		output	wire		o_hdmirx_reset_n,
 		// Verilator lint_on  SYNCASYNCNET
 		output	reg	[1:0]	o_pxclk_sel,
 		output	wire	[14:0]	o_iodelay,
@@ -110,6 +111,8 @@ module	vidpipe #(
 
 	// Local declarations
 	// {{{
+	localparam [0:0]	OPT_DATA_ISLAND = 1'b0;
+
 	localparam	CWID = $clog2(CLOCKFREQ_HZ);
 	localparam	WBLSB = $clog2(DW/8);
 	localparam	CAP_OUTPUT = 1'b1, CAP_INPUT = 1'b0;
@@ -150,9 +153,10 @@ module	vidpipe #(
 //	23. Test #2 (Unused at present)
 
 	// Verilator lint_off SYNCASYNCNET
-	reg		pix_reset_sys, pix_reset, pix_reset_request;
-	reg	[1:0]	pix_reset_pipe;
-	wire		pix_reset_n;
+	reg		pix_reset_sys, pix_reset_request, hdmi_reset_sys;
+	(* ASYNC_REG="TRUE" *) reg	pix_reset, hdmi_reset;
+	(* ASYNC_REG="TRUE" *) reg	[1:0] pix_reset_pipe, hdmi_reset_pipe;
+	wire		pix_reset_n, hdmi_reset_n;
 	// Verilator lint_on  SYNCASYNCNET
 
 	// Video streams
@@ -365,15 +369,20 @@ module	vidpipe #(
 
 
 	initial	pix_reset_sys = 1'b1;
+	initial	hdmi_reset_sys = 1'b1;
 	initial	pix_reset_request = 1'b1;
 	initial	hm_syncpol_sys = 1'b1;
 	initial	vm_syncpol_sys = 1'b1;
 	always @(posedge i_clk)
 	begin
 		if (pix_reset_request)
-			pix_reset_sys <= 1'b1;
-		else
-			pix_reset_sys <= !pxpll_locked_sys;
+		begin
+			pix_reset_sys  <= 1'b1;
+			hdmi_reset_sys <= 1'b1;
+		end else begin
+			pix_reset_sys  <= !pxpll_locked_sys;
+			hdmi_reset_sys <= !pxpll_locked_sys || !o_pxclk_sel[1];
+		end
 
 		if (wbcap_done || wbcap_err)
 		begin
@@ -639,6 +648,7 @@ module	vidpipe #(
 				pre_wb_data[10:0] <= { cfg_cmap_mode_sys,
 					1'b0, cfg_src_sel_sys, o_pxclk_sel,
 					2'b0, pxpll_locked_sys, pix_reset_sys };
+				pre_wb_data[15:14] <= cfg_alpha_sys;
 				pre_wb_data[16] <= in_locked_sys;
 				pre_wb_data[17] <= ovly_err_sys;
 				pre_wb_data[18] <= px2sys_valid;
@@ -691,13 +701,13 @@ module	vidpipe #(
 				pre_wb_data[WBLSB +: AW] <= cfg_framebase;
 			end
 		ADR_OVLYSIZE: begin		// OVSIZE
-			pre_wb_data[16 +: LGDIM] <= cfg_mem_height;
 			pre_wb_data[ 0 +: LGDIM] <= cfg_mem_width_sys;
+			pre_wb_data[16 +: LGDIM] <= cfg_mem_height;
 			end
 		ADR_OVLYOFFSET: begin		// OVOFFSET
 				// {{{
-				pre_wb_data[16 +: LGDIM] <= cfg_ovly_hpos_sys;
-				pre_wb_data[ 0 +: LGDIM] <= cfg_ovly_vpos_sys;
+				pre_wb_data[ 0 +: LGDIM] <= cfg_ovly_hpos_sys;
+				pre_wb_data[16 +: LGDIM] <= cfg_ovly_vpos_sys;
 				end
 				// }}}
 		ADR_FPS: begin			// FPS
@@ -809,23 +819,48 @@ module	vidpipe #(
 	else
 		{ pix_reset, pix_reset_pipe } <= { pix_reset_pipe, 1'b0 };
 
-	assign	pix_reset_n = !pix_reset;
-	assign	o_pix_reset_n = pix_reset_n;
+	always @(posedge i_hdmiclk or posedge hdmi_reset_sys)
+	if (hdmi_reset_sys)
+		{ hdmi_reset, hdmi_reset_pipe } <= -1;
+	else
+		{ hdmi_reset, hdmi_reset_pipe } <= { hdmi_reset_pipe, 1'b0 };
+
+	assign	hdmi_reset_n     = !hdmi_reset;
+	assign	o_hdmirx_reset_n = hdmi_reset_n;
+	assign	pix_reset_n      = !pix_reset;
+	assign	o_pix_reset_n    = pix_reset_n;
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Convert from HDMI to an AXI (video) stream
 	// {{{
+	wire		di_valid, di_ready, di_last;
+	wire	[7:0]	di_data;
 
 	generate if (OPT_HDMIIN)
 	begin : GEN_HDMIIN_TO_AXIVID
 		// {{{
+		wire		af_full, af_empty;
+		wire		w_valid, w_ready, w_vlast, w_hlast;
+		wire	[23:0]	w_data;
+		wire	[31:0]	v_debug, s_debug;
+
+		wire			v_syncpol,h_syncpol;
+		wire	[LGDIM-1:0]	h_width,  h_front, h_synch, h_raw;
+		wire	[LGDIM-1:0]	v_height, v_front, v_synch, v_raw;
+
+		// Verilator lint_off UNUSED
+		wire		h2sys_valid, h2sys_ready;
+		wire		h2pix_valid, h2pix_ready;
+		// Verilator lint_on  UNUSED
+
+
 		// hdmi2vga: Convert first to VGA
 		hdmi2vga
 		u_hdmi2vga (
 			// {{{
-			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.i_clk(i_hdmiclk), .i_reset(hdmi_reset),
 			.i_hdmi_red(i_hdmi_red), .i_hdmi_grn(i_hdmi_grn),
 				.i_hdmi_blu(i_hdmi_blu),
 			//
@@ -840,7 +875,7 @@ module	vidpipe #(
 			.M_DI_LAST( ipkt_last),
 			//
 			.o_sync_word(sync_word),
-			.o_debug(vga_debug)
+			.o_debug(v_debug)
 			// }}}
 		);
 
@@ -849,7 +884,7 @@ module	vidpipe #(
 			.OPT_TUSER_IS_SOF(1'b0), .LGDIM(LGDIM)
 		) u_sync2stream (
 			// {{{
-			.i_clk(i_pixclk), .i_reset(pix_reset),
+			.i_clk(i_hdmiclk), .i_reset(hdmi_reset),
 			// The VGA input
 			// {{{
 			.i_pix_valid(vga_valid),
@@ -859,27 +894,173 @@ module	vidpipe #(
 			// }}}
 			// The AXI Video stream output
 			// {{{
-			.M_AXIS_TVALID(rx_valid), .M_AXIS_TREADY(rx_ready),
-			.M_AXIS_TDATA(rx_data), .M_AXIS_TLAST(rx_vlast),
-			.M_AXIS_TUSER(rx_hlast),
+			.M_AXIS_TVALID(w_valid), .M_AXIS_TREADY(w_ready),
+			.M_AXIS_TDATA(w_data), .M_AXIS_TLAST(w_vlast),
+			.M_AXIS_TUSER(w_hlast),
 			// }}}
 			// Video parameters
 			// {{{
-			.o_width(hin_width),   .o_hfront(hin_front),
-			.o_hsync(hin_synch),   .o_raw_width(hin_raw),
-			.o_height(vin_height), .o_vfront(vin_front),
-			.o_vsync(vin_synch),   .o_raw_height(vin_raw),
+			.o_width( h_width),  .o_hfront(    h_front),
+			.o_hsync( h_synch),  .o_raw_width( h_raw),
+			.o_height(v_height), .o_vfront(    v_front),
+			.o_vsync( v_synch),  .o_raw_height(v_raw),
 			//
-			.o_vsync_pol(vin_syncpol),.o_hsync_pol(hin_syncpol),
+			.o_vsync_pol(v_syncpol),.o_hsync_pol(h_syncpol),
 			.o_locked(in_locked)
 			// }}}
 			// }}}
 		);
 
-		assign	src_debug = { (rx_hlast && rx_vlast),
-			(rx_hlast && rx_vlast), 2'b0,
-			rx_valid, rx_ready, rx_hlast, rx_vlast,
-			rx_data };
+		assign	s_debug = { (rx_hlast && rx_vlast),		// 32b..
+					rx_hlast && rx_vlast, 2'b0,
+					rx_valid, rx_ready,
+						rx_hlast, rx_vlast, rx_data //26
+				};
+
+		afifo #(
+			.WIDTH(26+32+32)
+		) u_rxvidxclk (
+			// {{{
+			.i_wclk(i_hdmiclk), .i_wr_reset_n(hdmi_reset_n),
+			.i_wr(w_valid), .i_wr_data({ s_debug,
+				v_debug, w_vlast, w_hlast, w_data }),
+			.o_wr_full(af_full),
+			//
+			.i_rclk(i_pixclk), .i_rd_reset_n(pix_reset_n),
+			.i_rd(rx_ready), .o_rd_data({ src_debug,
+				vga_debug, rx_vlast, rx_hlast, rx_data }),
+			.o_rd_empty(af_empty)
+			// }}}
+		);
+
+		assign	w_ready  = !af_full;
+		assign	rx_valid = !af_empty;
+
+		tfrvalue #(
+			.W(LGDIM*8+2+1)
+		) u_h2sys (
+			// {{{
+			.i_a_clk(i_hdmiclk), .i_a_reset_n(hdmi_reset_n),
+			.i_a_valid(1'b1), .o_a_ready(h2sys_ready),
+				.i_a_data({
+					in_locked,			//  1b
+					v_syncpol,h_syncpol,	//  2b
+					v_raw,    h_raw,		// LGDIM
+					v_synch,  h_synch,
+					v_front,  h_front,
+					v_height, h_width
+					}),
+			//
+			.i_b_clk(i_clk), .i_b_reset_n(!hdmi_reset_sys),
+			.o_b_valid(h2sys_valid), .i_b_ready(1'b1),
+				.o_b_data({
+					in_locked_sys,			//  1b
+					vin_syncpol_sys,hin_syncpol_sys, //  2b
+					vin_raw_sys,    hin_raw_sys,	// LGDIM
+					vin_synch_sys,  hin_synch_sys,
+					vin_front_sys,  hin_front_sys,
+					vin_height_sys, hin_width_sys
+					})
+			// }}}
+		);
+
+		tfrvalue #(
+			.W(LGDIM*8+2+32)
+		) u_h2pix (
+			// {{{
+			.i_a_clk(i_hdmiclk), .i_a_reset_n(hdmi_reset_n),
+			.i_a_valid(1'b1), .o_a_ready(h2pix_ready),
+				.i_a_data({
+					v_syncpol,h_syncpol,
+					v_raw,    h_raw,
+					v_synch,  h_synch,
+					v_front,  h_front,
+					v_height, h_width
+					}),
+			//
+			.i_b_clk(i_pixclk), .i_b_reset_n(pix_reset_n),
+			.o_b_valid(h2pix_valid), .i_b_ready(1'b1),
+				.o_b_data({
+					vin_syncpol,hin_syncpol,
+					vin_raw,    hin_raw,
+					vin_synch,  hin_synch,
+					vin_front,  hin_front,
+					vin_height, hin_width
+				})
+			// }}}
+		);
+
+
+		if (OPT_DATA_ISLAND)
+		begin : DI_TO_AXIS
+			wire		dis_valid, dis_full,
+					dis_last, dis_empty,
+					pktdec_valid, pktdec_last;
+			wire	[7:0]	dis_data, pktdec_data;
+
+			hdmibchdec
+			u_bch_decode (
+				// {{{
+				.i_clk(i_hdmiclk), .i_reset(hdmi_reset),
+				//
+				.S_VALID(ipkt_valid),
+				.S_HDR(  ipkt_hdr),
+				.S_DATA( ipkt_data),
+				.S_LAST( ipkt_last),
+				//
+				.M_VALID(pktdec_valid),
+				.M_DATA( pktdec_data),
+				.M_LAST( pktdec_last)
+				// }}}
+			);
+
+			hdmigate #(
+				.LGFLEN(6)
+			) u_gate (
+				// {{{
+				.S_AXI_ACLK(i_hdmiclk), .S_AXI_ARESETN(!hdmi_reset),
+				.S_AXIN_VALID(pktdec_valid),
+				.S_AXIN_DATA( pktdec_data),
+				.S_AXIN_LAST( pktdec_last),
+				//
+				.M_AXIN_VALID(dis_valid),
+				.M_AXIN_READY(!dis_full),
+				.M_AXIN_DATA( dis_data),
+				.M_AXIN_LAST( dis_last)
+				// }}}
+			);
+
+			afifo #(
+				.WIDTH(9)
+			) u_disxck (
+				// {{{
+				.i_wclk(i_hdmiclk),
+				.i_wr_reset_n(hdmi_reset_n),
+				.i_wr(dis_valid),
+				.i_wr_data({ dis_last, dis_data }),
+				.o_wr_full(dis_full),
+				//
+				.i_rclk(i_pixclk), .i_rd_reset_n(!pix_reset),
+				.i_rd(di_ready),
+					.o_rd_data({ di_last, di_data }),
+				.o_rd_empty(dis_empty)
+				// }}}
+			);
+
+			assign	di_valid = !dis_empty;
+
+		end else begin : NO_DI_INGEST
+
+			assign	di_valid = 1'b0;
+			assign	di_last  = 1'b0;
+			assign	di_data = 8'h0;
+
+			// Verilator lint_off UNUSED
+			wire	di_unused;
+			assign	di_unused = &{ 1'b0, di_ready };
+			// Verilator lint_on  UNUSED
+		end
+
 		// }}}
 	end else begin : NO_GEN_AXIVID
 		// {{{
@@ -906,6 +1087,10 @@ module	vidpipe #(
 		//
 		assign	src_debug = 32'h0;
 		assign	vga_debug = 32'h0;
+
+		// Verilator lint_off UNUSED
+		wire	unused_hdmiin;
+		assign	unused_hdmiin = &{ 1'b0, hdmi_reset, hdmi_reset_n };
 		// }}}
 	end endgenerate
 
@@ -923,7 +1108,7 @@ module	vidpipe #(
 		new_frame <= out_valid && out_ready && out_hlast && out_vlast;
 
 	tfrvalue #(
-		.W(LGDIM*8+5+15)
+		.W(2+15)
 	) u_px2sys (
 		// {{{
 		.i_a_clk(i_pixclk), .i_a_reset_n(pix_reset_n),
@@ -931,13 +1116,7 @@ module	vidpipe #(
 			.i_a_data({
 				new_frame,			//  1b
 				ovly_err,			//  1b
-				in_locked,			//  1b
-				i_iodelay,			// 15b
-				vin_syncpol,hin_syncpol,	//  2b
-				vin_raw,    hin_raw,		// LGDIM
-				vin_synch,  hin_synch,
-				vin_front,  hin_front,
-				vin_height, hin_width
+				i_iodelay			// 15b
 				}),
 		//
 		.i_b_clk(i_clk), .i_b_reset_n(!pix_reset_sys),
@@ -945,13 +1124,7 @@ module	vidpipe #(
 			.o_b_data({
 				new_frame_sys,			//  1b
 				ovly_err_sys,			//  1b
-				in_locked_sys,			//  1b
-				iodelay_actual_sys,		// 15b
-				vin_syncpol_sys,hin_syncpol_sys, //  2b
-				vin_raw_sys,    hin_raw_sys,	// LGDIM
-				vin_synch_sys,  hin_synch_sys,
-				vin_front_sys,  hin_front_sys,
-				vin_height_sys, hin_width_sys
+				iodelay_actual_sys		// 15b
 				})
 		// }}}
 	);
@@ -965,7 +1138,7 @@ module	vidpipe #(
 			.i_a_data({
 				dbg_sel_sys,
 				iodelay_request_sys,		// 15b
-				cfg_ovly_enable_sys,		// 1b
+				cfg_ovly_enable_sys && cfg24_set,	// 1b
 				cfg_src_sel_sys,		// 1b
 				cfg_alpha_sys,			// 2b
 				cfg_cmap_mode_sys,		// 3b
@@ -1334,14 +1507,14 @@ module	vidpipe #(
 			// }}}
 		);
 
-		assign	alph_debug = { alph_vlast && alph_hlast,
+		assign	alph_debug = { (alph_vlast && alph_hlast) || ovly_err,
 				(alph_hlast && alph_vlast),
-					alph_pixel[25:24],
+					ovly_err, 1'b0, // alph_pixel[25:24],
 				alph_valid, alph_ready, alph_hlast, alph_vlast,
 				alph_pixel[23:0] };
 
 		assign	pip_debug = { pipe_vlast && pipe_hlast,
-				(pipe_hlast && pipe_vlast), 2'b0,
+				(pipe_hlast && pipe_vlast), ovly_err, cfg24_set,
 				pipe_valid, pipe_ready, pipe_hlast, pipe_vlast,
 				pipe_data };
 		// }}}
@@ -1708,49 +1881,12 @@ module	vidpipe #(
 	//
 	// HDMI packet processing
 	// {{{
-	localparam [0:0]	OPT_DATA_ISLAND = 1'b0;
-
 	generate if (OPT_DATA_ISLAND)
 	begin : GEN_DATA_ISLAND
 		// {{{
 		wire		pktdec_valid, pktdec_hdr, pktdec_last;
 		wire	[7:0]	pktdec_data;
-
-		wire		di_valid, di_ready, di_last,
-				ign_dicap_ready;
-		wire	[7:0]	di_data;
-
-		hdmibchdec
-		u_bch_decode (
-			// {{{
-			.i_clk(i_pixclk), .i_reset(pix_reset),
-			//
-			.S_VALID(ipkt_valid),
-			.S_HDR(  ipkt_hdr),
-			.S_DATA( ipkt_data),
-			.S_LAST( ipkt_last),
-			//
-			.M_VALID(pktdec_valid),
-			.M_DATA( pktdec_data),
-			.M_LAST( pktdec_last)
-			// }}}
-		);
-
-		hdmigate #(
-			.LGFLEN(6)
-		) u_gate (
-			// {{{
-			.S_AXI_ACLK(i_pixclk), .S_AXI_ARESETN(!pix_reset),
-			.S_AXIN_VALID(pktdec_valid),
-			.S_AXIN_DATA( pktdec_data),
-			.S_AXIN_LAST( pktdec_last),
-			//
-			.M_AXIN_VALID(di_valid),
-			.M_AXIN_READY(di_ready),
-			.M_AXIN_DATA( di_data),
-			.M_AXIN_LAST( di_last)
-			// }}}
-		);
+		wire		ign_dicap_ready;
 
 		hdmigenpkt
 		u_gen_pkt (
@@ -1775,10 +1911,10 @@ module	vidpipe #(
 		u_dicap (
 			// {{{
 			.i_clk(i_pixclk), .i_reset(pix_reset),
-			.S_VALID(pktdec_valid),
+			.S_VALID(di_valid && di_ready),
 			.S_READY(ign_dicap_ready),
-			.S_DATA( pktdec_data),
-			.S_LAST( pktdec_last),
+			.S_DATA( di_data),
+			.S_LAST( di_last),
 			//
 			.o_vld(di_dbg_ce),
 			.o_debug(di_debug),
@@ -1786,10 +1922,10 @@ module	vidpipe #(
 			// }}}
 		);
 
-		assign	di_alt_valid = di_valid || pktdec_valid || ipkt_valid;
+		assign	di_alt_valid = di_valid || ipkt_valid;
 		assign	di_alt_debug = { opkt_valid,
 				di_valid && di_ready, di_last, di_data,	// 10b
-				pktdec_valid, pktdec_last, pktdec_data, // 10b
+				di_valid, di_ready, 8'h0, // 10b
 				ipkt_valid, ipkt_hdr, ipkt_last, ipkt_data // 11
 				};
 
@@ -1813,12 +1949,14 @@ module	vidpipe #(
 		assign	di_alt_valid = 1'b1;
 		assign	di_alt_debug = 32'h0;
 
+		assign	di_ready = 1'b1;
+
 		// Keep Verilator happy
 		// {{{
 		// Verilator lint_off UNUSED
 		wire	unused_di;
 		assign	unused_di = &{ 1'b0, opkt_ready, ipkt_valid, ipkt_hdr,
-				ipkt_data, ipkt_last };
+				ipkt_data, ipkt_last, di_valid, di_data, di_last };
 		// Verilator lint_on  UNUSED
 		// }}}
 		// }}}

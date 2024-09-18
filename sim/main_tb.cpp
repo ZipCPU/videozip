@@ -245,6 +245,10 @@ public:
 		// SIM.TICK from cec
 		m_core->i_hdmirx_cec = m_core->o_hdmirx_cec;
 		m_core->i_hdmitx_cec = m_core->o_hdmitx_cec;
+		// SIM.TICK from pxclk
+		m_core->i_pxclk_stall = 0;
+		m_core->i_pxclk_ack   = m_core->o_pxclk_stb;
+		m_core->i_pxclk_idata = m_core->o_pxclk_data;
 		// SIM.TICK from mdio
 #ifdef	NETCTRL_ACCESS
 		m_core->i_mdio = (*m_mdio)((m_core->i_reset)?1:0,

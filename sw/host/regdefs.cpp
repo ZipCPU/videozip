@@ -108,6 +108,7 @@ const	REGNAME	raw_bregs[] = {
 	{ R_MEGANET_TXABORTS,	"MEGANETABRTS"   	},
 	{ R_MEGANET_DBGRX   ,	"MEGANETDBGRX"   	},
 	{ R_MEGANET_DBGTX   ,	"MEGANETDBGTX"   	},
+	{ R_PXPLL           ,	"PXPLL"          	},
 	{ R_EDID            ,	"EDID"           	},
 	{ R_EDID            ,	"EDID_CTRL"      	},
 	{ R_EDID            ,	"EDIDCTRL"       	},
@@ -257,7 +258,27 @@ const	REGNAME	raw_bregs[] = {
 	{ R_ZIPUPC          ,	"ZIPUPC"         	},
 	{ R_ZIPUPC          ,	"UPC"            	},
 	{ R_ZIPSYSTEM       ,	"ZIPSYSTEM"      	},
-	{ R_ZIPSYSTEM       ,	"ZIPSYS"         	}
+	{ R_ZIPSYSTEM       ,	"ZIPSYS"         	},
+	{ R_ZIPWATCHDOG     ,	"ZIPWATCHDOG"    	},
+	{ R_ZIPBUSDOG       ,	"BUSDOG"         	},
+	{ R_ZIPAPIC         ,	"ZIPAPIC"        	},
+	{ R_ZIPAPIC         ,	"ALTPIC"         	},
+	{ R_ZIPTIMERA       ,	"ZIPTMA"         	},
+	{ R_ZIPTIMERA       ,	"ZIPTIMERA"      	},
+	{ R_ZIPTIMERB       ,	"ZIPTMB"         	},
+	{ R_ZIPTIMERB       ,	"ZIPTIMERB"      	},
+	{ R_ZIPTIMERC       ,	"ZIPTMC"         	},
+	{ R_ZIPTIMERC       ,	"ZIPTIMERC"      	},
+	{ R_ZIPJIFFIES      ,	"ZIPJIFF"        	},
+	{ R_ZIPMTASK        ,	"ZIPMTASK"       	},
+	{ R_ZIPMSTALL       ,	"ZIPMSTALL"      	},
+	{ R_ZIPMPSTAL       ,	"ZIPMPSTAL"      	},
+	{ R_ZIPMINSN        ,	"ZIPMINSN"       	},
+	{ R_ZIPUTASK        ,	"ZIPUTASK"       	},
+	{ R_ZIPUSTALL       ,	"ZIPUSTALL"      	},
+	{ R_ZIPUPSTAL       ,	"ZIPUPSTAL"      	},
+	{ R_ZIPUINSN        ,	"ZIPUINSN"       	},
+	{ R_ZIPUDMAC        ,	"ZIPDMAC"        	}
 };
 
 // REGSDEFS.CPP.INSERT for any bus masters

@@ -266,6 +266,12 @@ i_sd_cd_n,
 	// CEC declarations.
 	wire	i_hdmirx_cec, i_hdmitx_cec;
 	wire	o_hdmirx_cec, o_hdmitx_cec;
+	wire	[31:0]	pxclk_debug;
+	wire		w_pxclk_cyc, w_pxclk_stb, w_pxclk_we,
+			w_pxclk_stall, w_pxclk_ack;
+	wire	[6:0]	w_pxclk_addr;
+	wire	[31:0]	w_pxclk_data, w_pxclk_idata;
+	wire	[3:0]	w_pxclk_sel;
 	////////////////////////////////////////////////////////////////////////
 	//
 	// Definitions for the clock generation circuit
@@ -290,9 +296,9 @@ i_sd_cd_n,
 	wire	[3:0]	qspi_dat;
 	wire	[9:0]	hdmirx_red, hdmirx_grn, hdmirx_blu;
 	wire	[9:0]	hdmitx_red, hdmitx_grn, hdmitx_blu;
-	wire	[1:0]	w_pxclk_sel;
+	wire	[1:0]	w_pxclk_cksel;
 	wire		hdmirx_clk, hdmi_ck, hdmi_serdes_clk;
-	wire		pxrx_locked, pix_reset_n;
+	wire		pxrx_locked, pix_reset_n, hdmirx_reset_n;
 	wire [15-1:0]	set_hdmi_delay, actual_hdmi_delay;
 	// Verilator lint_off UNUSED
 	wire		ign_cpu_stall, ign_cpu_ack;
@@ -404,6 +410,9 @@ i_sd_cd_n,
 		i_hdmitx_cec, o_hdmitx_cec,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
+		w_pxclk_cyc, w_pxclk_stb, w_pxclk_we,
+		w_pxclk_addr, w_pxclk_data, w_pxclk_sel,
+		w_pxclk_stall, w_pxclk_ack, w_pxclk_idata,
 		// Clock Generator ports
 		s_genclk_clk,
 		w_genclk_pll_locked,
@@ -424,8 +433,8 @@ i_sd_cd_n,
 		hdmirx_red, hdmirx_grn, hdmirx_blu,
 		hdmitx_red, hdmitx_grn, hdmitx_blu,
 		set_hdmi_delay, actual_hdmi_delay,
-		pix_reset_n, pxrx_locked,
-		w_pxclk_sel,
+		pix_reset_n, pxrx_locked, hdmirx_reset_n,
+		w_pxclk_cksel,
 		// Simulation bus control for the CPU
 		1'b0, 1'b0, 1'b0, 7'h0, 32'h0,
 		ign_cpu_stall, ign_cpu_ack, ign_cpu_idata,
@@ -524,6 +533,40 @@ i_sd_cd_n,
 	// CEC logic
 	IOBUF hdmirx_cec (.T(o_hdmirx_cec), .I(1'b0), .O(i_hdmirx_cec), .IO(io_hdmirx_cec));
 	IOBUF hdmitx_cec (.T(o_hdmitx_cec), .I(1'b0), .O(i_hdmitx_cec), .IO(io_hdmitx_cec));
+
+	////////////////////////////////////////////////////////////////////////
+	//
+	// HDMI Clock generation
+	// {{{
+
+	xpxclk
+	u_xpxclk (
+		.i_sysclk(s_clk),		// System clock
+		.i_cksel(w_pxclk_cksel),		// Clock select switch
+		//
+		.i_hdmirx_clk_p(i_hdmirx_clk_p),	// HDMI RX input clock
+		.i_hdmirx_clk_n(i_hdmirx_clk_n),
+		.i_lcl_pixclk(s_clk_80mhz_unbuffered),	// Locally generated clk
+		.i_siclk(s_clk_80mhz_unbuffered),
+		//
+		.o_hdmick_locked(pxrx_locked),
+		.o_hdmirx_clk(hdmirx_clk),	// Clk for measurement only
+		.o_pixclk(hdmi_ck),		// Pixel clock
+		.o_hdmick(hdmi_serdes_clk),	// HS pixel clock
+		//
+		.i_wb_clk(s_clk),
+		//
+		.i_wb_cyc(w_pxclk_cyc), .i_wb_stb(w_pxclk_stb),
+			.i_wb_we(w_pxclk_we),
+			.i_wb_addr(w_pxclk_addr[7-1:0]),
+			.i_wb_data(w_pxclk_data), // 32 bits wide
+			.i_wb_sel(w_pxclk_sel),  // 32/8 bits wide
+		.o_wb_stall(w_pxclk_stall),.o_wb_ack(w_pxclk_ack),
+			.o_wb_data(w_pxclk_idata),
+		//
+		.o_debug(pxclk_debug)
+	);
+	// }}}
 
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -660,31 +703,12 @@ i_sd_cd_n,
 	// HDMI
 	// {{{
 
-	// Start with clock generation and propagation
-	// {{{
-	xpxclk
-	u_xpxclk (
-		.i_sysclk(s_clk),		// System clock
-		.i_cksel(w_pxclk_sel),		// Clock select switch
-		//
-		.i_hdmirx_clk_p(i_hdmirx_clk_p),	// HDMI RX input clock
-		.i_hdmirx_clk_n(i_hdmirx_clk_n),
-		.i_lcl_pixclk(s_clk_80mhz_unbuffered),	// Locally generated clk
-		.i_siclk(s_clk_80mhz_unbuffered),
-		//
-		.o_hdmick_locked(pxrx_locked),
-		.o_hdmirx_clk(hdmirx_clk),	// Clk for measurement only
-		.o_pixclk(hdmi_ck),		// Pixel clock
-		.o_hdmick(hdmi_serdes_clk)	// HS pixel clock
-	);
-	// }}}
-
 	// Ingest the HDMI data lines
 	// {{{
 	xhdmiin
 	u_hdmirx_red(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(hdmirx_reset_n),
 		.i_delay(set_hdmi_delay[14:10]),
 		.o_delay(actual_hdmi_delay[14:10]),
 		.i_hs_wire({ i_hdmirx_p[2], i_hdmirx_n[2] }),
@@ -694,7 +718,7 @@ i_sd_cd_n,
 	xhdmiin
 	u_hdmirx_grn(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(hdmirx_reset_n),
 		.i_delay(set_hdmi_delay[9:5]),
 		.o_delay(actual_hdmi_delay[9:5]),
 		.i_hs_wire({ i_hdmirx_p[1], i_hdmirx_n[1] }),
@@ -704,7 +728,7 @@ i_sd_cd_n,
 	xhdmiin
 	u_hdmirx_blu(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(hdmirx_reset_n),
 		.i_delay(set_hdmi_delay[4:0]),
 		.o_delay(actual_hdmi_delay[4:0]),
 		.i_hs_wire({ i_hdmirx_p[0], i_hdmirx_n[0] }),

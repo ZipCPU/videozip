@@ -68,14 +68,26 @@ module	xpxclk #(
 		input	wire	[1:0]	i_cksel,
 		output	wire		o_hdmick_locked,
 		output	wire		o_hdmirx_clk,
-		output	wire		o_pixclk, o_hdmick
+		output	wire		o_pixclk, o_hdmick,
+		//
+		// DRP port
+		input	wire		i_wb_clk, i_wb_cyc, i_wb_stb, i_wb_we,
+		input	wire	[6:0]	i_wb_addr,
+		input	wire	[31:0]	i_wb_data,
+		input	wire	[3:0]	i_wb_sel,
+		//
+		output	wire		o_wb_stall,
+		output	wire		o_wb_ack,
+		output	wire	[31:0]	o_wb_data,
+		//
+		output	wire	[31:0]	o_debug
 		// }}}
 	);
 
 	// Local declarations
 	// {{{
 	wire	lclck, hdmirx_ck, preck, siclk;
-	wire	clk_fbout, clk_fb, pixclk_nobuf, hdmi_ck;
+	wire	clk_fbout, clk_fb, raw_pixclk, hdmi_ck;
 	// }}}
 	generate if (OPT_EXTERNAL_CLOCK)
 	begin : GEN_EXTERNAL_CLOCK_SW
@@ -107,31 +119,84 @@ module	xpxclk #(
 		.i_ck0(lclck), .i_ck1(hdmirx_ck), .o_clk(preck)
 	);
 	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// Dynamic reconfiguration control
+	// {{{
+	wire		drp_reset, drp_den, drp_dwe, drp_drdy;
+	wire	[15:0]	drp_di, drp_do;
+	wire	[6:0]	drp_addr;
 
-	PLLE2_BASE #(
+	reg	wb_reset;
+
+	initial	wb_reset = 1'b1;
+	always @(posedge i_wb_clk)
+		wb_reset <= 1'b0;
+
+	wbdrp #(
+		.AW(7)
+	) u_drp (
 		// {{{
+		.i_clk(i_wb_clk), .i_reset(wb_reset),
+		.i_wb_cyc(i_wb_cyc), .i_wb_stb(i_wb_stb), .i_wb_we(i_wb_we),
+		.i_wb_addr(i_wb_addr),
+			.i_wb_data(i_wb_data), .i_wb_sel(i_wb_sel),
+		.o_wb_stall(o_wb_stall), .o_wb_ack(o_wb_ack),
+			.o_wb_data(o_wb_data),
+		//
+		.o_DEVRST(drp_reset), .o_DWE(drp_dwe), .o_DEN(drp_den),
+		.o_DADDR(drp_addr), .o_DI(drp_di),
+		.i_DRDY(drp_drdy), .i_DO(drp_do),
+		//
+		.o_debug(o_debug)
+		// }}}
+	);
+
+	// }}}
+	////////////////////////////////////////////////////////////////////////
+	//
+	// PLL locking
+	// {{{
+	PLLE2_ADV #(
+		// {{{
+		.CLKFBOUT_MULT(10),	// 150MHz * 20 = 3000MHz
+		.CLKFBOUT_PHASE(0.0),
+		.CLKIN1_PERIOD(6.7),	// Up to 148.5MHz input
+		.CLKOUT0_DIVIDE(10),	// 3000MHz / 20 => 150MHz
+		.CLKOUT1_DIVIDE(2)	// 3000MHz /  4 => 750MHz
+/*
 		.CLKFBOUT_MULT(15),	// 80MHz * 15 = 1200MHz
 		.CLKFBOUT_PHASE(0.0),
-		// .CLKIN1_PERIOD(6.6),	// Up to 200MHz input
 		.CLKIN1_PERIOD(12.5),	// Up to 80MHz input
 		.CLKOUT0_DIVIDE(15),	// 1200MHz / 15 =>  80MHz
 		.CLKOUT1_DIVIDE(3)	// 1200MHz /  3 => 400MHz
+*/
 		// }}}
 	) u_hdmi_pll (
 		// {{{
+		.RST(drp_reset),
+		//
 		.CLKIN1(preck),		// Incoming clock
 		.PWRDWN(1'b0),
 		.CLKFBIN(clk_fb),
 		.CLKFBOUT(clk_fbout),
 		.LOCKED(o_hdmick_locked),
 		//
-		.CLKOUT0(pixclk_nobuf),
-		.CLKOUT1(hdmi_ck)
+		.CLKOUT0(raw_pixclk),
+		.CLKOUT1(hdmi_ck),
+		// DRP controls
+		// {{{
+		.DCLK(i_wb_clk),
+		.DEN(drp_den),    .DWE(drp_dwe),
+		.DADDR(drp_addr), .DI(drp_di),
+		.DRDY(drp_drdy),  .DO(drp_do)
+		// }}}
+
 		// }}}
 	);
 
 	BUFG fdback_buf( .I(clk_fbout),    .O(clk_fb));
-	BUFG pixclk_buf( .I(pixclk_nobuf), .O(o_pixclk));
+	BUFG pixclk_buf( .I(raw_pixclk), .O(o_pixclk));
 	BUFG hdmi_buf(   .I(hdmi_ck),      .O(o_hdmick));
-
+	// }}}
 endmodule
