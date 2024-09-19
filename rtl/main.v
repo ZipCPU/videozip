@@ -162,6 +162,9 @@ module	main(i_clk, i_reset,
 		i_hdmitx_cec, o_hdmitx_cec,
 		// OLED control interface (roughly SPI)
 		o_oled_sck, o_oled_mosi, o_oled_dcn,
+		o_pxclk_cyc, o_pxclk_stb, o_pxclk_we,
+		o_pxclk_addr, o_pxclk_data, o_pxclk_sel,
+		i_pxclk_stall, i_pxclk_ack, i_pxclk_idata,
 		// Clock generator ports
 		i_genclk_clk,
 		i_genclk_pll_locked,
@@ -189,8 +192,8 @@ module	main(i_clk, i_reset,
 		i_hdmi_red, i_hdmi_grn, i_hdmi_blu,
 		o_hdmi_red, o_hdmi_grn, o_hdmi_blu,
 		o_hdmi_iodelay, i_hdmi_iodelay,
-		o_pix_reset_n, i_pxpll_locked,
-		o_pxclk_sel,
+		o_pix_reset_n, i_pxpll_locked, o_hdmirx_reset_n,
+		o_pxclk_cksel,
 		// Veri1ator only interface
 		cpu_sim_cyc,
 		cpu_sim_stb,
@@ -347,6 +350,12 @@ module	main(i_clk, i_reset,
 	output	wire	o_hdmirx_cec, o_hdmitx_cec;
 	// OLEDBW interface
 	output	wire		o_oled_sck, o_oled_mosi, o_oled_dcn;
+	output	wire	o_pxclk_cyc, o_pxclk_stb, o_pxclk_we;
+	output	wire	[6:0]	o_pxclk_addr;
+	output	wire	[31:0]	o_pxclk_data;
+	output	wire	[3:0]	o_pxclk_sel;
+	input	wire		i_pxclk_stall, i_pxclk_ack;
+	input	wire	[31:0]	i_pxclk_idata;
 	// Clock generator I/O ports
 	// {{{
 	input	wire		i_genclk_clk;
@@ -388,9 +397,9 @@ module	main(i_clk, i_reset,
 	output	wire	[9:0]	o_hdmi_red, o_hdmi_grn, o_hdmi_blu;
 	output	wire	[14:0]	o_hdmi_iodelay;
 	input	wire	[14:0]	i_hdmi_iodelay;
-	output	wire		o_pix_reset_n;
+	output	wire		o_pix_reset_n, o_hdmirx_reset_n;
 	input	wire		i_pxpll_locked;
-	output	wire	[1:0]	o_pxclk_sel;
+	output	wire	[1:0]	o_pxclk_cksel;
 	// }}}
 	input	wire		cpu_sim_cyc, cpu_sim_stb;
 	input	wire		cpu_sim_we;
@@ -1108,6 +1117,15 @@ module	main(i_clk, i_reset,
 	wire		wb32_net_stall, wb32_net_ack, wb32_net_err;
 	wire	[31:0]	wb32_net_idata;
 	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb32, component pxclk
+	// Verilator lint_off UNUSED
+	wire		wb32_pxclk_cyc, wb32_pxclk_stb, wb32_pxclk_we;
+	wire	[11:0]	wb32_pxclk_addr;
+	wire	[31:0]	wb32_pxclk_data;
+	wire	[3:0]	wb32_pxclk_sel;
+	wire		wb32_pxclk_stall, wb32_pxclk_ack, wb32_pxclk_err;
+	wire	[31:0]	wb32_pxclk_idata;
+	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb32, component wb32_dio
 	// Verilator lint_off UNUSED
 	wire		wb32_dio_cyc, wb32_dio_stb, wb32_dio_we;
@@ -1629,6 +1647,7 @@ module	main(i_clk, i_reset,
 	assign	wb32_cfg_err= 1'b0;
 	assign	wb32_cpunets_err= 1'b0;
 	assign	wb32_net_err= 1'b0;
+	assign	wb32_pxclk_err= 1'b0;
 	assign	wb32_dio_err= 1'b0;
 	assign	wb32_hdmi_err= 1'b0;
 	assign	wb32_mdio_err= 1'b0;
@@ -1637,13 +1656,14 @@ module	main(i_clk, i_reset,
 	//
 	//
 	wbxbar #(
-		.NM(1), .NS(11), .AW(12), .DW(32),
+		.NM(1), .NS(12), .AW(12), .DW(32),
 		.SLAVE_ADDR({
 			// Address width    = 12
 			// Address LSBs     = 2
 			{ 12'hc00 }, //         mdio: 0x3000
 			{ 12'h800 }, //         hdmi: 0x2000
-			{ 12'h500 }, //     wb32_dio: 0x1400
+			{ 12'h580 }, //     wb32_dio: 0x1600
+			{ 12'h500 }, //        pxclk: 0x1400
 			{ 12'h480 }, //          net: 0x1200
 			{ 12'h400 }, //       cpunet: 0x1000
 			{ 12'h380 }, //          cfg: 0x0e00
@@ -1659,6 +1679,7 @@ module	main(i_clk, i_reset,
 			{ 12'hc00 }, //         mdio
 			{ 12'hc00 }, //         hdmi
 			{ 12'hf80 }, //     wb32_dio
+			{ 12'hf80 }, //        pxclk
 			{ 12'hf80 }, //          net
 			{ 12'hf80 }, //       cpunet
 			{ 12'hf80 }, //          cfg
@@ -1706,6 +1727,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_cyc,
 			wb32_hdmi_cyc,
 			wb32_dio_cyc,
+			wb32_pxclk_cyc,
 			wb32_net_cyc,
 			wb32_cpunets_cyc,
 			wb32_cfg_cyc,
@@ -1719,6 +1741,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_stb,
 			wb32_hdmi_stb,
 			wb32_dio_stb,
+			wb32_pxclk_stb,
 			wb32_net_stb,
 			wb32_cpunets_stb,
 			wb32_cfg_stb,
@@ -1732,6 +1755,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_we,
 			wb32_hdmi_we,
 			wb32_dio_we,
+			wb32_pxclk_we,
 			wb32_net_we,
 			wb32_cpunets_we,
 			wb32_cfg_we,
@@ -1745,6 +1769,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_addr,
 			wb32_hdmi_addr,
 			wb32_dio_addr,
+			wb32_pxclk_addr,
 			wb32_net_addr,
 			wb32_cpunets_addr,
 			wb32_cfg_addr,
@@ -1758,6 +1783,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_data,
 			wb32_hdmi_data,
 			wb32_dio_data,
+			wb32_pxclk_data,
 			wb32_net_data,
 			wb32_cpunets_data,
 			wb32_cfg_data,
@@ -1771,6 +1797,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_sel,
 			wb32_hdmi_sel,
 			wb32_dio_sel,
+			wb32_pxclk_sel,
 			wb32_net_sel,
 			wb32_cpunets_sel,
 			wb32_cfg_sel,
@@ -1784,6 +1811,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_stall,
 			wb32_hdmi_stall,
 			wb32_dio_stall,
+			wb32_pxclk_stall,
 			wb32_net_stall,
 			wb32_cpunets_stall,
 			wb32_cfg_stall,
@@ -1797,6 +1825,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_ack,
 			wb32_hdmi_ack,
 			wb32_dio_ack,
+			wb32_pxclk_ack,
 			wb32_net_ack,
 			wb32_cpunets_ack,
 			wb32_cfg_ack,
@@ -1810,6 +1839,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_idata,
 			wb32_hdmi_idata,
 			wb32_dio_idata,
+			wb32_pxclk_idata,
 			wb32_net_idata,
 			wb32_cpunets_idata,
 			wb32_cfg_idata,
@@ -1823,6 +1853,7 @@ module	main(i_clk, i_reset,
 			wb32_mdio_err,
 			wb32_hdmi_err,
 			wb32_dio_err,
+			wb32_pxclk_err,
 			wb32_net_err,
 			wb32_cpunets_err,
 			wb32_cfg_err,
@@ -2377,6 +2408,15 @@ module	main(i_clk, i_reset,
 	// }}}
 `endif	// OLEDBW_ACCESS
 
+	assign	o_pxclk_cyc  = wb32_pxclk_cyc;
+	assign	o_pxclk_stb  = wb32_pxclk_stb;
+	assign	o_pxclk_we   = wb32_pxclk_we;
+	assign	o_pxclk_addr = wb32_pxclk_addr[6:0];
+	assign	o_pxclk_data = wb32_pxclk_data;
+	assign	o_pxclk_sel  = wb32_pxclk_sel;
+	assign	wb32_pxclk_stall = i_pxclk_stall;
+	assign	wb32_pxclk_ack   = i_pxclk_ack;
+	assign	wb32_pxclk_idata = i_pxclk_idata;
 `ifdef	NETBUS_ACCESS
 	// {{{
 	////////////////////////////////////////////////////////////////////////
@@ -3115,7 +3155,8 @@ module	main(i_clk, i_reset,
 				.o_hdmi_blu(o_hdmi_blu),
 		.o_pix_reset_n(o_pix_reset_n),
 		.i_pxpll_locked(i_pxpll_locked),
-		.o_pxclk_sel(o_pxclk_sel),
+		.o_hdmirx_reset_n(o_hdmirx_reset_n),
+		.o_pxclk_sel(o_pxclk_cksel),
 		.o_iodelay(o_hdmi_iodelay),
 		.i_iodelay(i_hdmi_iodelay),
 		.o_interrupt(hdmi_int),

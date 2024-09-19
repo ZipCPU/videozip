@@ -441,10 +441,10 @@ typedef	struct	RTCLIGHT_S	{
 
 #ifdef	I2CCPU_ACCESS
 #define	_BOARD_HAS_I2CCPU
-static volatile I2CCPU *const _i2c=((I2CCPU *)0x08001420);
+static volatile I2CCPU *const _i2c=((I2CCPU *)0x08001620);
 #endif	// I2CCPU_ACCESS
 #ifdef	SYSCLK
-static volatile unsigned *const _sysclk = ((unsigned *)0x080014b0);
+static volatile unsigned *const _sysclk = ((unsigned *)0x080016b0);
 #endif	// SYSCLK
 #ifdef	EDIDSLVSCOPE_SCOPC
 #define	_BOARD_HAS_EDIDSLVSCOPE
@@ -456,20 +456,22 @@ static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)0x08000a00);
 #endif	// ZIPSCOPE_SCOPE
 #ifdef	OLEDBW_ACCESS
 #define	_BOARD_HAS_OLEDBW
-static volatile OLEDBW *const _oled = ((OLEDBW *)134222912);
+static volatile OLEDBW *const _oled = ((OLEDBW *)134223424);
 #endif	// OLEDBW_ACCESS
+#define	_BOARD_HAS_PXPLL
+static volatile unsigned *const _pxclk=((unsigned *)0x08001400;
 #ifdef	PWRCOUNT_ACCESS
-static volatile unsigned *const _pwrcount = ((unsigned *)0x0800149c);
+static volatile unsigned *const _pwrcount = ((unsigned *)0x0800169c);
 #endif	// PWRCOUNT_ACCESS
 #ifdef	RTCCOUNT_ACCESS
 #define	_BOARD_HAS_RTCCOUNT
-static volatile unsigned *const _rtccount = ((unsigned *)0x080014a4);
+static volatile unsigned *const _rtccount = ((unsigned *)0x080016a4);
 #endif	// RTCCOUNT_ACCESS
 #define	_BOARD_HAS_BUSERR
-static volatile unsigned *const _buserr = ((unsigned *)0x08001484);
+static volatile unsigned *const _buserr = ((unsigned *)0x08001684);
 #ifdef	SPIO_ACCESS
 #define	_BOARD_HAS_SPIO
-static volatile unsigned *const _spio = ((unsigned *)0x080014ac);
+static volatile unsigned *const _spio = ((unsigned *)0x080016ac);
 #endif	// SPIO_ACCESS
 #ifdef	CFG_ACCESS
 #define	_BOARD_HAS_ICAPETWO
@@ -488,21 +490,21 @@ static volatile CPUNET *const _cpunet=((CPUNET *)0x08001000);
 static volatile ENETSTREAM *const _net = ((ENETSTREAM *)0x08001200);
 #endif	// MEGANET_ACCESS
 #define	_BOARD_HAS_BLDTIME
-static volatile unsigned *const _buildtime = ((unsigned *)0x08001480);
+static volatile unsigned *const _buildtime = ((unsigned *)0x08001680);
 #ifdef	NETCTRL_ACCESS
 #define	_BOARD_HAS_NETMDIO
 static volatile ENETMDIO *const _mdio = ((ENETMDIO *)0x08003000);
 #endif	// NETCTRL_ACCESS
 #ifdef	ROTARY_ACCESS
 #define	_BOARD_HAS_ROTARY
-static volatile unsigned *const _rotary = ((unsigned *)134223008);
+static volatile unsigned *const _rotary = ((unsigned *)134223520);
 #endif	// ROTARY_ACCESS
 #ifdef	FLASH_ACCESS
 #define	_BOARD_HAS_FLASH
 extern int _flash[1];
 #endif	// FLASH_ACCESS
 #ifdef	GENCLKFB
-static volatile unsigned *const _genclkfb = ((unsigned *)0x0800148c);
+static volatile unsigned *const _genclkfb = ((unsigned *)0x0800168c);
 #endif	// GENCLKFB
 #ifdef	VIDPIPE_ACCESS
 #define	_BOARD_HAS_VIDPIPE
@@ -514,13 +516,13 @@ static volatile CONSOLE *const _uart = ((CONSOLE *)0x08000c00);
 #endif	// BUSCONSOLE_ACCESS
 #ifdef	VERSION_ACCESS
 #define	_BOARD_HAS_VERSION
-static volatile unsigned *const _version = ((unsigned *)0x080014b4);
+static volatile unsigned *const _version = ((unsigned *)0x080016b4);
 #endif	// VERSION_ACCESS
 #ifdef	NETTXCLK_ACCESS
-static volatile unsigned *const _nettxctr = ((unsigned *)0x08001498);
+static volatile unsigned *const _nettxctr = ((unsigned *)0x08001698);
 #endif	// NETTXCLK_ACCESS
 #ifdef	NETCLOCKCTR_ACCESS
-static volatile unsigned *const _netclockctr = ((unsigned *)0x08001494);
+static volatile unsigned *const _netclockctr = ((unsigned *)0x08001694);
 #endif	// NETCLOCKCTR_ACCESS
 #ifdef	SDIO_ACCESS
 #define	_BOARD_HAS_SDIO
@@ -528,11 +530,11 @@ static volatile struct SDIO_S *const _sdio = ((struct SDIO_S *)0x00800000);
 #endif	// SDIO_ACCESS
 #ifdef	GPIO_ACCESS
 #define	_BOARD_HAS_GPIO
-static volatile unsigned *const _gpio = ((unsigned *)0x08001490);
+static volatile unsigned *const _gpio = ((unsigned *)0x08001690);
 #endif	// GPIO_ACCESS
 #ifdef	EDID_ACCESS
 #define	_BOARD_HAS_EDID
-static volatile I2CCPU *const _edid = ((I2CCPU *)0x08001400);
+static volatile I2CCPU *const _edid = ((I2CCPU *)0x08001600);
 #endif	// EDID_ACCESS
 #ifdef	FLASHCFG_ACCESS
 #define	_BOARD_HAS_FLASHCFG
@@ -540,7 +542,7 @@ static volatile unsigned * const _flashcfg = ((unsigned *)(0x08000400));
 #endif	// FLASHCFG_ACCESS
 #ifdef	RTCDATE_ACCESS
 #define	_BOARD_HAS_RTCDATE
-static volatile unsigned *const _rtcdate = ((unsigned *)134223016);
+static volatile unsigned *const _rtcdate = ((unsigned *)134223528);
 #endif	// RTCDATE_ACCESS
 #ifdef	BKRAM_ACCESS
 #define	_BOARD_HAS_BKRAM
@@ -550,10 +552,10 @@ extern char	_bkram[0x00040000];
 #define	_BOARD_HAS_SDRAM
 extern char	_sdram[0x20000000];
 #endif	// SDRAM_ACCESS
-static volatile char *const _edidslv = ((char *)0x08001500);
+static volatile char *const _edidslv = ((char *)0x08001700);
 #ifdef	RTC_ACCESS
 #define	_BOARD_HAS_RTC
-static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)0x08001460);
+static volatile RTCLIGHT *const _rtc = ((RTCLIGHT *)0x08001660);
 #endif	// RTC_ACCESS
 //
 // Interrupt assignments (2 PICs)

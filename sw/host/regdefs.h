@@ -146,45 +146,47 @@
 #define	R_MEGANET_TXABORTS	0x0800123c	// 08001200, wbregs names: MEGANETABRTS
 #define	R_MEGANET_DBGRX   	0x08001240	// 08001200, wbregs names: MEGANETDBGRX
 #define	R_MEGANET_DBGTX   	0x08001244	// 08001200, wbregs names: MEGANETDBGTX
+// HDMI pixel clock PLL reconfiguration port
+#define	R_PXPLL           	0x08001400	// 08001400, wbregs names: PXPLL
 // I2C Controller registers
-#define	R_EDID            	0x08001400	// 08001400, wbregs names: EDID, EDID_CTRL, EDIDCTRL
-#define	R_EDID_OVW        	0x08001404	// 08001400, wbregs names: EDID_OVW, EDID_OVERRIDE
-#define	R_EDID_ADDR       	0x08001408	// 08001400, wbregs names: EDID_ADDR, EDID_ADDRESS
-#define	R_EDID_CKCOUNT    	0x0800140c	// 08001400, wbregs names: EDIDCLK, EDID_CKCOUNT
+#define	R_EDID            	0x08001600	// 08001600, wbregs names: EDID, EDID_CTRL, EDIDCTRL
+#define	R_EDID_OVW        	0x08001604	// 08001600, wbregs names: EDID_OVW, EDID_OVERRIDE
+#define	R_EDID_ADDR       	0x08001608	// 08001600, wbregs names: EDID_ADDR, EDID_ADDRESS
+#define	R_EDID_CKCOUNT    	0x0800160c	// 08001600, wbregs names: EDIDCLK, EDID_CKCOUNT
 // I2C Controller registers
-#define	R_I2CCPU          	0x08001420	// 08001420, wbregs names: I2CCPU, I2CCPU_CTRL, I2CCPUCTRL
-#define	R_I2CCPU_OVW      	0x08001424	// 08001420, wbregs names: I2CCPU_OVW, I2CCPU_OVERRIDE
-#define	R_I2CCPU_ADDR     	0x08001428	// 08001420, wbregs names: I2CCPU_ADDR, I2CCPU_ADDRESS
-#define	R_I2CCPU_CKCOUNT  	0x0800142c	// 08001420, wbregs names: I2CCPUCLK, I2CCPU_CKCOUNT
-#define	R_OLED            	0x08001440	// 08001440, wbregs names: OLED
-#define	R_OLED_OV         	0x08001444	// 08001440, wbregs names: OLEDOV
-#define	R_OLED_ADDR       	0x08001448	// 08001440, wbregs names: OLEDADDR
-#define	R_OLED_CLK        	0x0800144c	// 08001440, wbregs names: OLEDCLK
+#define	R_I2CCPU          	0x08001620	// 08001620, wbregs names: I2CCPU, I2CCPU_CTRL, I2CCPUCTRL
+#define	R_I2CCPU_OVW      	0x08001624	// 08001620, wbregs names: I2CCPU_OVW, I2CCPU_OVERRIDE
+#define	R_I2CCPU_ADDR     	0x08001628	// 08001620, wbregs names: I2CCPU_ADDR, I2CCPU_ADDRESS
+#define	R_I2CCPU_CKCOUNT  	0x0800162c	// 08001620, wbregs names: I2CCPUCLK, I2CCPU_CKCOUNT
+#define	R_OLED            	0x08001640	// 08001640, wbregs names: OLED
+#define	R_OLED_OV         	0x08001644	// 08001640, wbregs names: OLEDOV
+#define	R_OLED_ADDR       	0x08001648	// 08001640, wbregs names: OLEDADDR
+#define	R_OLED_CLK        	0x0800164c	// 08001640, wbregs names: OLEDCLK
 // RTC clock registers
-#define	R_CLOCK           	0x08001460	// 08001460, wbregs names: CLOCK
-#define	R_TIMER           	0x08001464	// 08001460, wbregs names: TIMER
-#define	R_STOPWATCH       	0x08001468	// 08001460, wbregs names: STOPWATCH
-#define	R_CKALARM         	0x0800146c	// 08001460, wbregs names: ALARM, CKALARM
-#define	R_BLDTIME         	0x08001480	// 08001480, wbregs names: BLDTIME, BUILDTIME
-#define	R_BUSERR          	0x08001484	// 08001484, wbregs names: BUSERR
-#define	R_GENCLK          	0x08001488	// 08001488, wbregs names: GENCLK
+#define	R_CLOCK           	0x08001660	// 08001660, wbregs names: CLOCK
+#define	R_TIMER           	0x08001664	// 08001660, wbregs names: TIMER
+#define	R_STOPWATCH       	0x08001668	// 08001660, wbregs names: STOPWATCH
+#define	R_CKALARM         	0x0800166c	// 08001660, wbregs names: ALARM, CKALARM
+#define	R_BLDTIME         	0x08001680	// 08001680, wbregs names: BLDTIME, BUILDTIME
+#define	R_BUSERR          	0x08001684	// 08001684, wbregs names: BUSERR
+#define	R_GENCLK          	0x08001688	// 08001688, wbregs names: GENCLK
 // SYSCLK Clock Counter (measures clock speed)
-#define	R_GENCLKFB        	0x0800148c	// 0800148c, wbregs names: GENCLKFB
-#define	R_GPIO            	0x08001490	// 08001490, wbregs names: GPIO, GPI, GPO
+#define	R_GENCLKFB        	0x0800168c	// 0800168c, wbregs names: GENCLKFB
+#define	R_GPIO            	0x08001690	// 08001690, wbregs names: GPIO, GPI, GPO
 // Network RX clock counter (measures clock speed)
-#define	R_NETCLOCKCTR     	0x08001494	// 08001494, wbregs names: NETCLOCKCTR
+#define	R_NETCLOCKCTR     	0x08001694	// 08001694, wbregs names: NETCLOCKCTR
 // Network TX clock counter (measures clock speed)
-#define	R_NETTXCLK        	0x08001498	// 08001498, wbregs names: NETTXCLK
-#define	R_PWRCOUNT        	0x0800149c	// 0800149c, wbregs names: PWRCOUNT
+#define	R_NETTXCLK        	0x08001698	// 08001698, wbregs names: NETTXCLK
+#define	R_PWRCOUNT        	0x0800169c	// 0800169c, wbregs names: PWRCOUNT
 // rotary registers
-#define	R_ROTARY          	0x080014a0	// 080014a0, wbregs names: ROTARY
-#define	R_RTCCOUNT        	0x080014a4	// 080014a4, wbregs names: RTCCOUNT
-#define	R_RTCDATE         	0x080014a8	// 080014a8, wbregs names: RTCDATE, DATE
-#define	R_SPIO            	0x080014ac	// 080014ac, wbregs names: SPIO
+#define	R_ROTARY          	0x080016a0	// 080016a0, wbregs names: ROTARY
+#define	R_RTCCOUNT        	0x080016a4	// 080016a4, wbregs names: RTCCOUNT
+#define	R_RTCDATE         	0x080016a8	// 080016a8, wbregs names: RTCDATE, DATE
+#define	R_SPIO            	0x080016ac	// 080016ac, wbregs names: SPIO
 // SYSCLK Clock Counter (measures clock speed)
-#define	R_SYSCLK          	0x080014b0	// 080014b0, wbregs names: SYSCLK
-#define	R_VERSION         	0x080014b4	// 080014b4, wbregs names: VERSION
-#define	R_EDIDRX          	0x08001500	// 08001500, wbregs names: EDIDRX
+#define	R_SYSCLK          	0x080016b0	// 080016b0, wbregs names: SYSCLK
+#define	R_VERSION         	0x080016b4	// 080016b4, wbregs names: VERSION
+#define	R_EDIDRX          	0x08001700	// 08001700, wbregs names: EDIDRX
 // HDMI video processing pipe registers
 #define	R_VIDPIPE         	0x08002000	// 08002000, wbregs names: VIDPIPE, VIDCTRL
 #define	R_HDMIFREQ        	0x08002004	// 08002000, wbregs names: HDMIFREQ
@@ -279,6 +281,22 @@
 #define	R_ZIPUCC          	0x400000f8	// 40000000, wbregs names: ZIPUCC, UCC
 #define	R_ZIPUPC          	0x400000fc	// 40000000, wbregs names: ZIPUPC, UPC
 #define	R_ZIPSYSTEM       	0x40000100	// 40000000, wbregs names: ZIPSYSTEM, ZIPSYS
+#define	R_ZIPWATCHDOG     	0x40000104	// 40000000, wbregs names: ZIPWATCHDOG
+#define	R_ZIPBUSDOG       	0x40000108	// 40000000, wbregs names: BUSDOG
+#define	R_ZIPAPIC         	0x4000010c	// 40000000, wbregs names: ZIPAPIC, ALTPIC
+#define	R_ZIPTIMERA       	0x40000110	// 40000000, wbregs names: ZIPTMA, ZIPTIMERA
+#define	R_ZIPTIMERB       	0x40000114	// 40000000, wbregs names: ZIPTMB, ZIPTIMERB
+#define	R_ZIPTIMERC       	0x40000118	// 40000000, wbregs names: ZIPTMC, ZIPTIMERC
+#define	R_ZIPJIFFIES      	0x4000011c	// 40000000, wbregs names: ZIPJIFF
+#define	R_ZIPMTASK        	0x40000120	// 40000000, wbregs names: ZIPMTASK
+#define	R_ZIPMSTALL       	0x40000124	// 40000000, wbregs names: ZIPMSTALL
+#define	R_ZIPMPSTAL       	0x40000128	// 40000000, wbregs names: ZIPMPSTAL
+#define	R_ZIPMINSN        	0x4000012c	// 40000000, wbregs names: ZIPMINSN
+#define	R_ZIPUTASK        	0x40000130	// 40000000, wbregs names: ZIPUTASK
+#define	R_ZIPUSTALL       	0x40000134	// 40000000, wbregs names: ZIPUSTALL
+#define	R_ZIPUPSTAL       	0x40000138	// 40000000, wbregs names: ZIPUPSTAL
+#define	R_ZIPUINSN        	0x4000013c	// 40000000, wbregs names: ZIPUINSN
+#define	R_ZIPUDMAC        	0x40000140	// 40000000, wbregs names: ZIPDMAC
 
 
 //
