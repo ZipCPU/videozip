@@ -53,9 +53,11 @@
 @$BUS_ADDRESS_WIDTH=@$(MASTER.BUS.AWID)
 @NET=net
 @NETADDR=net_ip_addr
-@NETVALID=net_dbg_tvalid
-@NETREADY=net_dbg_tready
-@NETDATA=net_dbg_tdata
+@NETVALID=net_dbg_valid
+@NETREADY=net_dbg_ready
+@NETDATA=net_dbg_data
+@NETBYTES=net_dbg_bytes
+@NETLAST=net_dbg_last
 @MAIN.PARAM=
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -75,8 +77,9 @@
 	wire	[9:0]	@$(PREFIX)_gpout;
 	// Verilator lint_on  UNUSED
 
-	wire		@$(PREFIX)_tvalid, @$(PREFIX)_tready;
-	wire	[31:0]	@$(PREFIX)_tdata;
+	wire		@$(PREFIX)_valid, @$(PREFIX)_ready, @$(PREFIX)_last;
+	wire	[31:0]	@$(PREFIX)_pkdata;
+	// wire	[1:0]	@$(PREFIX)_bytes;
 	wire		w_@$(PREFIX)_int; // 1'b0;
 	// Verilator lint_off UNUSED
 	wire	[31:0]	@$(PREFIX)_debug;
@@ -121,14 +124,19 @@
 		// }}}
 		// Incoming network data
 		// {{{
-		.S_AXI_TVALID(@$(NETVALID)), .S_AXI_TREADY(@$(NETREADY)),
-			.S_AXI_TDATA(@$(NETDATA)),
+		.S_AXI_VALID(@$(NETVALID)), .S_AXI_READY(@$(NETREADY)),
+			.S_AXI_DATA(@$(NETDATA)),
+			.S_AXI_BYTES(@$(NETBYTES)),
+			.S_AXI_LAST(@$(NETLAST)),
 		// }}}
 		// Return network data
 		// {{{
-		.M_AXI_TVALID(@$(PREFIX)_tvalid),
-			.M_AXI_TREADY(@$(PREFIX)_tready),
-			.M_AXI_TDATA(@$(PREFIX)_tdata),
+		.M_AXI_VALID(@$(PREFIX)_valid),
+			.M_AXI_READY(@$(PREFIX)_ready),
+			.M_AXI_DATA(@$(PREFIX)_pkdata),
+			// BYTES=0, all words are full
+			.M_AXI_LAST(@$(PREFIX)_last),
+			// Not abortable here
 		// }}}
 		.o_debug(@$(PREFIX)_debug)
 		// }}}
@@ -137,8 +145,11 @@
 	assign	@$(MASTER.PREFIX)_addr = @$(MASTER.PREFIX)_tmp_addr[(@$BUS_ADDRESS_WIDTH-1):0];
 	// }}}
 @MAIN.ALT=
-	assign	@$(PREFIX)_tvalid = 1'b0;
-	assign	@$(PREFIX)_tdata  = 32'h0;
+	assign	@$(PREFIX)_valid = 1'b0;
+	assign	@$(PREFIX)_pkdata  = 32'h0;
+	// assign	@$(PREFIX)_bytes = 2'b0;
+	assign	@$(PREFIX)_last  = 1'b1;
+	assign	@$(PREFIX)_abort  = 1'b0;
 @XDC.INSERT=
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbg_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbg_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0

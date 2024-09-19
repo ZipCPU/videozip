@@ -44,6 +44,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 `default_nettype	none
+`timescale 1ns/1ps
 // }}}
 module	meganet #(
 		// {{{
@@ -84,32 +85,36 @@ module	meganet #(
 		output	wire		o_wb_ack,
 		output	wire	[31:0]	o_wb_data,
 		// }}}
-		// S_CPU_T*: Incoming CPU packet interface @ 100MHz
+		// S_CPU_*: Incoming CPU AXIN interface @ 100MHz
 		// {{{
-		input	wire		S_CPU_TVALID,
-		output	wire		S_CPU_TREADY,
-		input	wire	[31:0]	S_CPU_TDATA,
-		// input wire		S_AXI_TLAST,
+		input	wire		S_CPU_VALID,
+		output	wire		S_CPU_READY,
+		input	wire	[31:0]	S_CPU_DATA,
+		input	wire	[1:0]	S_CPU_BYTES,
+		input	wire		S_CPU_LAST,
+		input	wire		S_CPU_ABORT,	// == 0
 		// }}}
-		// S_DBG_T*: Incoming debug packet interface @ 100MHz
+		// S_DBG_*: Incoming debug packet interface @ 100MHz
 		// {{{
-		input	wire		S_DBG_TVALID,
-		output	wire		S_DBG_TREADY,
-		input	wire	[31:0]	S_DBG_TDATA,
-		// input wire		S_AXI_TLAST,
+		input	wire		S_DBG_VALID,
+		output	wire		S_DBG_READY,
+		input	wire	[31:0]	S_DBG_DATA,
+		input	wire		S_DBG_LAST,
 		// }}}
-		// S_DATA_T*: Incoming data interface @ 100MHz
+		// S_DATA_*: Incoming data interface @ 100MHz
 		// {{{
-		input	wire		S_DATA_TVALID,
-		output	wire		S_DATA_TREADY,
-		input	wire	[31:0]	S_DATA_TDATA,
-		// input wire		S_AXI_TLAST,
+		input	wire		S_DATA_VALID,
+		output	wire		S_DATA_READY,
+		input	wire	[31:0]	S_DATA_DATA,
+		input	wire	[1:0]	S_DATA_BYTES,
+		input	wire		S_DATA_LAST,
 		// }}}
 		// M_CPU_*: Outgoing CPU packet interface @ 100MHz
 		// {{{
 		output	wire		M_CPU_VALID,
 		input	wire		M_CPU_READY,
 		output	wire	[31:0]	M_CPU_DATA,
+		output	wire	[1:0]	M_CPU_BYTES,
 		output	wire		M_CPU_LAST,
 		output	wire		M_CPU_ABORT,
 		// }}}
@@ -118,6 +123,9 @@ module	meganet #(
 		output	wire		M_DBG_VALID,
 		input	wire		M_DBG_READY,
 		output	wire	[31:0]	M_DBG_DATA,
+		output	wire	[1:0]	M_DBG_BYTES,
+		output	wire		M_DBG_LAST,
+		// output wire		M_DBG_ABORT,
 		// }}}
 		// PHY interface
 		// {{{
@@ -184,13 +192,13 @@ module	meganet #(
 	// {{{
 	wire		ARPRX_VALID, ARPRX_READY, ARPRX_LAST, ARPRX_ABORT;
 	wire	[7:0]	ARPRX_DATA;
-	wire		ARPTX_VALID, ARPTX_READY;
-	wire	[31:0]	ARPTX_DATA;
+	wire		ARPTX_VALID, ARPTX_READY, ARPTX_LAST, ARPTX_ABORT;
+	wire	[7:0]	ARPTX_DATA;
+	wire	[0:0]	ARPTX_BYTES;
 	wire		ARP_VALID, ARP_READY, ARP_LAST, ARP_ABORT;
 	wire	[7:0]	ARP_DATA;
-	wire		ARPPKT_VALID, ARPPKT_READY, ARPPKT_EMPTY, ARPPKT_FULL;
-	wire	[31:0]	ARPPKT_DATA;
-	wire		ARPS_VALID, ARPS_READY, ARPS_LAST, ARPS_ABORT;
+	wire		ARPS_VALID, ARPS_READY, ARPS_LAST, ARPS_ABORT,
+			ARPS_BYTES;
 	wire	[7:0]	ARPS_DATA;
 	wire		arp_no_match, arp_match;
 	// }}}
@@ -200,13 +208,13 @@ module	meganet #(
 	// {{{
 	wire		ICMPRX_VALID, ICMPRX_READY, ICMPRX_LAST, ICMPRX_ABORT;
 	wire	[7:0]	ICMPRX_DATA;
-	wire		ICMPTX_VALID, ICMPTX_READY;
-	wire	[31:0]	ICMPTX_DATA;
+	wire		ICMPTX_VALID, ICMPTX_READY, ICMPTX_LAST, ICMPTX_ABORT;
+	wire	[7:0]	ICMPTX_DATA;
+	wire		ICMPTX_BYTES;
 	wire		ICMP_VALID, ICMP_READY, ICMP_LAST, ICMP_ABORT;
 	wire	[7:0]	ICMP_DATA;
-	wire		ICMPPKT_VALID, ICMPPKT_READY,ICMPPKT_EMPTY,ICMPPKT_FULL;
-	wire	[31:0]	ICMPPKT_DATA;
-	wire		ICMPS_VALID, ICMPS_READY, ICMPS_LAST, ICMPS_ABORT;
+	wire		ICMPS_VALID, ICMPS_READY, ICMPS_LAST, ICMPS_ABORT,
+			ICMPS_BYTES;
 	wire	[7:0]	ICMPS_DATA;
 	wire		icmp_no_match, icmp_match;
 	// }}}
@@ -219,8 +227,9 @@ module	meganet #(
 	//
 	// CPU channel declarations
 	// {{{
-	wire		CPUCK_VALID, CPUCK_READY, CPUCK_EMPTY, CPUCK_FULL;
+	wire		CPUCK_VALID, CPUCK_READY, CPUCK_LAST, CPUCK_ABORT;
 	wire	[31:0]	CPUCK_DATA;
+	wire	[1:0]	CPUCK_BYTES;
 
 	// Verilator lint_off UNUSED
 	wire		CPURX_VALID, CPURX_READY, CPURX_LAST, CPURX_ABORT;
@@ -228,8 +237,14 @@ module	meganet #(
 	// Verilator lint_on  UNUSED
 	wire		cpu_no_match, cpu_match, ip_no_match;
 
+	wire		CPUBUS_VALID, CPUBUS_READY, CPUBUS_LAST, CPUBUS_ABORT;
+	wire	[31:0]	CPUBUS_DATA;
+	wire	[2:0]	CPUBUS_BYTES;
+
+
 	wire		CPUS_VALID, CPUS_READY, CPUS_LAST, CPUS_ABORT;
 	wire	[7:0]	CPUS_DATA;
+	wire	[0:0]	CPUS_BYTES;
 	// }}}
 	////////////////////////////////////////
 	//
@@ -239,25 +254,35 @@ module	meganet #(
 	wire	[7:0]	DBGRX_DATA;
 	wire		DBG_VALID, DBG_READY, DBG_LAST, DBG_ABORT;
 	wire	[7:0]	DBG_DATA;
-	wire		DBGPKT_VALID, DBGPKT_READY, DBGPKT_FULL, DBGPKT_EMPTY;
-	wire	[31:0]	DBGPKT_DATA;
+	wire		DBGW_VALID, DBGW_READY, DBGW_LAST, DBGW_ABORT;
+	wire	[31:0]	DBGW_DATA;
+	wire	[2:0]	DBGW_BYTES;
+	wire		DBGN_VALID, DBGN_READY, DBGN_LAST, DBGN_ABORT;
+	wire	[31:0]	DBGN_DATA;
+	wire	[1:0]	DBGN_BYTES;
 	//
 	wire		DBGS_VALID, DBGS_READY, DBGS_LAST, DBGS_ABORT;
 	wire	[7:0]	DBGS_DATA;
+	wire	[0:0]	DBGS_BYTES;
 	//
-	wire		DBGCK_VALID, DBGCK_READY, DBGCK_EMPTY, DBGCK_FULL;
+	wire		DBGCK_VALID, DBGCK_READY, DBGCK_LAST, DBGCK_ABORT;
 	wire	[31:0]	DBGCK_DATA;
+	wire	[1:0]	DBGCK_BYTES;
 	//
 	wire		dbg_no_match, dbg_match;
+	wire		M_DBG_ABORT;
+
 	// }}}
 	////////////////////////////////////////
 	//
 	// Data channel declarations
 	// {{{
-	wire		DATACK_VALID, DATACK_READY, DATACK_EMPTY, DATACK_FULL;
+	wire		DATACK_VALID, DATACK_READY, DATACK_ABORT, DATACK_LAST;
 	wire	[31:0]	DATACK_DATA;
+	wire	[1:0]	DATACK_BYTES;
 	wire		DATAS_VALID, DATAS_READY, DATAS_LAST, DATAS_ABORT;
 	wire	[7:0]	DATAS_DATA;
+	wire	[0:0]	DATAS_BYTES;
 	// }}}
 
 	// }}}
@@ -268,15 +293,6 @@ module	meganet #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-
-	// S_CPU_T*  (stream) -> AFIFO -> S_CPU_*  (packet)
-	// S_DBG_T*  (stream) -> AFIFO -> S_DBG_*  (packet)
-	// S_DATA_T* (stream) -> AFIFO -> S_DATA_* (packet)
-	//	ARP   (packet)-> (packet)
-	//	ICMP  (packet)-> (packet)
-	// ---- NTP   (packet)-> (packet)	[INTERNAL]
-	//
-	// PktMerge
 
 	pktmerge #(
 		.NS(5), .DW(8)
@@ -419,58 +435,42 @@ module	meganet #(
 		ARP_VALID, ARP_READY, ARP_LAST, ARP_ABORT, ARP_DATA
 			};
 
-	// Package the ARP response into a AXI-Stream
-	pkt2stream #(
-		.OPT_LGFLEN(7-2)
-	) arp_stream (
-		// {{{
-		.S_AXI_ACLK(i_net_rx_clk), .S_AXI_ARESETN(!rx_reset),
-		.i_soft_reset(1'b0),
-		//
-		.S_AXIN_VALID( ARP_VALID ),
-		.S_AXIN_READY( ARP_READY ),
-		.S_AXIN_DATA(  ARP_DATA  ),
-		.S_AXIN_LAST(  ARP_LAST  ),
-		.S_AXIN_ABORT( ARP_ABORT ),
-		//
-		.M_AXI_TVALID( ARPPKT_VALID ),
-		.M_AXI_TREADY( ARPPKT_READY ),
-		.M_AXI_TDATA(  ARPPKT_DATA )
-		// }}}
-	);
-
 	// Move the ARP response packet from the RX to the TX clock domain
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
-	) arp_afifo (
+	axincdc #(
+		.LGFIFO(3), .DW(8)
+	) arp_cdc (
 		// {{{
-		.i_wclk(i_net_rx_clk), .i_wr_reset_n(!rx_reset),
-		.i_wr(ARPPKT_VALID), .i_wr_data(ARPPKT_DATA),
-			.o_wr_full(ARPPKT_FULL),
+		.S_CLK(i_net_rx_clk), .S_ARESETN(!rx_reset),
+		.S_VALID(ARP_VALID), .S_READY(ARP_READY),
+			.S_DATA(ARP_DATA), .S_BYTES(1'b1),
+			.S_ABORT(ARP_ABORT), .S_LAST(ARP_LAST),
 		//
-		.i_rclk(i_net_tx_clk), .i_rd_reset_n(!tx_reset),
-		.i_rd(ARPTX_READY), .o_rd_data(ARPTX_DATA),
-			.o_rd_empty(ARPPKT_EMPTY)
+		.M_CLK(i_net_tx_clk), .M_ARESETN(!tx_reset),
+		.M_VALID(ARPTX_VALID), .M_READY(ARPTX_READY),
+			.M_DATA(ARPTX_DATA), .M_BYTES(ARPTX_BYTES),
+			.M_ABORT(ARPTX_ABORT), .M_LAST(ARPTX_LAST)
+		//
 		// }}}
 	);
-
-	assign	ARPTX_VALID  = !ARPPKT_EMPTY;
-	assign	ARPPKT_READY = !ARPPKT_FULL;
 
 	// Unwrap the packet in the TX domain for transmission
-	stream2pkt #(
-		.BW(8), .S_AXIS_DATA_WIDTH(32)
-	) u_arpstream (
+	pktgate #(
+		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1)
+	) u_arpgate (
 		// {{{
 		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
 		//
-		.S_AXIS_TVALID(ARPTX_VALID),
-		.S_AXIS_TREADY(ARPTX_READY),
-		.S_AXIS_TDATA( ARPTX_DATA),
+		.S_AXIN_VALID(ARPTX_VALID),
+		.S_AXIN_READY(ARPTX_READY),
+		.S_AXIN_DATA( ARPTX_DATA),
+		.S_AXIN_BYTES(ARPTX_BYTES),
+		.S_AXIN_LAST( ARPTX_LAST),
+		.S_AXIN_ABORT(ARPTX_ABORT),
 		//
 		.M_AXIN_VALID(ARPS_VALID),
 		.M_AXIN_READY(ARPS_READY),
 		.M_AXIN_DATA( ARPS_DATA),
+		.M_AXIN_BYTES(ARPS_BYTES),
 		.M_AXIN_LAST( ARPS_LAST),
 		.M_AXIN_ABORT(ARPS_ABORT)
 		// }}}
@@ -478,7 +478,7 @@ module	meganet #(
 
 	assign	tx_arp_debug = {
 		arp_match, TX_VALID,
-		ARPTX_VALID, ARPTX_READY, ARPTX_DATA[15:0],
+		ARPTX_VALID, ARPTX_READY, 8'h0, ARPTX_DATA,
 		ARPS_VALID, ARPS_READY, ARPS_LAST, ARPS_ABORT, ARPS_DATA
 		};
 
@@ -530,59 +530,42 @@ module	meganet #(
 			};
 	*/
 
-
-	// Convert this to an AXI-Stream packet
-	pkt2stream #(
-		.OPT_LGFLEN(6-2)
-	) icmp_stream (
+	// Move the ICMP response packet from the RX to the TX clock domain
+	axincdc #(
+		.LGFIFO(3), .DW(8)
+	) icmp_cdc (
 		// {{{
-		.S_AXI_ACLK(i_net_rx_clk), .S_AXI_ARESETN(!rx_reset),
-		.i_soft_reset(1'b0),
+		.S_CLK(i_net_rx_clk), .S_ARESETN(!rx_reset),
+		.S_VALID(ICMP_VALID), .S_READY(ICMP_READY),
+			.S_DATA(ICMP_DATA), .S_BYTES(1'b1),
+			.S_ABORT(ICMP_ABORT), .S_LAST(ICMP_LAST),
 		//
-		.S_AXIN_VALID( ICMP_VALID ),
-		.S_AXIN_READY( ICMP_READY ),
-		.S_AXIN_DATA(  ICMP_DATA  ),
-		.S_AXIN_LAST(  ICMP_LAST  ),
-		.S_AXIN_ABORT( ICMP_ABORT ),
-		//
-		.M_AXI_TVALID( ICMPPKT_VALID ),
-		.M_AXI_TREADY( ICMPPKT_READY ),
-		.M_AXI_TDATA(  ICMPPKT_DATA )
+		.M_CLK(i_net_tx_clk), .M_ARESETN(!tx_reset),
+		.M_VALID(ICMPTX_VALID), .M_READY(ICMPTX_READY),
+			.M_DATA(ICMPTX_DATA), .M_BYTES(ICMPTX_BYTES),
+			.M_ABORT(ICMPTX_ABORT), .M_LAST(ICMPTX_LAST)
 		// }}}
 	);
 
-	// Move from the receive to the transmit clock domain
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
-	) icmp_afifo (
-		// {{{
-		.i_wclk(i_net_rx_clk), .i_wr_reset_n(!rx_reset),
-		.i_wr(ICMPPKT_VALID), .i_wr_data(ICMPPKT_DATA),
-			.o_wr_full(ICMPPKT_FULL),
-		//
-		.i_rclk(i_net_tx_clk), .i_rd_reset_n(!tx_reset),
-		.i_rd(ICMPTX_READY), .o_rd_data(ICMPTX_DATA),
-			.o_rd_empty(ICMPPKT_EMPTY)
-		// }}}
-	);
-
-	assign	ICMPTX_VALID  = !ICMPPKT_EMPTY;
-	assign	ICMPPKT_READY = !ICMPPKT_FULL;
-
-	// Unwrap the packet for transmission
-	stream2pkt #(
-		.BW(8), .S_AXIS_DATA_WIDTH(32)
-	) u_icmpstream (
+	// Buffer the packet in the TX domain for transmission
+	//  .. Wait for the whole packet before transmitting
+	pktgate #(
+		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1)
+	) u_icmpgate (
 		// {{{
 		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
 		//
-		.S_AXIS_TVALID(ICMPTX_VALID),
-		.S_AXIS_TREADY(ICMPTX_READY),
-		.S_AXIS_TDATA( ICMPTX_DATA),
+		.S_AXIN_VALID(ICMPTX_VALID),
+		.S_AXIN_READY(ICMPTX_READY),
+		.S_AXIN_DATA( ICMPTX_DATA),
+		.S_AXIN_BYTES(ICMPTX_BYTES),
+		.S_AXIN_LAST( ICMPTX_LAST),
+		.S_AXIN_ABORT(ICMPTX_ABORT),
 		//
 		.M_AXIN_VALID(ICMPS_VALID),
 		.M_AXIN_READY(ICMPS_READY),
 		.M_AXIN_DATA( ICMPS_DATA),
+		.M_AXIN_BYTES(ICMPS_BYTES),
 		.M_AXIN_LAST( ICMPS_LAST),
 		.M_AXIN_ABORT(ICMPS_ABORT)
 		// }}}
@@ -590,7 +573,7 @@ module	meganet #(
 
 	assign	tx_icmp_debug = {
 		ICMPTX_VALID && ICMPTX_READY,
-		ICMPTX_VALID, ICMPTX_READY, ICMPTX_DATA[17:0],
+		ICMPTX_VALID, ICMPTX_READY, 10'h0, ICMPTX_DATA,
 		ICMPS_VALID, ICMPS_READY, ICMPS_LAST, ICMPS_DATA
 		};
 
@@ -639,43 +622,56 @@ module	meganet #(
 		DBG_VALID, DBG_READY, DBG_LAST, DBG_ABORT, DBG_DATA
 		};
 
-	// Convert these to AXI-Stream packets, to be sent off module
-	pkt2stream #(
-		.OPT_LGFLEN(10)
-	) dbg_stream (
+	// Adjust the width to 32b words--necessary to cross clock domains
+	axinwidth #(
+		.IW(8), .OW(32), .OPT_LITTLE_ENDIAN(1'b0)
+	) u_dbgrx_width (
 		// {{{
-		.S_AXI_ACLK(i_net_rx_clk), .S_AXI_ARESETN(!rx_reset),
-		.i_soft_reset(1'b0),
+		.ACLK(i_net_rx_clk), .ARESETN(!rx_reset),
 		//
-		.S_AXIN_VALID( DBG_VALID ),
-		.S_AXIN_READY( DBG_READY ),
-		.S_AXIN_DATA(  DBG_DATA  ),
-		.S_AXIN_LAST(  DBG_LAST  ),
-		.S_AXIN_ABORT( DBG_ABORT ),
+		.S_AXIN_VALID( DBG_VALID ), .S_AXIN_READY( DBG_READY ),
+		.S_AXIN_DATA(  DBG_DATA  ), .S_AXIN_BYTES( 1'b1  ),
+		.S_AXIN_LAST(  DBG_LAST  ), .S_AXIN_ABORT( DBG_ABORT ),
 		//
-		.M_AXI_TVALID( DBGPKT_VALID ),
-		.M_AXI_TREADY( DBGPKT_READY ),
-		.M_AXI_TDATA(  DBGPKT_DATA )
+		.M_AXIN_VALID(DBGW_VALID), .M_AXIN_READY(DBGW_READY),
+			.M_AXIN_DATA(DBGW_DATA), .M_AXIN_BYTES(DBGW_BYTES),
+			.M_AXIN_LAST(DBGW_LAST), .M_AXIN_ABORT(DBGW_ABORT)
 		// }}}
 	);
 
-	// Move these AXI stream packets to the system clock
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
-	) dbg_afifo (
+	// Discard anything but whole packets
+	pktgate #(
+		.DW(32), .LGFLEN(9), .OPT_DROP_ON_OVERFLOW(1'b1)
+	) u_dbggate (
 		// {{{
-		.i_wclk(i_net_rx_clk), .i_wr_reset_n(!rx_reset),
-		.i_wr(DBGPKT_VALID), .i_wr_data(DBGPKT_DATA),
-			.o_wr_full(DBGPKT_FULL),
+		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
 		//
-		.i_rclk(i_clk), .i_rd_reset_n(!i_reset),
-		.i_rd(M_DBG_READY), .o_rd_data(M_DBG_DATA),
-			.o_rd_empty(DBGPKT_EMPTY)
+		.S_AXIN_VALID(DBGW_VALID), .S_AXIN_READY(DBGW_READY),
+		.S_AXIN_DATA( DBGW_DATA), .S_AXIN_BYTES(DBGW_BYTES[1:0]),
+		.S_AXIN_LAST( DBGW_LAST), .S_AXIN_ABORT(DBGW_ABORT),
+		//
+		.M_AXIN_VALID(DBGN_VALID), .M_AXIN_READY(DBGN_READY),
+		.M_AXIN_DATA( DBGN_DATA),  .M_AXIN_BYTES(DBGN_BYTES),
+		.M_AXIN_LAST( DBGN_LAST),  .M_AXIN_ABORT(DBGN_ABORT)
 		// }}}
 	);
 
-	assign	M_DBG_VALID  = !DBGPKT_EMPTY;
-	assign	DBGPKT_READY = !DBGPKT_FULL;
+	// Move to the system/bus clock domain
+	axincdc #(
+		.LGFIFO(3), .DW(32)
+	) u_dbg_cdc2bus (
+		// {{{
+		.S_CLK(i_net_rx_clk), .S_ARESETN(!rx_reset),
+		.S_VALID(DBGN_VALID), .S_READY(DBGN_READY),
+			.S_DATA(DBGN_DATA), .S_BYTES(DBGN_BYTES),
+			.S_ABORT(DBGN_ABORT), .S_LAST(DBGN_LAST),
+		//
+		.M_CLK(S_AXI_ACLK), .M_ARESETN(S_AXI_ARESETN),
+		.M_VALID(M_DBG_VALID), .M_READY(M_DBG_READY),
+			.M_DATA(M_DBG_DATA), .M_BYTES(M_DBG_BYTES),
+			.M_ABORT(M_DBG_ABORT), .M_LAST(M_DBG_LAST)
+		// }}}
+	);
 
 	//// }}}
 	////
@@ -686,39 +682,37 @@ module	meganet #(
 	// Packet comes in as AXI stream from off module.
 
 	// Convert the incoming DBG packet from the system to the transmit clock
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
-	) dbgtx_afifo (
+	axincdc #(
+		.LGFIFO(3), .DW(32)
+	) u_dbgtx_cdc (
 		// {{{
-		.i_wclk(i_clk), .i_wr_reset_n(!i_reset),
-		.i_wr(S_DBG_TVALID), .i_wr_data(S_DBG_TDATA),
-			.o_wr_full(DBGCK_FULL),
+		.S_CLK(i_clk), .S_ARESETN(!i_reset),
+		.S_VALID(S_DBG_VALID), .S_READY(S_DBG_READY),
+			.S_DATA(S_DBG_DATA), .S_BYTES(2'b00),
+			.S_ABORT(1'b0), .S_LAST(S_DBG_LAST),
 		//
-		.i_rclk(i_net_tx_clk), .i_rd_reset_n(!tx_reset),
-		.i_rd(DBGCK_READY), .o_rd_data(DBGCK_DATA),
-			.o_rd_empty(DBGCK_EMPTY)
+		.M_CLK(i_net_tx_clk), .M_ARESETN(!tx_reset),
+		.M_VALID(DBGCK_VALID), .M_READY(DBGCK_READY),
+			.M_DATA(DBGCK_DATA), .M_BYTES(DBGCK_BYTES),
+			.M_ABORT(DBGCK_ABORT), .M_LAST(DBGCK_LAST)
 		// }}}
 	);
 
-	assign	DBGCK_VALID  = !DBGCK_EMPTY;
-	assign	S_DBG_TREADY = !DBGCK_FULL;
-
-	// Now unwrap the packet for transmission
-	stream2pkt #(
-		.BW(8), .S_AXIS_DATA_WIDTH(32)
-	) u_dbgstream (
+	// Now convert the packet from 32b to 8b for transmission
+	axinwidth #(
+		.IW(32), .OW(8), .OPT_LITTLE_ENDIAN(1'b0)
+	) u_dbgtx_width (
 		// {{{
-		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
+		.ACLK(i_net_tx_clk), .ARESETN(!tx_reset),
 		//
-		.S_AXIS_TVALID(DBGCK_VALID),
-		.S_AXIS_TREADY(DBGCK_READY),
-		.S_AXIS_TDATA( DBGCK_DATA),
+		.S_AXIN_VALID(DBGCK_VALID), .S_AXIN_READY(DBGCK_READY),
+		.S_AXIN_DATA( DBGCK_DATA), .S_AXIN_BYTES({
+			((DBGCK_BYTES == 0) ? 1'b1:1'b0), DBGCK_BYTES }),
+		.S_AXIN_LAST( DBGCK_LAST),  .S_AXIN_ABORT(DBGCK_ABORT),
 		//
-		.M_AXIN_VALID(DBGS_VALID),
-		.M_AXIN_READY(DBGS_READY),
-		.M_AXIN_DATA( DBGS_DATA),
-		.M_AXIN_LAST( DBGS_LAST),
-		.M_AXIN_ABORT(DBGS_ABORT)
+		.M_AXIN_VALID(DBGS_VALID), .M_AXIN_READY(DBGS_READY),
+		.M_AXIN_DATA( DBGS_DATA),  .M_AXIN_BYTES(DBGS_BYTES),
+		.M_AXIN_LAST( DBGS_LAST),  .M_AXIN_ABORT(DBGS_ABORT)
 		// }}}
 	);
 
@@ -770,24 +764,40 @@ module	meganet #(
 	// never finish generating an AXI stream packet
 	// }}}
 
-	// Convert the incoming (received) packet to AXI stream
-	pkt2wide #(
-		.OW(32)
-	) cpu_rx (
+	// Widen from 8b to 32b, so we can switch clock domains
+	axinwidth #(
+		.IW(8), .OW(32), .OPT_LITTLE_ENDIAN(1'b0)
+	) u_cpurx_width (
 		// {{{
-		.S_AXI_ACLK(i_clk), .S_AXI_ARESETN(!i_reset),
-		.i_net_clk(i_net_rx_clk), .i_net_reset_n(!rx_reset),
+		.ACLK(i_net_rx_clk), .ARESETN(!rx_reset),
 		//
 		.S_AXIN_VALID( CPURX_VALID ),
 		.S_AXIN_READY( CPURX_READY ),
 		.S_AXIN_DATA(  CPURX_DATA  ),
+		.S_AXIN_BYTES( 1'b1  ),
 		.S_AXIN_LAST(  CPURX_LAST  ),
 		.S_AXIN_ABORT( CPURX_ABORT ),
 		//
-		.M_AXIN_VALID(M_CPU_VALID), .M_AXIN_READY(M_CPU_READY),
-			.M_AXIN_DATA(M_CPU_DATA),
-			.M_AXIN_LAST(M_CPU_LAST),
-			.M_AXIN_ABORT(M_CPU_ABORT)
+		.M_AXIN_VALID(CPUBUS_VALID), .M_AXIN_READY(CPUBUS_READY),
+			.M_AXIN_DATA(CPUBUS_DATA), .M_AXIN_BYTES(CPUBUS_BYTES),
+			.M_AXIN_LAST(CPUBUS_LAST), .M_AXIN_ABORT(CPUBUS_ABORT)
+		// }}}
+	);
+
+	// Cross to the bus clock domain
+	axincdc #(
+		.LGFIFO(3), .DW(32)
+	) u_cpu_cdc2bus (
+		// {{{
+		.S_CLK(i_net_rx_clk), .S_ARESETN(!rx_reset),
+		.S_VALID(CPUBUS_VALID), .S_READY(CPUBUS_READY),
+			.S_DATA(CPUBUS_DATA), .S_BYTES(CPUBUS_BYTES[1:0]),
+			.S_ABORT(CPUBUS_ABORT), .S_LAST(CPUBUS_LAST),
+		//
+		.M_CLK(S_AXI_ACLK), .M_ARESETN(S_AXI_ARESETN),
+		.M_VALID(M_CPU_VALID), .M_READY(M_CPU_READY),
+			.M_DATA(M_CPU_DATA), .M_BYTES(M_CPU_BYTES),
+			.M_ABORT(M_CPU_ABORT), .M_LAST(M_CPU_LAST)
 		// }}}
 	);
 
@@ -798,40 +808,37 @@ module	meganet #(
 	//// {{{
 
 	// Convert the incoming CPU packet to the transmit clock
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
+	axincdc #(
+		.LGFIFO(3), .DW(32)
 	) cputx_afifo (
 		// {{{
-		.i_wclk(i_clk), .i_wr_reset_n(!i_reset),
-		.i_wr(S_CPU_TVALID), .i_wr_data(S_CPU_TDATA),
-			.o_wr_full(CPUCK_FULL),
+		.S_CLK(i_clk), .S_ARESETN(!i_reset),
+		.S_VALID(S_CPU_VALID), .S_READY(S_CPU_READY),
+			.S_DATA(S_CPU_DATA), .S_BYTES(S_CPU_BYTES),
+			.S_LAST(S_CPU_LAST), .S_ABORT(S_CPU_ABORT),
 		//
-		.i_rclk(i_net_tx_clk), .i_rd_reset_n(!tx_reset),
-		.i_rd(CPUCK_READY), .o_rd_data(CPUCK_DATA),
-			.o_rd_empty(CPUCK_EMPTY)
+		.M_CLK(i_net_tx_clk), .M_ARESETN(!tx_reset),
+		.M_VALID(CPUCK_VALID), .M_READY(CPUCK_READY),
+			.M_DATA(CPUCK_DATA), .M_BYTES(CPUCK_BYTES),
+			.M_LAST(CPUCK_LAST), .M_ABORT(CPUCK_ABORT)
 		// }}}
 	);
 
-	assign	S_CPU_TREADY = !CPUCK_FULL;
-	assign	CPUCK_VALID  = !CPUCK_EMPTY;
-
-
-	// Unwind the packet in the TX domain for transmission
-	stream2pkt #(
-		.BW(8), .S_AXIS_DATA_WIDTH(32)
-	) u_cpustream (
+	// Convert from 32b to 8b
+	axinwidth #(
+		.IW(32), .OW(8), .OPT_LITTLE_ENDIAN(1'b0)
+	) u_cputx_width (
 		// {{{
-		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
+		.ACLK(i_net_tx_clk), .ARESETN(!tx_reset),
 		//
-		.S_AXIS_TVALID(CPUCK_VALID),
-		.S_AXIS_TREADY(CPUCK_READY),
-		.S_AXIS_TDATA( CPUCK_DATA),
+		.S_AXIN_VALID(CPUCK_VALID), .S_AXIN_READY(CPUCK_READY),
+		.S_AXIN_DATA( CPUCK_DATA), .S_AXIN_BYTES({
+			((CPUCK_BYTES == 0) ? 1'b1:1'b0), CPUCK_BYTES }),
+		.S_AXIN_LAST( CPUCK_LAST),  .S_AXIN_ABORT(CPUCK_ABORT),
 		//
-		.M_AXIN_VALID(CPUS_VALID),
-		.M_AXIN_READY(CPUS_READY),
-		.M_AXIN_DATA( CPUS_DATA),
-		.M_AXIN_LAST( CPUS_LAST),
-		.M_AXIN_ABORT(CPUS_ABORT)
+		.M_AXIN_VALID(CPUS_VALID), .M_AXIN_READY(CPUS_READY),
+		.M_AXIN_DATA( CPUS_DATA),  .M_AXIN_BYTES(CPUS_BYTES),
+		.M_AXIN_LAST( CPUS_LAST),  .M_AXIN_ABORT(CPUS_ABORT)
 		// }}}
 	);
 
@@ -840,46 +847,45 @@ module	meganet #(
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
-	// Incoming DATA channel handling
+	// Outging DATA channel handling
 	// {{{
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
 
-	// Cross to the TX clock
-	afifo #(
-		.LGFIFO(3), .WIDTH(32)
-	) data_afifo (
+	// Cross to the TX clock domain
+	axincdc #(
+		.LGFIFO(3), .DW(32)
+	) data_cdc (
 		// {{{
-		.i_wclk(i_clk), .i_wr_reset_n(!i_reset),
-		.i_wr(S_DATA_TVALID), .i_wr_data(S_DATA_TDATA),
-			.o_wr_full(DATACK_FULL),
+		.S_CLK(i_clk), .S_ARESETN(!i_reset),
+		.S_VALID(S_DATA_VALID), .S_READY(S_DATA_READY),
+			.S_DATA(S_DATA_DATA), .S_BYTES(S_DATA_BYTES),
+			.S_ABORT(1'b0), .S_LAST(S_DATA_LAST),
 		//
-		.i_rclk(i_net_tx_clk), .i_rd_reset_n(!tx_reset),
-		.i_rd(DATACK_READY), .o_rd_data(DATACK_DATA),
-			.o_rd_empty(DATACK_EMPTY)
+		.M_CLK(i_net_tx_clk), .M_ARESETN(!tx_reset),
+		.M_VALID(DATACK_VALID), .M_READY(DATACK_READY),
+			.M_DATA(DATACK_DATA), .M_BYTES(DATACK_BYTES),
+			.M_ABORT(DATACK_ABORT), .M_LAST(DATACK_LAST)
 		// }}}
 	);
 
-	assign	S_DATA_TREADY = !DATACK_FULL;
-	assign	DATACK_VALID  = !DATACK_EMPTY;
-
-	// Unwind the incoming packet into bytes
-	stream2pkt #(
-		.BW(8), .S_AXIS_DATA_WIDTH(32)
-	) u_datastream (
+	// Resize us down to 8b.  This should also provide sufficient
+	// backpressure that we (shouldn't) need a gate
+	axinwidth #(
+		.IW(32), .OW(8)
+	) u_datatx_width (
 		// {{{
-		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
+		.ACLK(i_net_tx_clk), .ARESETN(!tx_reset),
 		//
-		.S_AXIS_TVALID(DATACK_VALID),
-		.S_AXIS_TREADY(DATACK_READY),
-		.S_AXIS_TDATA( DATACK_DATA),
+		.S_AXIN_VALID(DATACK_VALID), .S_AXIN_READY(DATACK_READY),
+		.S_AXIN_DATA( DATACK_DATA), .S_AXIN_BYTES({ (DATACK_BYTES==0),
+				DATACK_BYTES }),
+		.S_AXIN_LAST( DATACK_LAST), .S_AXIN_ABORT(DATACK_ABORT),
 		//
-		.M_AXIN_VALID(DATAS_VALID),
-		.M_AXIN_READY(DATAS_READY),
-		.M_AXIN_DATA( DATAS_DATA),
-		.M_AXIN_LAST( DATAS_LAST),
-		.M_AXIN_ABORT(DATAS_ABORT)
+		.M_AXIN_VALID(DATAS_VALID), .M_AXIN_READY(DATAS_READY),
+		.M_AXIN_DATA( DATAS_DATA), .M_AXIN_BYTES(DATAS_BYTES),
+		.M_AXIN_LAST( DATAS_LAST), .M_AXIN_ABORT(DATAS_ABORT)
 		// }}}
 	);
 
@@ -889,7 +895,6 @@ module	meganet #(
 		DATAS_VALID, DATAS_READY, DATAS_LAST, DATAS_ABORT, DATAS_DATA,
 		TX_VALID,    TX_READY,    TX_LAST,    TX_ABORT,    TX_DATA
 		};
-
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -1338,6 +1343,10 @@ module	meganet #(
 			ign_tfrtxdbg_valid, ign_tfrtxdbg_ready,
 			n_rx_debugsel, n_tx_debugsel,
 			high_speed_net,
+			ARPS_BYTES, ICMPS_BYTES, CPUS_BYTES, DATAS_BYTES,
+				DBGS_BYTES,
+			CPUBUS_BYTES[2], DBGW_BYTES[2],
+			M_DBG_ABORT,	// Will always be zero
 			tx_in_progress[3], rx_debug, tx_debug };
 	// Verilator lint_on  UNUSED
 	// }}}

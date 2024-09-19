@@ -53,8 +53,8 @@
 @PREFIX=cpunet
 @DEVID=CPUNET
 @NADDR=32
-@ACCESS=@$(DEVID)_ACCESS
-@DEPENDS=ETH_ROUTER
+@ACCESS=@$(DEVID)_ACCESS MEGANETCPURX_ACCESS MEGANETCPUTX_ACCESS
+@DEPENDS=MEGANET_ACCESS
 @SLAVE.BUS=wb32
 @SLAVE.TYPE=OTHER
 @SLAVE.PREFIX=@$(SLAVE.BUS.NAME)_@$(PREFIX)s
@@ -69,24 +69,12 @@
 @INT.RXNET.WIRE=@$(PREFIX)_rx_int
 @INT.TXNET.PIC=syspic
 @INT.TXNET.WIRE=@$(PREFIX)_tx_int
+@CPUTX=netcputx
+@CPURX=netcpurx
 @MAIN.DEFNS=
 	// CPUNet Controller
 	// {{{
 	// Verilator lint_off UNUSED
-	wire		@$(PREFIX)_rx_valid,
-			@$(PREFIX)_rx_ready,
-			@$(PREFIX)_rx_last,
-			@$(PREFIX)_rx_abort;
-	wire	[127:0]	@$(PREFIX)_rx_data;
-	wire	[3:0]	@$(PREFIX)_rx_bytes;
-
-	wire		@$(PREFIX)_tx_valid,
-			@$(PREFIX)_tx_ready,
-			@$(PREFIX)_tx_last,
-			@$(PREFIX)_tx_abort;
-	wire	[127:0]	@$(PREFIX)_tx_data;
-	wire	[3:0]	@$(PREFIX)_tx_bytes;
-
 	wire	[31:0]	@$(PREFIX)_debug;
 	// Verilator lint_on  UNUSED
 	// }}}
@@ -99,25 +87,25 @@
 	cpunet #(
 		.AW(@$(MASTER.BUS.AWID)),
 		.BUSDW(@$(MASTER.BUS.WIDTH)),
-		.PKTDW(128)
+		.PKTDW(32)
 	) u_@$(PREFIX) (
 		// {{{
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
 		@$(SLAVE.ANSIPORTLIST),
 		//
-		.RX_VALID(@$(PREFIX)_rx_valid),
-		.RX_READY(@$(PREFIX)_rx_ready),
-		.RX_DATA( @$(PREFIX)_rx_data),
-		.RX_BYTES(@$(PREFIX)_rx_bytes),
-		.RX_LAST( @$(PREFIX)_rx_last),
-		.RX_ABORT(@$(PREFIX)_rx_abort),
+		.RX_VALID(@$(CPURX)_valid),
+		.RX_READY(@$(CPURX)_ready),
+		.RX_DATA( @$(CPURX)_data),
+		.RX_BYTES(@$(CPURX)_bytes),
+		.RX_LAST( @$(CPURX)_last),
+		.RX_ABORT(@$(CPURX)_abort),
 		//
-		.TX_VALID(@$(PREFIX)_tx_valid),
-		.TX_READY(@$(PREFIX)_tx_ready),
-		.TX_DATA( @$(PREFIX)_tx_data),
-		.TX_BYTES(@$(PREFIX)_tx_bytes),
-		.TX_LAST( @$(PREFIX)_tx_last),
-		.TX_ABORT(@$(PREFIX)_tx_abort),
+		.TX_VALID(@$(CPUTX)_valid),
+		.TX_READY(@$(CPUTX)_ready),
+		.TX_DATA( @$(CPUTX)_data),
+		.TX_BYTES(@$(CPUTX)_bytes),
+		.TX_LAST( @$(CPUTX)_last),
+		.TX_ABORT(@$(CPUTX)_abort),
 		//
 		@$(MASTER.ANSIPORTLIST),
 		//

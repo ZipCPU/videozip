@@ -67,6 +67,7 @@ LIBS    := -lc -lvidzip -lgcc
 LIBFAT  := -lfatfs
 FAT     := ../fatfs/libfatfs.a
 CFLAGS  := -O3 $(INCS)
+DUMPRTL := -fdump-rtl-all
 #
 # For source analysis, the following macros are defined:
 #
@@ -75,7 +76,6 @@ CFLAGS  := -O3 $(INCS)
 $(OBJDIR)/%.o: %.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) -c $< -o $@
-DUMPRTL := -fdump-rtl-all
 $(OBJDIR)/%.s: %.c
 	$(mk-objdir)
 	$(CC) $(CFLAGS) $(DUMPRTL) -S $< -o $@
@@ -124,7 +124,8 @@ $(OBJDIR)/hdmistart.o: hdmistart.c
 	$(mk-objdir)
 	$(CC) -c $(CFLAGS) $< -o $@
 hdmistart: $(HDMISTARTOBJS)
-	$(CC) $(CFLAGS) $(LFLAGS) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
+	# $(CC) $(CFLAGS) $(LFLAGS) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LBLKRAM) -Wl,-Map=$(OBJDIR)/hdmistart.map $(HDMISTARTOBJS) $(LIBS) -o $@
 
 ROTARY:= $(addprefix $(OBJDIR)/,rotary.o txfns.o)
 rotary: $(ROTARY) board.ld $(ZLIBD)/$(ZIPLIB)
@@ -132,7 +133,8 @@ rotary: $(ROTARY) board.ld $(ZLIBD)/$(ZIPLIB)
 
 MONITOR:= $(addprefix $(OBJDIR)/,monitor.o)
 monitor: $(MONITOR) board.ld $(ZLIBD)/$(ZIPLIB)
-	$(CC) $(CFLAGS) $(LFLAGS) $(MONITOR) $(LIBS) -o $@
+	# $(CC) $(CFLAGS) $(LFLAGS) $(MONITOR) $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LBLKRAM) $(MONITOR) $(LIBS) -o $@
 
 SDREADD:= $(addprefix $(OBJDIR)/,sdreadd.o txfns.o)
 $(OBJDIR)/sdreadd.o: sdreadd.c

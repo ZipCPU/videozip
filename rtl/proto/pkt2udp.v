@@ -107,7 +107,7 @@ module	pkt2udp #(
 	wire	[15:0]	udp_length;
 	reg	[3:0]	hdrpos;
 
-	reg			mem_wr;
+	reg			mem_wr, m_lenword;
 	reg	[31:0]		mem_wdata, pkt_data, rdlen, pktlen;
 	reg	[LGMEM-1:0]	mem_waddr, mem_raddr;
 	wire	[LGMEM-1:0]	w_mem_raddr;
@@ -502,22 +502,19 @@ module	pkt2udp #(
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 		mem_raddr <= 0;
-	else if (M_AXIS_VALID && M_AXIS_READY && rdlen > 2)
+	else if (m_lenword || (M_AXIS_VALID && M_AXIS_READY && rdlen > 2))
 		mem_raddr <= mem_raddr + 1;
 	else if (start_run)
 		mem_raddr <= mem_raddr + 2;
-	// else if (rdstate || pkt_data > 0)
-	//	mem_raddr <= mem_raddr + 1;
 	// }}}
 
 	// pkt_data
 	// {{{
-	// assign w_mem_raddr = mem_raddr[LGMEM-1:0] + (rdstate == R_PACKET
-	//		&& (!M_AXIS_VALID || M_AXIS_READY) && !M_AXIS_LAST);
 	assign	w_mem_raddr = mem_raddr + (start_run ? 1:0);
 
 	always @(posedge S_AXI_ACLK)
-	if (rdstate == R_IDLE || M_AXIS_LAST || (M_AXIS_VALID && M_AXIS_READY))
+	if (rdstate == R_IDLE || M_AXIS_LAST || m_lenword
+					|| (M_AXIS_VALID && M_AXIS_READY))
 		pkt_data <= mem[w_mem_raddr];
 	// }}}
 
@@ -541,6 +538,9 @@ module	pkt2udp #(
 	begin
 		rdstate <= R_IDLE;
 		rdlen   <= 0;
+	end else if (m_lenword)
+	begin
+		rdlen <= rdlen - 1;
 	end else if (M_AXIS_VALID)
 	begin
 		if (M_AXIS_READY)
@@ -561,7 +561,8 @@ module	pkt2udp #(
 	begin
 		if (rdstate == R_PACKET)
 		begin
-			assert(M_AXIS_VALID);
+			assert(!m_lenword || !M_AXIS_VALID);
+			assert(m_lenword || M_AXIS_VALID);
 			assert(rdlen > 0);
 			assert(M_AXIS_LAST == (rdlen == 1));
 		end else begin
@@ -581,6 +582,18 @@ module	pkt2udp #(
 `endif
 	// }}}
 
+	// m_lenword
+	// {{{
+	initial	m_lenword = 1'b0;
+	always @(posedge S_AXI_ACLK)
+	if (!S_AXI_ARESETN)
+		m_lenword <= 0;
+	else if (M_AXIS_VALID || m_lenword)
+		m_lenword <= 1'b0;
+	else
+		m_lenword <= start_run;
+	// }}}
+
 	// M_AXIS_VALID
 	// {{{
 	initial	M_AXIS_VALID = 1'b0;
@@ -588,7 +601,7 @@ module	pkt2udp #(
 	if (!S_AXI_ARESETN)
 		M_AXIS_VALID <= 0;
 	else if (!M_AXIS_VALID)
-		M_AXIS_VALID <= start_run;
+		M_AXIS_VALID <= m_lenword;
 	else if (M_AXIS_READY && M_AXIS_LAST)
 		M_AXIS_VALID <= 1'b0;
 	// }}}

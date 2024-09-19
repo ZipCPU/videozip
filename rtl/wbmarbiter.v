@@ -113,7 +113,7 @@ module wbmarbiter #(
 	////////////////////////////////////////////////////////////////////////
 	//
 	//
-	roundrobin #(
+	pktarbiter #(
 		.W(NIN)
 	) u_arb (
 		.i_clk(i_clk), .i_reset_n(!i_reset),

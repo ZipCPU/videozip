@@ -39,6 +39,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
 `default_nettype	none
+`timescale	1ns/1ps
 // }}}
 module addepad(i_clk, i_reset, i_ce, i_v, i_d, o_v, o_d);
 	parameter	MINOCTETS=60;
