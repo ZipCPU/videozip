@@ -70,6 +70,17 @@ to demonstrate usage of all, or at least most, of the interfaces on the board.
    Unlike prior versions of the VideoZip project, this version is designed to
    handle subclock IO synchronization delays automatically.
 
+   Further timing analysis suggests this design may be limited to an HDMI
+   clock of 92.5MHz, and no faster.  This is due to the fact that the IO
+   modules produce HDMI at a 10x rate, requiring a 5x pixel clock driver,
+   requiring a BUFx distributing that 5x clock, and the Artix-7 limits the
+   BUFx components to 464MHz.  This is disappointing, since I have been able
+   to get 1080p working with this board before, and 1080p requires a 148.5MHz
+   clock.  Was I just overclocking the device, unbeknownst to Vivado?
+
+   This also means I'll need to edit the EDID before I can broadcast it
+   upstream.  Well, either that or try overclocking again.
+
    Status: FAILS, still under investigation
 
 8. [I2C](rtl/wbi2c/wbi2ccpu.v): A key component of several projects has now
