@@ -846,7 +846,7 @@ module	vidpipe #(
 		wire	[23:0]	w_data;
 		wire	[31:0]	v_debug, s_debug;
 
-		wire			v_syncpol,h_syncpol;
+		wire			v_syncpol,h_syncpol, w_locked;
 		wire	[LGDIM-1:0]	h_width,  h_front, h_synch, h_raw;
 		wire	[LGDIM-1:0]	v_height, v_front, v_synch, v_raw;
 
@@ -906,7 +906,7 @@ module	vidpipe #(
 			.o_vsync( v_synch),  .o_raw_height(v_raw),
 			//
 			.o_vsync_pol(v_syncpol),.o_hsync_pol(h_syncpol),
-			.o_locked(in_locked)
+			.o_locked(w_locked)
 			// }}}
 			// }}}
 		);
@@ -943,7 +943,7 @@ module	vidpipe #(
 			.i_a_clk(i_hdmiclk), .i_a_reset_n(hdmi_reset_n),
 			.i_a_valid(1'b1), .o_a_ready(h2sys_ready),
 				.i_a_data({
-					in_locked,			//  1b
+					w_locked,			//  1b
 					v_syncpol,h_syncpol,	//  2b
 					v_raw,    h_raw,		// LGDIM
 					v_synch,  h_synch,
@@ -965,12 +965,13 @@ module	vidpipe #(
 		);
 
 		tfrvalue #(
-			.W(LGDIM*8+2+32)
+			.W(LGDIM*8+3)
 		) u_h2pix (
 			// {{{
 			.i_a_clk(i_hdmiclk), .i_a_reset_n(hdmi_reset_n),
 			.i_a_valid(1'b1), .o_a_ready(h2pix_ready),
 				.i_a_data({
+					w_locked,
 					v_syncpol,h_syncpol,
 					v_raw,    h_raw,
 					v_synch,  h_synch,
@@ -981,6 +982,7 @@ module	vidpipe #(
 			.i_b_clk(i_pixclk), .i_b_reset_n(pix_reset_n),
 			.o_b_valid(h2pix_valid), .i_b_ready(1'b1),
 				.o_b_data({
+					in_locked,
 					vin_syncpol,hin_syncpol,
 					vin_raw,    hin_raw,
 					vin_synch,  hin_synch,
@@ -1140,10 +1142,15 @@ module	vidpipe #(
 				iodelay_request_sys,		// 15b
 				cfg_ovly_enable_sys && cfg24_set,	// 1b
 				cfg_src_sel_sys,		// 1b
+				// 139
 				cfg_alpha_sys,			// 2b
+				// 137
 				cfg_cmap_mode_sys,		// 3b
+				// 134
 				cfg_mem_width_sys,		// LGDIM
+				// 122b
 				cfg_ovly_hpos_sys, cfg_ovly_vpos_sys,
+				// 98b follow, for LGDIM=12
 				vm_syncpol_sys,hm_syncpol_sys,
 				vm_raw_sys,    hm_raw_sys,
 				vm_synch_sys,  hm_synch_sys,
@@ -1171,17 +1178,71 @@ module	vidpipe #(
 		// }}}
 	);
 
-	assign	hm_width  = (cfg_src_sel && OPT_HDMIIN) ? hin_width  : hout_width;
-	assign	hm_front  = (cfg_src_sel && OPT_HDMIIN) ? hin_front  : hout_front;
-	assign	hm_synch  = (cfg_src_sel && OPT_HDMIIN) ? hin_synch  : hout_synch;
-	assign	hm_raw    = (cfg_src_sel && OPT_HDMIIN) ? hin_raw    : hout_raw;
-	assign	hm_syncpol= (cfg_src_sel && OPT_HDMIIN) ? hin_syncpol: hout_syncpol;
+	// HM-*, VM-*: Pixel clock domain, ?M-*-SYS: System clock domain
+	generate if (OPT_HDMIIN)
+	begin : GEN_SIZES
+		// {{{
+		reg	[LGDIM-1:0]	rv_raw,    rh_raw,
+					rv_synch,  rh_synch,
+					rv_front,  rh_front,
+					rv_height, rh_width;
+		reg			rv_syncpol,rh_syncpol;
 
-	assign	vm_height = (cfg_src_sel && OPT_HDMIIN) ? vin_height : vout_height;
-	assign	vm_front  = (cfg_src_sel && OPT_HDMIIN) ? vin_front  : vout_front;
-	assign	vm_synch  = (cfg_src_sel && OPT_HDMIIN) ? vin_synch  : vout_synch;
-	assign	vm_raw    = (cfg_src_sel && OPT_HDMIIN) ? vin_raw    : vout_raw;
-	assign	vm_syncpol= (cfg_src_sel && OPT_HDMIIN) ? vin_syncpol: vout_syncpol;
+		always @(posedge i_pixclk)
+		if (cfg_src_sel)
+		begin
+			rh_width  <= hin_width;
+			rh_front  <= hin_front;
+			rh_synch  <= hin_synch;
+			rh_raw    <= hin_raw;
+			rh_syncpol<= hin_syncpol;
+
+			rv_height <= vin_height;
+			rv_front  <= vin_front;
+			rv_synch  <= vin_synch;
+			rv_raw    <= vin_raw;
+			rv_syncpol<= vin_syncpol;
+		end else begin
+			rh_width  <= hout_width;
+			rh_front  <= hout_front;
+			rh_synch  <= hout_synch;
+			rh_raw    <= hout_raw;
+			rh_syncpol<= hout_syncpol;
+
+			rv_height <= vout_height;
+			rv_front  <= vout_front;
+			rv_synch  <= vout_synch;
+			rv_raw    <= vout_raw;
+			rv_syncpol<= vout_syncpol;
+		end
+
+		assign	hm_width  = rh_width;
+		assign	hm_front  = rh_front;
+		assign	hm_synch  = rh_synch;
+		assign	hm_raw    = rh_raw;
+		assign	hm_syncpol= rh_syncpol;
+
+		assign	vm_height = rv_height;
+		assign	vm_front  = rv_front;
+		assign	vm_synch  = rv_synch;
+		assign	vm_raw    = rv_raw;
+		assign	vm_syncpol= rv_syncpol;
+		// }}}
+	end else begin : DEFAULT_SIZES
+		// {{{
+		assign	hm_width  =  hout_width;
+		assign	hm_front  =  hout_front;
+		assign	hm_synch  =  hout_synch;
+		assign	hm_raw    =  hout_raw;
+		assign	hm_syncpol=  hout_syncpol;
+
+		assign	vm_height =  vout_height;
+		assign	vm_front  =  vout_front;
+		assign	vm_synch  =  vout_synch;
+		assign	vm_raw    =  vout_raw;
+		assign	vm_syncpol=  vout_syncpol;
+		// }}}
+	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -1514,7 +1575,8 @@ module	vidpipe #(
 				alph_pixel[23:0] };
 
 		assign	pip_debug = { pipe_vlast && pipe_hlast,
-				(pipe_hlast && pipe_vlast), ovly_err, cfg24_set,
+				(pipe_hlast && pipe_vlast), ovly_err,
+					cfg_ovly_enable,
 				pipe_valid, pipe_ready, pipe_hlast, pipe_vlast,
 				pipe_data };
 		// }}}
@@ -1595,11 +1657,11 @@ module	vidpipe #(
 			.o_b_valid(ign_captfr_valid), .i_b_ready(1'b1),
 				.o_b_data({
 					pxcrop_en,
-					pxcrop_hpos, pxcrop_vpos,
-					pxcrop_width, pxcrop_height,
+					pxcrop_hpos, pxcrop_vpos,	// 24b
+					pxcrop_width, pxcrop_height,	// 24b
 			//
-					pxcap_mode,
-					pxcap_src, pxcap_en, pxcap_count })
+					pxcap_mode,	// 2b
+					pxcap_src, pxcap_en, pxcap_count })//14b
 			// }}}
 		);
 

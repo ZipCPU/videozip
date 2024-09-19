@@ -1,0 +1,23 @@
+[tasks]
+prf
+cvr
+
+[options]
+prf: mode prove
+cvr: mode cover
+
+[engines]
+smtbmc
+
+[script]
+read -formal wbdrp.v
+read -formal fwb_slave.v
+--pycode-begin--
+cmd = "hierarchy -top wbdrp"
+output(cmd)
+--pycode-end--
+prep -top wbdrp
+
+[files]
+fwb_slave.v
+../../rtl/wbdrp.v

@@ -86,6 +86,9 @@ module	xpxclk #(
 
 	// Local declarations
 	// {{{
+	localparam [1:0]	OPT_FIXED = 2'b10,
+				DEF_CKSEL = 2'b10;
+
 	wire	lclck, hdmirx_ck, preck, siclk;
 	wire	clk_fbout, clk_fb, raw_pixclk, hdmi_ck;
 	// }}}
@@ -93,11 +96,29 @@ module	xpxclk #(
 	begin : GEN_EXTERNAL_CLOCK_SW
 		// Select lclck from either i_lcl_pixclk or i_siclk
 		// {{{
-		xclksw
-		lclpx (
-			.i_sys_clk(i_sysclk), .i_clk_sel(i_cksel[0]),
-			.i_ck0(i_lcl_pixclk), .i_ck1(i_siclk), .o_clk(lclck)
-		);
+
+		if (OPT_FIXED[0])
+		begin : FIXED_CLKSW
+
+			BUFG
+			u_prepx (
+				.I(DEF_CKSEL[0] ? i_siclk : i_lcl_pixclk),
+				.O(preck));
+
+		end else begin : CLOCK_SWITCH
+
+			xclksw
+			lclpx (
+				// Clock selection
+				.i_sys_clk(i_sysclk),
+				.i_clk_sel(i_cksel[0]),
+				// Incoming clock choices
+				.i_ck0(i_lcl_pixclk), .i_ck1(i_siclk),
+				// Generated output clock
+				.o_clk(lclck)
+			);
+
+		end
 		// }}}
 	end else begin : NO_EXTERNAL_CLOCK
 		assign	siclk   = i_lcl_pixclk;
@@ -113,11 +134,30 @@ module	xpxclk #(
 
 	assign	o_hdmirx_clk = hdmirx_ck;
 
-	xclksw
-	prepx (
-		.i_sys_clk(i_sysclk), .i_clk_sel(i_cksel[1]),
-		.i_ck0(lclck), .i_ck1(hdmirx_ck), .o_clk(preck)
-	);
+	generate if (OPT_FIXED[1])
+	begin : FIXED_CLKSW
+
+		BUFG
+		u_prepx (
+			.I(DEF_CKSEL[1] ? hdmirx_ck : lclck),
+			.O(preck));
+
+	end else begin : CLOCK_SWITCH
+
+		xclksw
+		u_prepx (
+			// Clock selection
+			.i_sys_clk(i_sysclk),
+			.i_clk_sel(i_cksel[1]),
+			//
+			// Incoming clock choices
+			.i_ck0(lclck), .i_ck1(hdmirx_ck),
+			//
+			// Generated output clock
+			.o_clk(preck)
+		);
+
+	end endgenerate
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -159,11 +199,11 @@ module	xpxclk #(
 	// {{{
 	PLLE2_ADV #(
 		// {{{
-		.CLKFBOUT_MULT(10),	// 150MHz * 20 = 3000MHz
+		.CLKFBOUT_MULT(15),	// 100MHz * 15 = 1500MHz
 		.CLKFBOUT_PHASE(0.0),
-		.CLKIN1_PERIOD(6.7),	// Up to 148.5MHz input
-		.CLKOUT0_DIVIDE(10),	// 3000MHz / 20 => 150MHz
-		.CLKOUT1_DIVIDE(2)	// 3000MHz /  4 => 750MHz
+		.CLKIN1_PERIOD(10.4),	// Up to 128 MHz input
+		.CLKOUT0_DIVIDE(15),	// 1500MHz / 15 => 100MHz
+		.CLKOUT1_DIVIDE(3)	// 1500MHz /  5 => 500MHz
 /*
 		.CLKFBOUT_MULT(15),	// 80MHz * 15 = 1200MHz
 		.CLKFBOUT_PHASE(0.0),
@@ -195,8 +235,8 @@ module	xpxclk #(
 		// }}}
 	);
 
-	BUFG fdback_buf( .I(clk_fbout),    .O(clk_fb));
+	BUFG fdback_buf( .I(clk_fbout),  .O(clk_fb));
 	BUFG pixclk_buf( .I(raw_pixclk), .O(o_pixclk));
-	BUFG hdmi_buf(   .I(hdmi_ck),      .O(o_hdmick));
+	BUFG hdmi_buf(   .I(hdmi_ck),    .O(o_hdmick));
 	// }}}
 endmodule

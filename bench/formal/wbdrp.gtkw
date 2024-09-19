@@ -1,0 +1,58 @@
+[*]
+[*] GTKWave Analyzer v3.4.0 (w)1999-2022 BSI
+[*] Thu Sep 12 16:17:14 2024
+[*]
+[dumpfile] "(null)"
+[timestart] 0
+[size] 1920 1013
+[pos] -1 -1
+*-5.613175 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 343
+[signals_width] 150
+[sst_expanded] 1
+[sst_vpaned_height] 293
+@28
+wbdrp.i_clk
+wbdrp.i_reset
+@200
+-
+@28
+wbdrp.i_wb_cyc
+wbdrp.i_wb_stb
+wbdrp.i_wb_we
+@22
+wbdrp.i_wb_addr[5:0]
+wbdrp.i_wb_data[31:0]
+wbdrp.i_wb_sel[3:0]
+@28
+wbdrp.o_wb_stall
+wbdrp.o_wb_ack
+@22
+wbdrp.o_wb_data[31:0]
+@200
+-
+@28
+wbdrp.o_DEN
+wbdrp.o_DWE
+@22
+wbdrp.o_DADDR[5:0]
+wbdrp.o_DI[15:0]
+@28
+wbdrp.i_DRDY
+@22
+wbdrp.i_DO[15:0]
+@200
+-
+@29
+wbdrp.fsm_state[1:0]
+@22
+wbdrp.r_data[15:0]
+wbdrp.r_mask[15:0]
+@28
+wbdrp.r_will_ack
+@200
+-
+@22
+wbdrp.o_debug[31:0]
+[pattern_trace] 1
+[pattern_trace] 0
