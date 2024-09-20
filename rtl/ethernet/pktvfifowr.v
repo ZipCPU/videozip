@@ -703,18 +703,18 @@ module	pktvfifowr #(
 			wide_mem_fill = wide_mem_fill + wide_memsize;
 		// Add two pointer words, 4-bytes each, and round up to the
 		//   nearest 4-byte boundary
-		wide_mem_fill = wide_mem_fill + 11;
+		wide_mem_fill = wide_mem_fill + 11 + (BUSDW/4);
 		if (wr_midpkt && wr_state != WR_OVERFLOW)
 			wide_mem_fill = wide_mem_fill + wr_pktlen;
-		wide_mem_fill[1:0] = 2'b00;
-		if (S_VALID && S_READY)
-			wide_mem_fill = wide_mem_fill + BUSDW/8;
+		// wide_mem_fill[1:0] = 2'b00;
+		// if (S_VALID && S_READY)
+		//	wide_mem_fill = wide_mem_fill + BUSDW/8;
 		// if (o_wb_stb)
 		//	wide_mem_fill = wide_mem_fill + BUSDW/8;
 		// Make sure we always have room for one more word
 		//   since it will take at least one clock cycle for this
 		//   to take effect
-		wide_mem_fill = wide_mem_fill + (BUSDW/8);
+		// wide_mem_fill = wide_mem_fill + (BUSDW/8);
 		wide_mem_fill[WBLSB-1:0] = 0;
 	end
 

@@ -60,7 +60,8 @@ module afifo #(
 		// OPT_REGISTER_READS, we force all reads to be synchronous and
 		// not burdened by any logic.  You can spare a clock of latency
 		// by clearing this register.
-		parameter [0:0]	OPT_REGISTER_READS = 1'b1
+		parameter [0:0]	OPT_REGISTER_READS = 1'b1,
+		parameter [0:0]	OPT_REGISTER_FULL = 1'b0
 `ifdef	FORMAL
 		// F_OPT_DATA_STB
 		// {{{
@@ -109,6 +110,7 @@ module afifo #(
 					rd_wgray, wr_rgray;
 	wire	[LGFIFO:0]		next_rd_addr, next_wr_addr;
 	reg	[LGFIFO:0]		rgray, wgray;
+	wire	[LGFIFO:0]		next_wgray;
 	(* ASYNC_REG = "TRUE" *) reg	[(LGFIFO+1)*(NFF-1)-1:0]
 					rgray_cross, wgray_cross;
 	wire				wclk;
@@ -141,6 +143,7 @@ module afifo #(
 	// wr_addr, wgray
 	// {{{
 	assign	next_wr_addr = wr_addr + 1;
+	assign	next_wgray   = next_wr_addr ^ (next_wr_addr >> 1);
 	always @(posedge wclk or negedge i_wr_reset_n)
 	if (!i_wr_reset_n)
 	begin
@@ -149,7 +152,7 @@ module afifo #(
 	end else if (i_wr && !o_wr_full)
 	begin
 		wr_addr <= next_wr_addr;
-		wgray   <= next_wr_addr ^ (next_wr_addr >> 1);
+		wgray   <= next_wgray;
 	end
 	// }}}
 
@@ -216,8 +219,24 @@ module afifo #(
 	//
 	//
 
-	always @(*)
-		o_wr_full = (wr_rgray == { ~wgray[MSB:MSB-1], wgray[MSB-2:0] });
+	generate if (OPT_REGISTER_FULL)
+	begin : GEN_FULL
+
+		always @(posedge wclk or negedge i_wr_reset_n)
+		if (!i_wr_reset_n)
+			o_wr_full <= 0;
+		else if (i_wr && !o_wr_full)
+		begin
+			o_wr_full <= (wr_rgray == { ~next_wgray[MSB:MSB-1],
+							next_wgray[MSB-2:0]});
+		end else
+			o_wr_full <= (wr_rgray == { ~wgray[MSB:MSB-1],
+							wgray[MSB-2:0] });
+
+	end else begin : W_FULL
+		always @(*)
+			o_wr_full = (wr_rgray == { ~wgray[MSB:MSB-1], wgray[MSB-2:0] });
+	end endgenerate
 
 	always @(*)
 		lcl_rd_empty = (rd_wgray == rgray);

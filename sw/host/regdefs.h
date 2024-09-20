@@ -83,49 +83,49 @@
 #define	R_CONSOLE_FIFO    	0x08000c04	// 08000c00, wbregs names: UFIFO
 #define	R_CONSOLE_UARTRX  	0x08000c08	// 08000c00, wbregs names: RX, RXUART
 #define	R_CONSOLE_UARTTX  	0x08000c0c	// 08000c00, wbregs names: TX, TXUART
-// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
-#define	R_CFG_CRC         	0x08000e00	// 08000e00, wbregs names: FPGACRC
-#define	R_CFG_FAR         	0x08000e04	// 08000e00, wbregs names: FPGAFAR
-#define	R_CFG_FDRI        	0x08000e08	// 08000e00, wbregs names: FPGAFDRI
-#define	R_CFG_FDRO        	0x08000e0c	// 08000e00, wbregs names: FPGAFDRO
-#define	R_CFG_CMD         	0x08000e10	// 08000e00, wbregs names: FPGACMD
-#define	R_CFG_CTL0        	0x08000e14	// 08000e00, wbregs names: FPGACTL0
-#define	R_CFG_MASK        	0x08000e18	// 08000e00, wbregs names: FPGAMASK
-#define	R_CFG_STAT        	0x08000e1c	// 08000e00, wbregs names: FPGASTAT
-#define	R_CFG_LOUT        	0x08000e20	// 08000e00, wbregs names: FPGALOUT
-#define	R_CFG_COR0        	0x08000e24	// 08000e00, wbregs names: FPGACOR0
-#define	R_CFG_MFWR        	0x08000e28	// 08000e00, wbregs names: FPGAMFWR
-#define	R_CFG_CBC         	0x08000e2c	// 08000e00, wbregs names: FPGACBC
-#define	R_CFG_IDCODE      	0x08000e30	// 08000e00, wbregs names: FPGAIDCODE
-#define	R_CFG_AXSS        	0x08000e34	// 08000e00, wbregs names: FPGAAXSS
-#define	R_CFG_COR1        	0x08000e38	// 08000e00, wbregs names: FPGACOR1
-#define	R_CFG_WBSTAR      	0x08000e40	// 08000e00, wbregs names: WBSTAR
-#define	R_CFG_TIMER       	0x08000e44	// 08000e00, wbregs names: CFGTIMER
-#define	R_CFG_BOOTSTS     	0x08000e58	// 08000e00, wbregs names: BOOTSTS
-#define	R_CFG_CTL1        	0x08000e60	// 08000e00, wbregs names: FPGACTL1
-#define	R_CFG_BSPI        	0x08000e7c	// 08000e00, wbregs names: FPGABSPI
 // CPU Net Controller registers
-#define	R_CPUNET          	0x08001000	// 08001000, wbregs names: CPUNET
-#define	R_CPUNETMAC1      	0x08001004	// 08001000, wbregs names: CPUMAC1
-#define	R_CPUNETMAC2      	0x08001008	// 08001000, wbregs names: CPUMAC2
-#define	R_CPUNETIPV4      	0x0800100c	// 08001000, wbregs names: CPUIPV4
-#define	R_CPUNETIPV6P1    	0x08001010	// 08001000, wbregs names: CPUIP6P1
-#define	R_CPUNETIPV6P2    	0x08001014	// 08001000, wbregs names: CPUIP6P2
-#define	R_CPUNETIPV6P3    	0x08001018	// 08001000, wbregs names: CPUIP6P3
-#define	R_CPUNETIPV6P4    	0x0800101c	// 08001000, wbregs names: CPUIP6P4
-#define	R_CPUNETRXDROPS   	0x08001020	// 08001000, wbregs names: RXDROPS
-#define	R_CPUNETRXPKTS    	0x08001024	// 08001000, wbregs names: RXPKTS
-#define	R_CPUNETTXPKTS    	0x08001028	// 08001000, wbregs names: TXPKTS
-#define	R_CPUNETTX_BASE   	0x08001040	// 08001000, wbregs names: CNTXBASE, CPUNETTXBASE
-#define	R_CPUNETTX_LEN    	0x08001044	// 08001000, wbregs names: CNTXLEN, CPUNETTXLEN
-#define	R_CPUNETTX_RPTR   	0x08001048	// 08001000, wbregs names: CNTXRPTR, CPUNETTXRPTR
-#define	R_CPUNETTX_WPTR   	0x0800104c	// 08001000, wbregs names: CNTXWPTR, CPUNETTXWPTR
-#define	R_CPUNETRX_BASE   	0x08001050	// 08001000, wbregs names: CNRXBASE, CPUNETRXBASE
-#define	R_CPUNETRX_LEN    	0x08001054	// 08001000, wbregs names: CNRXLEN, CPUNETRXLEN
-#define	R_CPUNETRX_RPTR   	0x08001058	// 08001000, wbregs names: CNRXRPTR, CPUNETRXRPTR
-#define	R_CPUNETRX_WPTR   	0x0800105c	// 08001000, wbregs names: CNRXWPTR, CPUNETRXWPTR
-#define	R_CPUNETRX_DBG    	0x08001060	// 08001000, wbregs names: CNRXDBG, CPUNETRXDBG
-#define	R_CPUNETTX_DBG    	0x08001064	// 08001000, wbregs names: CNTXDBG, CPUNETTXDBG
+#define	R_CPUNET          	0x08000e00	// 08000e00, wbregs names: CPUNET
+#define	R_CPUNETMAC1      	0x08000e04	// 08000e00, wbregs names: CPUMAC1
+#define	R_CPUNETMAC2      	0x08000e08	// 08000e00, wbregs names: CPUMAC2
+#define	R_CPUNETIPV4      	0x08000e0c	// 08000e00, wbregs names: CPUIPV4
+#define	R_CPUNETIPV6P1    	0x08000e10	// 08000e00, wbregs names: CPUIP6P1
+#define	R_CPUNETIPV6P2    	0x08000e14	// 08000e00, wbregs names: CPUIP6P2
+#define	R_CPUNETIPV6P3    	0x08000e18	// 08000e00, wbregs names: CPUIP6P3
+#define	R_CPUNETIPV6P4    	0x08000e1c	// 08000e00, wbregs names: CPUIP6P4
+#define	R_CPUNETRXDROPS   	0x08000e20	// 08000e00, wbregs names: RXDROPS
+#define	R_CPUNETRXPKTS    	0x08000e24	// 08000e00, wbregs names: RXPKTS
+#define	R_CPUNETTXPKTS    	0x08000e28	// 08000e00, wbregs names: TXPKTS
+#define	R_CPUNETTX_BASE   	0x08000e40	// 08000e00, wbregs names: CNTXBASE, CPUNETTXBASE
+#define	R_CPUNETTX_LEN    	0x08000e44	// 08000e00, wbregs names: CNTXLEN, CPUNETTXLEN
+#define	R_CPUNETTX_RPTR   	0x08000e48	// 08000e00, wbregs names: CNTXRPTR, CPUNETTXRPTR
+#define	R_CPUNETTX_WPTR   	0x08000e4c	// 08000e00, wbregs names: CNTXWPTR, CPUNETTXWPTR
+#define	R_CPUNETRX_BASE   	0x08000e50	// 08000e00, wbregs names: CNRXBASE, CPUNETRXBASE
+#define	R_CPUNETRX_LEN    	0x08000e54	// 08000e00, wbregs names: CNRXLEN, CPUNETRXLEN
+#define	R_CPUNETRX_RPTR   	0x08000e58	// 08000e00, wbregs names: CNRXRPTR, CPUNETRXRPTR
+#define	R_CPUNETRX_WPTR   	0x08000e5c	// 08000e00, wbregs names: CNRXWPTR, CPUNETRXWPTR
+#define	R_CPUNETRX_DBG    	0x08000e60	// 08000e00, wbregs names: CNRXDBG, CPUNETRXDBG
+#define	R_CPUNETTX_DBG    	0x08000e64	// 08000e00, wbregs names: CNTXDBG, CPUNETTXDBG
+// FPGA CONFIG REGISTERS: 0x4e0-0x4ff
+#define	R_CFG_CRC         	0x08001000	// 08001000, wbregs names: FPGACRC
+#define	R_CFG_FAR         	0x08001004	// 08001000, wbregs names: FPGAFAR
+#define	R_CFG_FDRI        	0x08001008	// 08001000, wbregs names: FPGAFDRI
+#define	R_CFG_FDRO        	0x0800100c	// 08001000, wbregs names: FPGAFDRO
+#define	R_CFG_CMD         	0x08001010	// 08001000, wbregs names: FPGACMD
+#define	R_CFG_CTL0        	0x08001014	// 08001000, wbregs names: FPGACTL0
+#define	R_CFG_MASK        	0x08001018	// 08001000, wbregs names: FPGAMASK
+#define	R_CFG_STAT        	0x0800101c	// 08001000, wbregs names: FPGASTAT
+#define	R_CFG_LOUT        	0x08001020	// 08001000, wbregs names: FPGALOUT
+#define	R_CFG_COR0        	0x08001024	// 08001000, wbregs names: FPGACOR0
+#define	R_CFG_MFWR        	0x08001028	// 08001000, wbregs names: FPGAMFWR
+#define	R_CFG_CBC         	0x0800102c	// 08001000, wbregs names: FPGACBC
+#define	R_CFG_IDCODE      	0x08001030	// 08001000, wbregs names: FPGAIDCODE
+#define	R_CFG_AXSS        	0x08001034	// 08001000, wbregs names: FPGAAXSS
+#define	R_CFG_COR1        	0x08001038	// 08001000, wbregs names: FPGACOR1
+#define	R_CFG_WBSTAR      	0x08001040	// 08001000, wbregs names: WBSTAR
+#define	R_CFG_TIMER       	0x08001044	// 08001000, wbregs names: CFGTIMER
+#define	R_CFG_BOOTSTS     	0x08001058	// 08001000, wbregs names: BOOTSTS
+#define	R_CFG_CTL1        	0x08001060	// 08001000, wbregs names: FPGACTL1
+#define	R_CFG_BSPI        	0x0800107c	// 08001000, wbregs names: FPGABSPI
 // Meganet register definitions
 #define	R_MEGANET_RXCMD   	0x08001200	// 08001200, wbregs names: MEGANETRX
 #define	R_MEGANET_TXCMD   	0x08001204	// 08001200, wbregs names: MEGANETTX

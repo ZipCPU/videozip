@@ -55,7 +55,7 @@
 	// The BUS Interrupt controller
 	//
 	icontrol #(15)
-	@$(PREFIX)i(
+	u_@$(PREFIX) (
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(1'b0),
 		@$(SLAVE.ANSIPORTLIST),
 		.i_brd_ints(bus_int_vector),

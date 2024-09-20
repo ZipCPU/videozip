@@ -95,6 +95,7 @@ module	pktgate #(
 	reg			lastv;
 	wire			r_full, eop_next, r_empty;
 	reg	[FW-1:0]	mem	[0:(FLEN-1)];
+	wire	[FW-1:0]	incoming_data;
 	reg	[LGFLEN:0]	wr_addr, rd_addr, eop_addr;
 	wire	[LGFLEN:0]	fill;
 	reg			s_midpacket;
@@ -107,6 +108,22 @@ module	pktgate #(
 	assign	w_rd = M_AXIN_VALID && M_AXIN_READY;
 	assign	s_abort = S_AXIN_ABORT && s_midpacket;
 	assign	wr_eop = w_wr && S_AXIN_LAST;
+
+	generate if (DW <= 8)
+	begin : ASSIGN_SINGLE
+		assign	incoming_data = { S_AXIN_LAST, S_AXIN_DATA };
+
+		// Keep Verilator happy
+		// {{{
+		// Verilator lint_off UNUSED
+		wire	unused_incoming;
+		assign	unused_incoming = &{ 1'b0, S_AXIN_BYTES };
+		// Verilator lint_on  UNUSED
+		// }}}
+	end else begin : GEN_MBYTES
+		assign	incoming_data = { S_AXIN_LAST,
+				S_AXIN_BYTES[$clog2(DW/8)-1:0], S_AXIN_DATA };
+	end endgenerate
 	// }}}
 
 	// fill
@@ -175,25 +192,9 @@ module	pktgate #(
 
 	// Write to memory
 	// {{{
-	wire	[FW-1:0]	wr_data;
-	
-	generate if (DW <= 8)
-	begin : WR_BYTE
-		assign	wr_data = { S_AXIN_LAST, S_AXIN_DATA };
-
-		// Keep Verilator happy
-		// Verilator lint_off UNUSED
-		wire	unused_wrdata;
-		assign	unused_wrdata = &{ 1'b0, S_AXIN_BYTES };
-		// Verilator lint_on  UNUSED
-	end else begin : WR_DATA
-		assign	wr_data = { S_AXIN_LAST, S_AXIN_BYTES[LGBYTES-1:0],
-					S_AXIN_DATA };
-	end endgenerate
-
 	always @(posedge S_AXI_ACLK)
 	if (w_wr)
-		mem[wr_addr[(LGFLEN-1):0]] <= wr_data;
+		mem[wr_addr[(LGFLEN-1):0]] <= incoming_data;
 	// }}}
 
 	// rd_addr, the read address pointer
@@ -294,9 +295,7 @@ module	pktgate #(
 		begin
 			memv = mem[rd_addr[LGFLEN-1:0]];
 			if (r_empty)
-				memv = { S_AXIN_LAST,
-						S_AXIN_BYTES[$clog2(DW/8)-1:0],
-						S_AXIN_DATA };
+				memv = incoming_data;
 		end
 
 		always @(posedge S_AXI_ACLK)
@@ -356,8 +355,11 @@ module	pktgate #(
 		end
 
 		always @(posedge S_AXI_ACLK)
-			bypass_data <= { (S_AXIN_LAST || S_AXIN_ABORT),
-				S_AXIN_BYTES[$clog2(DW/8)-1:0], S_AXIN_DATA };
+		begin
+			bypass_data <= incoming_data;
+			if (S_AXIN_ABORT)
+				bypass_data[FW-1] <= 1;
+		end
 
 		initial mem[0] = 0;
 		initial rd_data = 0;
@@ -368,8 +370,7 @@ module	pktgate #(
 
 		always @(*)
 		if (OPT_READ_ON_EMPTY && r_empty)
-			rdval = { S_AXIN_LAST, S_AXIN_BYTES[$clog2(DW/8)-1:0],
-							S_AXIN_DATA };
+			rdval = incoming_data;
 		else if (bypass_valid)
 			rdval = bypass_data;
 		else

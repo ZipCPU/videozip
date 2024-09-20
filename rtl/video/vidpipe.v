@@ -154,9 +154,9 @@ module	vidpipe #(
 
 	// Verilator lint_off SYNCASYNCNET
 	reg		pix_reset_sys, pix_reset_request, hdmi_reset_sys;
-	(* ASYNC_REG="TRUE" *) reg	pix_reset, hdmi_reset;
+	(* ASYNC_REG="TRUE" *) reg	pix_reset_u, hdmi_reset;
 	(* ASYNC_REG="TRUE" *) reg	[1:0] pix_reset_pipe, hdmi_reset_pipe;
-	wire		pix_reset_n, hdmi_reset_n;
+	wire		pix_reset_n, hdmi_reset_n, pix_reset;
 	// Verilator lint_on  SYNCASYNCNET
 
 	// Video streams
@@ -812,18 +812,23 @@ module	vidpipe #(
 	// Video RESET
 	// {{{
 	// pix_reset_sys <= changed parameters, or changed clock source
-
 	always @(posedge i_pixclk or posedge pix_reset_sys)
 	if (pix_reset_sys)
-		{ pix_reset, pix_reset_pipe } <= -1;
+		{ pix_reset_u, pix_reset_pipe } <= -1;
 	else
-		{ pix_reset, pix_reset_pipe } <= { pix_reset_pipe, 1'b0 };
+		{ pix_reset_u, pix_reset_pipe } <= { pix_reset_pipe, 1'b0 };
 
 	always @(posedge i_hdmiclk or posedge hdmi_reset_sys)
 	if (hdmi_reset_sys)
 		{ hdmi_reset, hdmi_reset_pipe } <= -1;
 	else
 		{ hdmi_reset, hdmi_reset_pipe } <= { hdmi_reset_pipe, 1'b0 };
+
+`ifdef	VERILATOR
+	assign	pix_reset = pix_reset_u;
+`else
+	BUFG	buf_pix_reset (.I(pix_reset_u), .O(pix_reset));
+`endif
 
 	assign	hdmi_reset_n     = !hdmi_reset;
 	assign	o_hdmirx_reset_n = hdmi_reset_n;

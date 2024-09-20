@@ -1090,15 +1090,6 @@ module	main(i_clk, i_reset,
 	wire		wb32_uart_stall, wb32_uart_ack, wb32_uart_err;
 	wire	[31:0]	wb32_uart_idata;
 	// Verilator lint_on UNUSED
-	// Wishbone definitions for bus wb32, component cfg
-	// Verilator lint_off UNUSED
-	wire		wb32_cfg_cyc, wb32_cfg_stb, wb32_cfg_we;
-	wire	[11:0]	wb32_cfg_addr;
-	wire	[31:0]	wb32_cfg_data;
-	wire	[3:0]	wb32_cfg_sel;
-	wire		wb32_cfg_stall, wb32_cfg_ack, wb32_cfg_err;
-	wire	[31:0]	wb32_cfg_idata;
-	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb32, component cpunet
 	// Verilator lint_off UNUSED
 	wire		wb32_cpunets_cyc, wb32_cpunets_stb, wb32_cpunets_we;
@@ -1107,6 +1098,15 @@ module	main(i_clk, i_reset,
 	wire	[3:0]	wb32_cpunets_sel;
 	wire		wb32_cpunets_stall, wb32_cpunets_ack, wb32_cpunets_err;
 	wire	[31:0]	wb32_cpunets_idata;
+	// Verilator lint_on UNUSED
+	// Wishbone definitions for bus wb32, component icape
+	// Verilator lint_off UNUSED
+	wire		wb32_icape_cyc, wb32_icape_stb, wb32_icape_we;
+	wire	[11:0]	wb32_icape_addr;
+	wire	[31:0]	wb32_icape_data;
+	wire	[3:0]	wb32_icape_sel;
+	wire		wb32_icape_stall, wb32_icape_ack, wb32_icape_err;
+	wire	[31:0]	wb32_icape_idata;
 	// Verilator lint_on UNUSED
 	// Wishbone definitions for bus wb32, component net
 	// Verilator lint_off UNUSED
@@ -1644,8 +1644,8 @@ module	main(i_clk, i_reset,
 	assign	wb32_vidscope_err= 1'b0;
 	assign	wb32_zipscope_err= 1'b0;
 	assign	wb32_uart_err= 1'b0;
-	assign	wb32_cfg_err= 1'b0;
 	assign	wb32_cpunets_err= 1'b0;
+	assign	wb32_icape_err= 1'b0;
 	assign	wb32_net_err= 1'b0;
 	assign	wb32_pxclk_err= 1'b0;
 	assign	wb32_dio_err= 1'b0;
@@ -1665,8 +1665,8 @@ module	main(i_clk, i_reset,
 			{ 12'h580 }, //     wb32_dio: 0x1600
 			{ 12'h500 }, //        pxclk: 0x1400
 			{ 12'h480 }, //          net: 0x1200
-			{ 12'h400 }, //       cpunet: 0x1000
-			{ 12'h380 }, //          cfg: 0x0e00
+			{ 12'h400 }, //        icape: 0x1000
+			{ 12'h380 }, //       cpunet: 0x0e00
 			{ 12'h300 }, //         uart: 0x0c00
 			{ 12'h280 }, //     zipscope: 0x0a00
 			{ 12'h200 }, //     vidscope: 0x0800
@@ -1681,8 +1681,8 @@ module	main(i_clk, i_reset,
 			{ 12'hf80 }, //     wb32_dio
 			{ 12'hf80 }, //        pxclk
 			{ 12'hf80 }, //          net
+			{ 12'hf80 }, //        icape
 			{ 12'hf80 }, //       cpunet
-			{ 12'hf80 }, //          cfg
 			{ 12'hf80 }, //         uart
 			{ 12'hf80 }, //     zipscope
 			{ 12'hf80 }, //     vidscope
@@ -1729,8 +1729,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_cyc,
 			wb32_pxclk_cyc,
 			wb32_net_cyc,
+			wb32_icape_cyc,
 			wb32_cpunets_cyc,
-			wb32_cfg_cyc,
 			wb32_uart_cyc,
 			wb32_zipscope_cyc,
 			wb32_vidscope_cyc,
@@ -1743,8 +1743,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_stb,
 			wb32_pxclk_stb,
 			wb32_net_stb,
+			wb32_icape_stb,
 			wb32_cpunets_stb,
-			wb32_cfg_stb,
 			wb32_uart_stb,
 			wb32_zipscope_stb,
 			wb32_vidscope_stb,
@@ -1757,8 +1757,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_we,
 			wb32_pxclk_we,
 			wb32_net_we,
+			wb32_icape_we,
 			wb32_cpunets_we,
-			wb32_cfg_we,
 			wb32_uart_we,
 			wb32_zipscope_we,
 			wb32_vidscope_we,
@@ -1771,8 +1771,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_addr,
 			wb32_pxclk_addr,
 			wb32_net_addr,
+			wb32_icape_addr,
 			wb32_cpunets_addr,
-			wb32_cfg_addr,
 			wb32_uart_addr,
 			wb32_zipscope_addr,
 			wb32_vidscope_addr,
@@ -1785,8 +1785,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_data,
 			wb32_pxclk_data,
 			wb32_net_data,
+			wb32_icape_data,
 			wb32_cpunets_data,
-			wb32_cfg_data,
 			wb32_uart_data,
 			wb32_zipscope_data,
 			wb32_vidscope_data,
@@ -1799,8 +1799,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_sel,
 			wb32_pxclk_sel,
 			wb32_net_sel,
+			wb32_icape_sel,
 			wb32_cpunets_sel,
-			wb32_cfg_sel,
 			wb32_uart_sel,
 			wb32_zipscope_sel,
 			wb32_vidscope_sel,
@@ -1813,8 +1813,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_stall,
 			wb32_pxclk_stall,
 			wb32_net_stall,
+			wb32_icape_stall,
 			wb32_cpunets_stall,
-			wb32_cfg_stall,
 			wb32_uart_stall,
 			wb32_zipscope_stall,
 			wb32_vidscope_stall,
@@ -1827,8 +1827,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_ack,
 			wb32_pxclk_ack,
 			wb32_net_ack,
+			wb32_icape_ack,
 			wb32_cpunets_ack,
-			wb32_cfg_ack,
 			wb32_uart_ack,
 			wb32_zipscope_ack,
 			wb32_vidscope_ack,
@@ -1841,8 +1841,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_idata,
 			wb32_pxclk_idata,
 			wb32_net_idata,
+			wb32_icape_idata,
 			wb32_cpunets_idata,
-			wb32_cfg_idata,
 			wb32_uart_idata,
 			wb32_zipscope_idata,
 			wb32_vidscope_idata,
@@ -1855,8 +1855,8 @@ module	main(i_clk, i_reset,
 			wb32_dio_err,
 			wb32_pxclk_err,
 			wb32_net_err,
+			wb32_icape_err,
 			wb32_cpunets_err,
-			wb32_cfg_err,
 			wb32_uart_err,
 			wb32_zipscope_err,
 			wb32_vidscope_err,
@@ -2178,7 +2178,7 @@ module	main(i_clk, i_reset,
 		.ADDRESS_WIDTH(26),
 		.DATA_WIDTH(128),
 		.AXIS_ID_WIDTH(2)
-	) i2ci (
+	) u_i2c (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_wb_cyc(wb32_i2cs_cyc), .i_wb_stb(wb32_i2cs_stb), .i_wb_we(wb32_i2cs_we),
@@ -2263,7 +2263,7 @@ module	main(i_clk, i_reset,
 		.SYNCHRONOUS(1),
 		.DEFAULT_HOLDOFF(0)
 		// }}}
-	) edidslvscopei(
+	) u_edidslvscope (
 		// {{{
 		.i_data_clk(i_clk), .i_ce(1'b1),
 		.i_trigger(edidslv_dbg[31]), .i_data(edidslv_dbg[30:0]),
@@ -2306,7 +2306,7 @@ module	main(i_clk, i_reset,
 		.SYNCHRONOUS(1),
 		.DEFAULT_HOLDOFF(2044)
 		// }}}
-	) zipscopei(
+	) u_zipscope (
 		// {{{
 		.i_data_clk(i_clk), .i_ce(1'b1),
 		.i_trigger(zip_trigger), .i_data(zip_debug),
@@ -2590,7 +2590,7 @@ module	main(i_clk, i_reset,
 
 	spio #(
 		.NBTN(5), .NLEDS(8), .NSW(8)
-	) spioi(
+	) u_spio (
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_wb_cyc(wb32_spio_cyc), .i_wb_stb(wb32_spio_stb), .i_wb_we(wb32_spio_we),
 			.i_wb_data(wb32_spio_data), // 32 bits wide
@@ -2657,25 +2657,25 @@ module	main(i_clk, i_reset,
 	//
 	//
 `ifdef	VERILATOR
-	reg	r_cfg_ack;
+	reg	r_icape_ack;
 
-	initial	r_cfg_ack = 1'b0;
+	initial	r_icape_ack = 1'b0;
 	always @(posedge i_clk)
-		r_cfg_ack <= wb32_cfg_stb;
-	assign	wb32_cfg_ack   = r_cfg_ack;
-	assign	wb32_cfg_stall = 1'b0;
-	assign	wb32_cfg_idata = 32'h00;
+		r_icape_ack <= wb32_icape_stb;
+	assign	wb32_icape_ack   = r_icape_ack;
+	assign	wb32_icape_stall = 1'b0;
+	assign	wb32_icape_idata = 32'h00;
 `else
 	wbicapetwo #(
 		.LGDIV(ICAPE_LGDIV)
-	) cfgport(
+	) u_icape (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
-		.i_wb_cyc(wb32_cfg_cyc), .i_wb_stb(wb32_cfg_stb), .i_wb_we(wb32_cfg_we),
-			.i_wb_addr(wb32_cfg_addr[5-1:0]),
-			.i_wb_data(wb32_cfg_data), // 32 bits wide
-			.i_wb_sel(wb32_cfg_sel),  // 32/8 bits wide
-		.o_wb_stall(wb32_cfg_stall),.o_wb_ack(wb32_cfg_ack), .o_wb_data(wb32_cfg_idata)
+		.i_wb_cyc(wb32_icape_cyc), .i_wb_stb(wb32_icape_stb), .i_wb_we(wb32_icape_we),
+			.i_wb_addr(wb32_icape_addr[5-1:0]),
+			.i_wb_data(wb32_icape_data), // 32 bits wide
+			.i_wb_sel(wb32_icape_sel),  // 32/8 bits wide
+		.o_wb_stall(wb32_icape_stall),.o_wb_ack(wb32_icape_ack), .o_wb_data(wb32_icape_idata)
 		// }}}
 	);
 `endif
@@ -2687,12 +2687,12 @@ module	main(i_clk, i_reset,
 	// {{{
 
 	//
-	// In the case that there is no wb32_cfg peripheral
+	// In the case that there is no wb32_icape peripheral
 	// responding on the wb32 bus
-	assign	wb32_cfg_ack   = 1'b0;
-	assign	wb32_cfg_err   = (wb32_cfg_stb);
-	assign	wb32_cfg_stall = 0;
-	assign	wb32_cfg_idata = 0;
+	assign	wb32_icape_ack   = 1'b0;
+	assign	wb32_icape_err   = (wb32_icape_stb);
+	assign	wb32_icape_stall = 0;
+	assign	wb32_icape_idata = 0;
 
 	// }}}
 	// }}}
@@ -2706,7 +2706,7 @@ module	main(i_clk, i_reset,
 		.SYNCHRONOUS(0),
 		.DEFAULT_HOLDOFF(8188)
 		// }}}
-	) vidscopei(
+	) u_vidscope (
 		// {{{
 		.i_data_clk(i_pixclk), .i_ce(hdmidbg_ce),
 		.i_trigger(hdmidbg_trigger), .i_data(hdmiclr_debug),
@@ -3049,7 +3049,7 @@ module	main(i_clk, i_reset,
 		.OPT_CFG(1'b0)
 `endif
 		// }}}
-	) flashi(
+	) u_flash (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
 		// Primary memory reading inputs
@@ -3544,7 +3544,7 @@ module	main(i_clk, i_reset,
 
 	wbgpio	#(
 		.NIN(NGPI), .NOUT(NGPO), .DEFAULT(INITIAL_GPIO)
-	) gpioi(
+	) u_gpio (
 		// {{{
 		.i_clk(i_clk),
 		.i_wb_cyc(wb32_gpio_cyc), .i_wb_stb(wb32_gpio_stb), .i_wb_we(wb32_gpio_we),
@@ -3594,7 +3594,7 @@ module	main(i_clk, i_reset,
 		.ADDRESS_WIDTH(26),
 		.DATA_WIDTH(128),
 		.AXIS_ID_WIDTH(2)
-	) edidi (
+	) u_edid (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_wb_cyc(wb32_edids_cyc), .i_wb_stb(wb32_edids_stb), .i_wb_we(wb32_edids_we),
@@ -3769,7 +3769,7 @@ module	main(i_clk, i_reset,
 		.LGMEMSZ(18),
 		.DW(128),
 		.EXTRACLOCK(1)
-	) bkrami(
+	) u_bkram (
 		.i_clk(i_clk),
 		.i_reset(i_reset),
 		.i_wb_cyc(wbwide_bkram_cyc), .i_wb_stb(wbwide_bkram_stb), .i_wb_we(wbwide_bkram_we),

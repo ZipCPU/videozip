@@ -455,7 +455,8 @@ module	meganet #(
 
 	// Unwrap the packet in the TX domain for transmission
 	pktgate #(
-		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1)
+		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1),
+		.OPT_ASYNC_READ(1'b0)
 	) u_arpgate (
 		// {{{
 		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
@@ -550,7 +551,8 @@ module	meganet #(
 	// Buffer the packet in the TX domain for transmission
 	//  .. Wait for the whole packet before transmitting
 	pktgate #(
-		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1)
+		.DW(8), .LGFLEN(8), .OPT_DROP_ON_OVERFLOW(1'b1),
+		.OPT_ASYNC_READ(1'b0)
 	) u_icmpgate (
 		// {{{
 		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
@@ -641,10 +643,11 @@ module	meganet #(
 
 	// Discard anything but whole packets
 	pktgate #(
-		.DW(32), .LGFLEN(9), .OPT_DROP_ON_OVERFLOW(1'b1)
+		.DW(32), .LGFLEN(9), .OPT_DROP_ON_OVERFLOW(1'b1),
+		.OPT_ASYNC_READ(1'b0)
 	) u_dbggate (
 		// {{{
-		.S_AXI_ACLK(i_net_tx_clk), .S_AXI_ARESETN(!tx_reset),
+		.S_AXI_ACLK(i_net_rx_clk), .S_AXI_ARESETN(!rx_reset),
 		//
 		.S_AXIN_VALID(DBGW_VALID), .S_AXIN_READY(DBGW_READY),
 		.S_AXIN_DATA( DBGW_DATA), .S_AXIN_BYTES(DBGW_BYTES[1:0]),

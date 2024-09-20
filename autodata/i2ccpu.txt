@@ -131,7 +131,7 @@
 		.ADDRESS_WIDTH(@$(MASTER.BUS.AWID)),
 		.DATA_WIDTH(@$(MASTER.BUS.WIDTH)),
 		.AXIS_ID_WIDTH(@$(IDW))
-	) @$(PREFIX)i (
+	) u_@$(PREFIX) (
 		// {{{
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)), .i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
 		@$(SLAVE.ANSIPORTLIST),

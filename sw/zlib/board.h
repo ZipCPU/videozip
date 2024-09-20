@@ -459,7 +459,7 @@ static volatile WBSCOPE *const _zipscope = ((WBSCOPE *)0x08000a00);
 static volatile OLEDBW *const _oled = ((OLEDBW *)134223424);
 #endif	// OLEDBW_ACCESS
 #define	_BOARD_HAS_PXPLL
-static volatile unsigned *const _pxclk=((unsigned *)0x08001400;
+static volatile unsigned *const _pxclk=((unsigned *)0x08001400);
 #ifdef	PWRCOUNT_ACCESS
 static volatile unsigned *const _pwrcount = ((unsigned *)0x0800169c);
 #endif	// PWRCOUNT_ACCESS
@@ -475,7 +475,7 @@ static volatile unsigned *const _spio = ((unsigned *)0x080016ac);
 #endif	// SPIO_ACCESS
 #ifdef	CFG_ACCESS
 #define	_BOARD_HAS_ICAPETWO
-static volatile unsigned *const _icape = ((unsigned *)0x08000e00);
+static volatile unsigned *const _icape = ((unsigned *)0x08001000);
 #endif	// CFG_ACCESS
 #ifdef	VIDSCOPE_SCOPE
 #define	_BOARD_HAS_VIDSCOPE
@@ -483,7 +483,7 @@ static volatile WBSCOPE *const _vidscope = ((WBSCOPE *)0x08000800);
 #endif	// VIDSCOPE_SCOPE
 #ifdef	CPUNET_ACCESS
 #define	_BOARD_HAS_CPUNET
-static volatile CPUNET *const _cpunet=((CPUNET *)0x08001000);
+static volatile CPUNET *const _cpunet=((CPUNET *)0x08000e00);
 #endif	// CPUNET_ACCESS
 #ifdef	MEGANET_ACCESS
 #define	_BOARD_HAS_MEGANET

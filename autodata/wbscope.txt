@@ -64,7 +64,7 @@
 		.SYNCHRONOUS(@$(SYNCHRONOUS)),
 		.DEFAULT_HOLDOFF(@$(DEFHOLDOFF))
 		// }}}
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		// {{{
 		.i_data_clk(@$(DATA_CLOCK)), .i_ce(@$(CAPTURECE)),
 		.i_trigger(@$(TRIGGER)), .i_data(@$(DEBUG)),

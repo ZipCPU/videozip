@@ -574,7 +574,7 @@ i_sd_cd_n,
 	// {{{
 
 	xgenclk
-	xgenclki(
+	u_xgenclk (
 		// {{{
 		s_clksync, s_clk_400mhz,
 			w_genclk_ce, w_genclk_word,

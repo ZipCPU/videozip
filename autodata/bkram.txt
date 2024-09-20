@@ -51,7 +51,7 @@
 		.LGMEMSZ(@$(THIS.LGMEMSZ)),
 		.DW(@$(SLAVE.BUS.WIDTH)),
 		.EXTRACLOCK(1)
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		.i_clk(@$(SLAVE.BUS.CLOCK.WIRE)),
 		.i_reset(@$(SLAVE.BUS.CLOCK.RESET)),
 		@$(SLAVE.ANSIPORTLIST)
@@ -86,8 +86,7 @@
 #endif
 #endif
 
-// #define	block_ram	VVAR(_@$(PREFIX)i__DOT__mem)
-#define	block_ram	rootp->main__DOT__@$(PREFIX)i__DOT__mem.m_storage
+#define	block_ram	rootp->main__DOT__u_@$(PREFIX)__DOT__mem.m_storage
 
 @$BUSBYTES=@$(SLAVE.BUS.WIDTH)/8
 @SLAVE.ORDER=1

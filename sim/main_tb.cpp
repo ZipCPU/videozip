@@ -103,8 +103,7 @@
 #endif
 #endif
 
-// #define	block_ram	VVAR(_bkrami__DOT__mem)
-#define	block_ram	rootp->main__DOT__bkrami__DOT__mem.m_storage
+#define	block_ram	rootp->main__DOT__u_bkram__DOT__mem.m_storage
 
 class	MAINTB : public TESTB<Vmain> {
 public:

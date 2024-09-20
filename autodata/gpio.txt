@@ -129,7 +129,7 @@
 
 	wbgpio	#(
 		.NIN(NGPI), .NOUT(NGPO), .DEFAULT(INITIAL_@$(DEVID))
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		// {{{
 		.i_clk(i_clk),
 		@$(SLAVE.ANSIPORTLIST),

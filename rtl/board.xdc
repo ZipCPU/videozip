@@ -369,9 +369,7 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *clksysclkct
 ## No XDC.INSERT tag in cec
 ## No XDC.INSERT tag in oled
 ## No XDC.INSERT tag in pxclk
-## From netbus
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_net/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_net/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_net/dbg_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_net/dbg_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+## No XDC.INSERT tag in netbus
 ## No XDC.INSERT tag in netdirs
 ## No XDC.INSERT tag in pwrcount
 ## No XDC.INSERT tag in alt
@@ -382,16 +380,16 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_
 ## No XDC.INSERT tag in wbu_arbiter
 ## No XDC.INSERT tag in zip_alt_uic
 ## No XDC.INSERT tag in zip_alt_mpc
-## No XDC.INSERT tag in cfg
+## No XDC.INSERT tag in icape
 ## From vidscope
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/br_config*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/GEN_ASYNC.q_*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/br_holdoff*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/dr_stopped*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/o_pixdebug*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/o_bus_data*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/waddr*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/this_addr*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_triggered*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_stopped*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/dr_primed*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/ASYNC_STATUS.q_oflags*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/vidscopei/GEN_ASYNC.r_reset_complete*}] -to [get_cells -hier -filter {NAME=~thedesign/vidscopei/GEN_ASYNC.q_reset_complete*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/br_config*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/GEN_ASYNC.q_*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/br_holdoff*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/dr_stopped*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/o_pixdebug*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/o_bus_data*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/waddr*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/this_addr*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/dr_triggered*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/ASYNC_STATUS.q_oflags*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/dr_stopped*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/ASYNC_STATUS.q_oflags*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/dr_primed*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/ASYNC_STATUS.q_oflags*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_vidscope/GEN_ASYNC.r_reset_complete*}] -to [get_cells -hier -filter {NAME=~thedesign/u_vidscope/GEN_ASYNC.q_reset_complete*}] 6.0
 ## No XDC.INSERT tag in cpunet
 ## No XDC.INSERT tag in KEYS
 ## No XDC.INSERT tag in RESET_ADDRESS
@@ -403,13 +401,9 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *afifo*/wgra
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *afifo*/rgray_r*}] -to [ get_cells -hier -filter {NAME =~ *afifo*/rgray_cross*}] 8.0
 
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset*}]  -to [ get_cells -hier -filter {NAME =~*n_tx_reset*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_tx_reset*}]   -to [ get_cells -hier -filter {NAME =~*u_icmpstream/M_AXIN*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/*afifo*}]        -to [ get_cells -hier -filter {NAME =~*u_net/*afifo*/GEN_REGISTERED_READ.o_rd_data*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*net_core/preq_tx_reset*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/o_net_reset*}]  -to [ get_cells -hier -filter {NAME =~*net_core/q_tx_reset*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_net/u_icmpstream/M_AXIN_VALID*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_net/u_icmpstream/M_AXIN_DATA*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *sdrami/r_sys_reset*}]    -to [ get_cells -hier -filter {NAME =~*u_net/u_icmpstream/M_AXIN_LAST*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/net_core/tfrtxspd/a_req*}]  -to [ get_cells -hier -filter {NAME =~*u_net/net_core/tfrtxspd/b_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/net_core/tfrtxspd/a_data*}] -to [ get_cells -hier -filter {NAME =~*u_net/net_core/tfrtxspd/o_b_data*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]       -to [ get_cells -hier -filter {NAME =~*txmaci/r_hw*}] 8.0
@@ -429,15 +423,10 @@ set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*o_match*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*rxipci/o_err*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*rxipci/o_err*}] 8.0
-set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*arp/M_AXIN_DATA*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*rxmaci/r_hwmac*}] 8.0
-set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*u_net/u_arp/M_AXIN_DATA*}] 8.0
-set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*u_net/u_arp/M_AXIN_DATA*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_net/net_core/tfr_rxipaddr/b_last*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_net/net_core/tfr_rxipaddr/b_pipe*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_net/net_core/tfr_rxipaddr/b_req*}] 8.0
-set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_net/arp_afifo/rgray_cross*}] 8.0
-set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/n_rx_reset*}]      -to [ get_cells -hier -filter {NAME =~*u_net/arp_afifo/wgray*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/b_last*}]      -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/a_pipe*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/a_data*}]      -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/o_b_data*}] 8.0
 set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *tfr_rxipaddr/a_req*}]       -to [ get_cells -hier -filter {NAME =~*tfr_rxipaddr/o_b_data*}] 8.0
@@ -454,6 +443,9 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/tfr_*
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/tfr_*/a_req*}]       -to [ get_cells -hier -filter {NAME =~ *u_net/tfr*/b_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/tfr_*/b_last*}]       -to [ get_cells -hier -filter {NAME =~ *u_net/tfr*/a_pipe*}] 8.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *u_net/net_core/n_rx_err*}]       -to [ get_cells -hier -filter {NAME =~ *u_net/net_core/rx_err_pipe*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/hw_mac*}]          -to [ get_cells -hier -filter {NAME =~*u_net/u_arp/M_AXIN_DATA*}] 8.0
+set_max_delay   -datapath_only -from [get_cells -hier -filter {NAME=~ *net_core/my_ipaddr*}]       -to [ get_cells -hier -filter {NAME =~*u_net/u_arp/M_AXIN_DATA*}] 8.0
 ## No XDC.INSERT tag in zip_alt_uoc
 ## No XDC.INSERT tag in zip_alt_upc
 ## No XDC.INSERT tag in buildtime
@@ -469,43 +461,41 @@ set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ *thedesign/r
 ## No XDC.INSERT tag in zip_alt_utc
 ## From hdmi
 create_clock -period 10.8 -name PXCLK -waveform { 0.0 5.4 } -add [get_ports i_hdmirx_clk_p ]
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~u_xpxclk/CLOCK_SWITCH.u_prepx/r_sel*}] -to [get_cells -hier -filter {NAME=~ u_xpxclk/CLOCK_SWITCH.u_prepx/u_bufg*}] 7.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_reg}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_reg*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/genhdmi/pix_reset*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_u*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/genhdmi/pix_reset*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmirx_*/reset_pipe*}] 10.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/hdmi_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmirx_*/the_deserdes/reset_pipe*}] 10.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmitx_*/reset_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmitx_*/sync_reset_n*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/GEN_REGISTERED_READ.o_rd_empty*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/GEN_REGISTERED_READ.o_rd_data*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rd_addr*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rgray*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rd_wgray*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/wgray_cross*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmitx_*/reset_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ u_hdmitx_*/sync_reset_n*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/GEN_REGISTERED_READ.o_rd_empty*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/GEN_REGISTERED_READ.o_rd_data*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rd_addr*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rgray*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rd_wgray*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/wgray_cross*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_overlay/primary_skid/LOGIC.r_valid*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rd_addr*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_overlay/primary_skid/LOGIC.r_valid*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/rgray*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/wgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/wgray_cross*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_HDMIIN_TO_AXIVID.u_rxvidxclk/GEN_REGISTERED_READ.o_rd_data*}] 6.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_req*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_ack*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_ack*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_data*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/wgray_cross*}] 5.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] 5.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_req*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_ack*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/u_new_frame/a_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_wb2pix/a_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_ack*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_data*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/o_b_data*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_req*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/b_last*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.u_pix2wb/a_pipe*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/wgray_cross*}] 6.0
+set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/pix_reset_sys*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] 6.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray_cross*}] 7.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/GEN_REGISTERED_READ.o_rd_data*}] 7.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rd_addr*}] 7.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rgray*}] 7.0
 set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.r_pix_reset*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_hdmi/GEN_FRAMEBUF.u_framebuf/GEN_ASYNC_FIFO.pxfifo/rd_wgray*}] 7.0

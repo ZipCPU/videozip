@@ -179,7 +179,7 @@
 		.OPT_CFG(1'b0)
 `endif
 		// }}}
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
 		// Primary memory reading inputs

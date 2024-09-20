@@ -150,9 +150,7 @@
 	// assign	@$(PREFIX)_bytes = 2'b0;
 	assign	@$(PREFIX)_last  = 1'b1;
 	assign	@$(PREFIX)_abort  = 1'b0;
-@XDC.INSERT=
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbgtx_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbgtx_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
-set_max_delay -datapath_only -from [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbg_afifo/mem*}] -to [get_cells -hier -filter {NAME=~ thedesign/u_@$(NET)/dbg_afifo/GEN_REGISTERED_READ.o_rd_data*}] 8.0
+## @XDC.INSERT=
 @RTL.MAKE.GROUP= NETBUS
 @RTL.MAKE.SUBD=proto
 @RTL.MAKE.FILES= netdebug.v netdbgrx.v netdbgtx.v

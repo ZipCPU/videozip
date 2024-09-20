@@ -75,7 +75,7 @@
 
 	spio #(
 		.NBTN(@$(NBTN)), .NLEDS(@$(NLED)), .NSW(@$(NSW))
-	) @$(PREFIX)i(
+	) u_@$(PREFIX) (
 		.i_clk(i_clk), .i_reset(i_reset),
 		@$(SLAVE.ANSIPORTLIST),
 		.i_sw(i_sw), .i_btn(w_btn), .o_led(w_led),

@@ -36,7 +36,7 @@
 ################################################################################
 ##
 ## }}}
-@PREFIX=cfg
+@PREFIX=icape
 @NADDR=32
 @ACCESS=CFG_ACCESS
 @SLAVE.TYPE=OTHER
@@ -65,7 +65,7 @@
 `else
 	wbicapetwo #(
 		.LGDIV(ICAPE_LGDIV)
-	) cfgport(
+	) u_@$(PREFIX) (
 		// {{{
 		.i_clk(i_clk), .i_reset(i_reset),
 		@$(SLAVE.ANSIPORTLIST)
@@ -117,7 +117,7 @@
 #define	CFG_BOOTSTS	22
 #define	CFG_CTL1	24
 #define	CFG_BSPI	31
-@BDEF.IONAME=io_icape[32]
+@BDEF.IONAME=_icape[32]
 @BDEF.IOTYPE=unsigned
 @BDEF.OSDEF=_BOARD_HAS_ICAPETWO
 @BDEF.OSVAL=static volatile @$THIS.BDEF.IOTYPE *const _icape = ((unsigned *)@$[0x%08x](REGBASE));

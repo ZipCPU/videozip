@@ -61,7 +61,7 @@
 	// {{{
 
 	xgenclk
-	x@$(PREFIX)i(
+	u_x@$(PREFIX) (
 		// {{{
 		s_clksync, s_clk_400mhz,
 			w_@$(PREFIX)_ce, w_@$(PREFIX)_word,

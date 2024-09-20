@@ -79,15 +79,65 @@ module axincdc #(
 	reg	s_midpkt, s_abort;
 	wire	[FW-1:0]	wr_data, rd_data;
 
+	// Incoming skidbuffer
+	// {{{
+	localparam [0:0]	OPT_SKIDBUFFER = 1'b1;
+	wire			skd_valid, skd_last, skd_abort, skd_ready;
+	wire	[DW-1:0]	skd_data;
+	wire	[LGBYTES-1:0]	skd_bytes;
+
+	generate if (OPT_SKIDBUFFER)
+	begin : GEN_SKIDBUFFER
+		wire	[DW+$clog2(DW/8)-1:0]	skd_in, skd_out;
+
+		netskid #(
+			.DW(DW + $clog2(DW/8))
+		) u_netskid (
+			.i_clk(S_CLK), .i_reset(!S_ARESETN),
+			//
+			.S_AXIN_VALID(S_VALID), .S_AXIN_READY(S_READY),
+			.S_AXIN_DATA(skd_in),
+			.S_AXIN_LAST(S_LAST), .S_AXIN_ABORT(S_ABORT),
+			//
+			.M_AXIN_VALID(skd_valid), .M_AXIN_READY(skd_ready),
+			.M_AXIN_DATA(skd_out),
+			.M_AXIN_LAST(skd_last), .M_AXIN_ABORT(skd_abort)
+		);
+
+		assign	skd_data  = skd_out[DW-1:0];
+		if (DW <= 8)
+		begin : NO_SKD_BYTES
+			assign	skd_in = S_DATA;
+			assign	skd_bytes = 0;
+			// Keep Verilator happy
+			// Verilator lint_off UNUSED
+			wire	unused_wrdata;
+			assign	unused_wrdata = &{ 1'b0, S_BYTES };
+			// Verilator lint_on  UNUSED
+		end else begin : COUNT_SKD_BYTES
+			assign	skd_in = { S_BYTES, S_DATA };
+			assign	skd_bytes = skd_out[DW +: $clog2(DW/8)];
+		end
+
+	end else begin : NO_SKIDBUFFER
+		assign	skd_valid = S_VALID;
+		assign	S_READY   = skd_ready;
+		assign	skd_data  = S_DATA;
+		assign	skd_bytes = S_BYTES;
+		assign	skd_last  = S_LAST;
+		assign	skd_abort = S_ABORT;
+	end endgenerate
+	// }}}
+
 	// s_midpkt
 	// {{{
 	always @(posedge S_CLK)
 	if (!S_ARESETN)
 		s_midpkt <= 1'b0;
-	else if (S_ABORT && (!S_VALID || S_READY))
+	else if (skd_abort && (!skd_valid || skd_ready))
 		s_midpkt <= 1'b0;
-	else if (S_VALID && S_READY)
-		s_midpkt <= !S_LAST;
+	else if (skd_valid && skd_ready)
+		s_midpkt <= !skd_last;
 	// }}}
 
 	// s_abort
@@ -97,31 +147,31 @@ module axincdc #(
 		s_abort <= 1'b0;
 	else if (!w_full)
 		s_abort <= 1'b0;
-	else if (s_midpkt && S_ABORT && (!S_VALID || S_READY))
+	else if (s_midpkt && skd_abort && (!skd_valid || skd_ready))
 		s_abort <= 1'b1;
 	// }}}
 
 	generate if (DW <= 8)
 	begin : WR_BYTE_DATA
-		assign	wr_data = { S_LAST, S_DATA };
+		assign	wr_data = { skd_last, skd_data };
 
 		// Keep Verilator happy
 		// Verilator lint_off UNUSED
 		wire	unused_wrdata;
-		assign	unused_wrdata = &{ 1'b0, S_BYTES };
+		assign	unused_wrdata = &{ 1'b0, skd_bytes };
 		// Verilator lint_on  UNUSED
 	end else begin : GEN_WR_DATA
-		assign	wr_data = { S_LAST, S_BYTES, S_DATA };
+		assign	wr_data = { skd_last, skd_bytes, skd_data };
 	end endgenerate
 
 	afifo #(
 		.LGFIFO(LGFIFO),
-		.WIDTH(1+FW),
+		.WIDTH(1+FW)
 	) u_afifo (
 		// {{{
 		.i_wclk(S_CLK),		.i_wr_reset_n(S_ARESETN),
-		.i_wr(s_abort || (S_VALID && !S_ABORT) || (S_ABORT&& s_midpkt)),
-		.i_wr_data({ s_abort || (S_ABORT && s_midpkt), wr_data }),
+		.i_wr(s_abort || (skd_valid && !skd_abort ) || (skd_abort && s_midpkt)),
+		.i_wr_data({ s_abort || (skd_abort && s_midpkt), wr_data }),
 		.o_wr_full(w_full),
 		//
 		.i_rclk(M_CLK),		.i_rd_reset_n(M_ARESETN),
@@ -141,6 +191,6 @@ module axincdc #(
 	end endgenerate
 
 	assign	M_VALID = !w_empty;
-	assign	S_READY = S_ABORT || (!w_full && !s_abort);
+	assign	skd_ready = skd_abort || (!w_full && !s_abort);
 	assign  M_ABORT = w_abort && M_VALID;
 endmodule
