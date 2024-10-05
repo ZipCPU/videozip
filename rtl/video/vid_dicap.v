@@ -55,7 +55,7 @@ module	vid_dicap (
 	reg		sof, gated;
 
 	wire		gbx_valid, gbx_ready, gbx_last, gbx_iready;
-	wire	[1:0]	ign_gbx_bytes;
+	wire	[2:0]	ign_gbx_bytes;
 	wire	[31:0]	gbx_data;
 
 	always @(posedge i_clk)
@@ -79,7 +79,7 @@ module	vid_dicap (
 	) gearbox (
 		.i_clk(i_clk), .i_reset(i_reset), .i_soft_reset(1'b0),
 		.S_VALID(S_VALID && !gated), .S_READY(gbx_iready),
-		.S_DATA({ S_DATA, 24'h0 }), .S_BYTES(2'b01), .S_LAST(S_LAST),
+		.S_DATA({ S_DATA, 24'h0 }), .S_BYTES(3'b01), .S_LAST(S_LAST),
 		.M_VALID(gbx_valid), .M_READY(gbx_ready),
 		.M_DATA(gbx_data), .M_BYTES(ign_gbx_bytes),
 		.M_LAST(gbx_last)

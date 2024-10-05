@@ -111,7 +111,7 @@ module	vidpipe #(
 
 	// Local declarations
 	// {{{
-	localparam [0:0]	OPT_DATA_ISLAND = 1'b0;
+	localparam [0:0]	OPT_DATA_ISLAND = 1'b1;
 
 	localparam	CWID = $clog2(CLOCKFREQ_HZ);
 	localparam	WBLSB = $clog2(DW/8);
@@ -293,7 +293,9 @@ module	vidpipe #(
 	reg	[2:0]	dbg_sel_sys;
 	wire	[2:0]	dbg_sel;
 	// Verilator lint_off UNUSED
+	wire		pixdbg_valid;
 	wire	[31:0]	src_debug, tx_debug, alph_debug, pip_debug, vga_debug;
+	wire	[29:0]	raw_hdmi;
 
 	wire		di_dbg_ce, di_dbg_trigger, di_alt_valid;
 	wire	[31:0]	di_debug, di_alt_debug;
@@ -843,6 +845,9 @@ module	vidpipe #(
 	wire		di_valid, di_ready, di_last;
 	wire	[7:0]	di_data;
 
+	wire		pktdbg_valid;
+	wire	[31:0]	pkt_debug;
+
 	generate if (OPT_HDMIIN)
 	begin : GEN_HDMIIN_TO_AXIVID
 		// {{{
@@ -922,18 +927,35 @@ module	vidpipe #(
 						rx_hlast, rx_vlast, rx_data //26
 				};
 
+		wire		ign_dbg_full, dbg_empty;
 		afifo #(
-			.WIDTH(26+32+32)
+			.WIDTH(32+32+30)
+		) u_scopexclk (
+			// {{{
+			.i_wclk(i_hdmiclk), .i_wr_reset_n(hdmi_reset_n),
+			.i_wr(1'b1), .i_wr_data({ s_debug, v_debug,
+				i_hdmi_blu, i_hdmi_grn, i_hdmi_red }),
+			.o_wr_full(ign_dbg_full),
+			//
+			.i_rclk(i_pixclk), .i_rd_reset_n(pix_reset_n),
+			.i_rd(1'b1), .o_rd_data({ src_debug, vga_debug,
+				raw_hdmi }),
+			.o_rd_empty(dbg_empty)
+			// }}}
+		);
+		assign	pixdbg_valid = !dbg_empty;
+
+		afifo #(
+			.WIDTH(26)
 		) u_rxvidxclk (
 			// {{{
 			.i_wclk(i_hdmiclk), .i_wr_reset_n(hdmi_reset_n),
-			.i_wr(w_valid), .i_wr_data({ s_debug,
-				v_debug, w_vlast, w_hlast, w_data }),
+			.i_wr(w_valid),.i_wr_data({ w_vlast, w_hlast, w_data }),
 			.o_wr_full(af_full),
 			//
 			.i_rclk(i_pixclk), .i_rd_reset_n(pix_reset_n),
-			.i_rd(rx_ready), .o_rd_data({ src_debug,
-				vga_debug, rx_vlast, rx_hlast, rx_data }),
+			.i_rd(rx_ready), .o_rd_data({ rx_vlast, rx_hlast,
+							rx_data }),
 			.o_rd_empty(af_empty)
 			// }}}
 		);
@@ -1037,6 +1059,38 @@ module	vidpipe #(
 				// }}}
 			);
 
+			wire		pktdbg_empty;
+			wire	[31:0]	hdmi_pkt_debug;
+			// Verilator lint_off UNUSED
+			wire		ign_pkt_full;
+			// Verilator lint_on  UNUSED
+
+			assign	hdmi_pkt_debug = {
+				dis_valid && dis_last,	// TRIGGER
+				// 3+8, 2+8, 3+8
+				dis_valid, !dis_full, dis_last, dis_data[6:0],
+				pktdec_valid, pktdec_last, pktdec_data,
+				ipkt_valid, ipkt_hdr, ipkt_last, ipkt_data
+				};
+
+			afifo #(
+				.WIDTH(32)
+			) u_pktdbgxclk (
+				// {{{
+				.i_wclk(i_hdmiclk),
+				.i_wr_reset_n(hdmi_reset_n),
+				.i_wr(1'b1),
+				.i_wr_data(hdmi_pkt_debug),
+				.o_wr_full(ign_pkt_full),
+				//
+				.i_rclk(i_pixclk), .i_rd_reset_n(pix_reset_n),
+				.i_rd(1'b1),
+					.o_rd_data(pkt_debug),
+				.o_rd_empty(pktdbg_empty)
+				// }}}
+			);
+			assign	pktdbg_valid = !pktdbg_empty;
+
 			afifo #(
 				.WIDTH(9)
 			) u_disxck (
@@ -1047,7 +1101,7 @@ module	vidpipe #(
 				.i_wr_data({ dis_last, dis_data }),
 				.o_wr_full(dis_full),
 				//
-				.i_rclk(i_pixclk), .i_rd_reset_n(!pix_reset),
+				.i_rclk(i_pixclk), .i_rd_reset_n(pix_reset_n),
 				.i_rd(di_ready),
 					.o_rd_data({ di_last, di_data }),
 				.o_rd_empty(dis_empty)
@@ -1062,12 +1116,22 @@ module	vidpipe #(
 			assign	di_last  = 1'b0;
 			assign	di_data = 8'h0;
 
+			assign	pktdbg_valid = 1'b0;
+			assign	pkt_debug = 32'h0;
+
 			// Verilator lint_off UNUSED
 			wire	di_unused;
 			assign	di_unused = &{ 1'b0, di_ready };
 			// Verilator lint_on  UNUSED
 		end
 
+		// Keep Verilator happy
+		// {{{
+		// Verilator lint_off UNUSED
+		wire	unused_dbg;
+		assign	unused_dbg = &{ 1'b0, ign_dbg_full };
+		// Verilator lint_on UNUSED
+		// }}}
 		// }}}
 	end else begin : NO_GEN_AXIVID
 		// {{{
@@ -1948,11 +2012,11 @@ module	vidpipe #(
 	//
 	// HDMI packet processing
 	// {{{
+	wire	[31:0]	genpkt_debug;
+
 	generate if (OPT_DATA_ISLAND)
 	begin : GEN_DATA_ISLAND
 		// {{{
-		wire		pktdec_valid, pktdec_hdr, pktdec_last;
-		wire	[7:0]	pktdec_data;
 		wire		ign_dicap_ready;
 
 		hdmigenpkt
@@ -1973,6 +2037,16 @@ module	vidpipe #(
 			.M_LAST( opkt_last)
 			// }}}
 		);
+
+		assign	genpkt_debug = { opkt_valid && opkt_ready && opkt_last,
+			7'h0,
+			// 12b
+			di_valid, di_ready, 1'b0, di_last,
+				di_data,
+			// 12b
+			opkt_valid, opkt_ready, opkt_hdr, opkt_last,
+				opkt_data
+			};
 
 		vid_dicap	// A basic 8b:32b gearbox via zipdma_rxgears
 		u_dicap (
@@ -2018,6 +2092,8 @@ module	vidpipe #(
 
 		assign	di_ready = 1'b1;
 
+		assign	genpkt_debug = 32'h0;
+
 		// Keep Verilator happy
 		// {{{
 		// Verilator lint_off UNUSED
@@ -2037,6 +2113,7 @@ module	vidpipe #(
 
 	axishdmi #(
 		.HW(LGDIM), .VW(LGDIM),
+		.OPT_DATAISLAND(OPT_DATA_ISLAND),
 		.OPT_RESYNC_ON_VLAST(1'b1)
 	) genhdmi (
 		// {{{
@@ -2077,15 +2154,21 @@ module	vidpipe #(
 
 	always @(posedge i_pixclk)
 	case(dbg_sel)
-	3'b000:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, src_debug[31],  src_debug };
+	3'b000:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { pixdbg_valid, src_debug[31],  src_debug };
 	3'b001:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, alph_debug[31], alph_debug };
 	3'b010:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, pip_debug[31],  pip_debug };
-	3'b011:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31],   tx_debug };
-	3'b100:	{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
+	3'b011:	begin
+		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31],   tx_debug };
+		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, genpkt_debug[31], genpkt_debug };
+		end
+	3'b100: begin
+		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
+		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { pktdbg_valid, pktdbg_valid && pkt_debug[31], pkt_debug };
+		end
 	// 3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
 	//		{ di_alt_valid, di_alt_valid, di_alt_debug };
-	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, vga_debug[31], 2'b00, i_hdmi_blu, i_hdmi_grn, i_hdmi_red };
-	3'b110: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, vga_debug[31], vga_debug };
+	3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { pixdbg_valid, vga_debug[31], 2'b00, raw_hdmi };
+	3'b110: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { pixdbg_valid, vga_debug[31], vga_debug };
 	default:
 		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { 1'b1, tx_debug[31], tx_debug };
 	endcase

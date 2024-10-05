@@ -464,11 +464,17 @@ module	hdmi2vga #(
 		r_vga_green <= sgrn_pix;
 		r_vga_blue  <= sblu_pix;
 
-		if (|sblu_aux[5:4] && (!video_period || non_video_data))
+		// AUX[6] == GUARD encoding
+		// AUX[5] == TERC4 encoding
+		// AUX[4] == control encoding
+		if ((!sblu_aux[6] || sblu_aux[0]
+					|| !sgrn_aux[6] || !sred_aux[6])
+				&& (|sblu_aux[5:4])
+				&& (!video_period || non_video_data))
 		begin
 			// If blue is either a control word or a TERC4 data
 			// island packet word, then it contains our V & H sync
-			// channels.
+			// channels.  Ignore any potential video guard pixels
 			o_vsync <= sblu_ctl[1];
 			o_hsync <= sblu_ctl[0];
 		end
@@ -537,6 +543,24 @@ module	hdmi2vga #(
 	always @(posedge i_clk)
 	begin
 		o_debug <= dbg_vga;
+		o_debug <= 0;
+
+		o_debug[28] <= o_pix_valid;
+		o_debug[27] <= o_vsync;
+		o_debug[26] <= o_hsync;
+		o_debug[25:24] <= { sgrn_aux[5], sred_aux[5] };	// 2
+		o_debug[23:20] <= sgrn_aux[3:0];	// 4
+		o_debug[19:16] <= sred_aux[3:0];	// 4
+		o_debug[15:11] <= sblu_aux[6:2];	// 5
+		o_debug[ 10] <= M_DI_VALID;		// 11
+		o_debug[  9] <= M_DI_HDR;
+		o_debug[  8] <= M_DI_LAST;
+		o_debug[7:0] <= M_DI_DATA;
+
+		// o_debug[30:28] <=   ublu_aux[6:4];
+		// o_debug[27:20] <=    dbg_blu[7:0];
+		// o_debug[19:10] <=   blu_word[9:0];
+		// o_debug[ 9: 0] <= i_hdmi_blu[9:0];
 
 		// o_debug[31] <= video_start_red[0];
 		// o_debug[30] <= video_start_grn[0];
