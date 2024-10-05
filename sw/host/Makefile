@@ -104,6 +104,8 @@ zipstate: $(OBJDIR)/zipstate.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 exregs: $(OBJDIR)/exregs.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
+testsync: $(OBJDIR)/testsync.o $(BUSOBJS)
+	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 excheck: $(OBJDIR)/excheck.o $(BUSOBJS)
 	$(CXX) $(CFLAGS) $^ $(LIBS) -o $@
 rdclocks: $(OBJDIR)/rdclocks.o $(BUSOBJS)

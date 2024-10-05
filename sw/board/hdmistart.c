@@ -277,6 +277,72 @@ main(int argc, char ** argv) {
 	}
 	// }}}
 
+	// Adjust EDID to something our PLLs can handle
+	// {{{
+	txstr("Transforming EDID ...\n");
+	// Adjust standard timings ... we don't support 146 or 162MHz
+	// **THIS IS SPECIFIC TO MY PERSONAL PROJECTOR**
+	_edidslv[0x30] = _edidslv[0x31] = 1;	// Invalidate 146MHz std timing
+	_edidslv[0x32] = _edidslv[0x33] = 1;	// Invalidate 162MHz std timing
+
+	/*
+	for(int k=0; k<2; k++) {
+		pixclk_mhz = (_edidslv[37+k*18]&0x0ff)	// LSB
+				+ ((_edidslv[38+k*18]&0x0ff)*256); // MSB
+		// MAX frequency we support is ... X * 15 = 1600MHz,
+		//			or about 100MHz
+		// MIN frequency is thus X * 15 == 800MHz, or about 53MHz
+		if (pixclk_mhz > 10800) {
+			pixclk_mhz >>= 1;
+			_edidslv[37+k*18] = pixclk_mhz & 0x0ff;
+			_edidslv[38+k*18] = (pixclk_mhz >> 8) & 0x0ff;
+		}
+	}
+	*/
+
+	// Duplicate detailed timing #2 into the #1 position
+	for(int k=0; k<18; k++)
+		_edidslv[0x36+k] = _edidslv[0x36+18+k];
+
+	/*
+	if (_edidslv[0x36+2*18] == 0x0fd) {
+		unsigned	pixclk_mhz;
+
+		// If monitor specifies clock limits, fix them at 110MHz
+		pixclk_mhz = (_edidslv[37+2*18 + 9] & 0x0ff) * 10;
+		if (pixclk_mhz > 110)
+			_edidslv[37+2*18+9] = 0x0b;	// 110MHz
+	}
+	*/
+	_edidslv[99] = 0x0b;
+
+	// The extension block ...
+	// Disable support for YCbCr formats (NOTE: this violates HDMI std)
+	if (_edidslv[128] == 2 && _edidslv[129] == 3) {
+		_edidslv[131] &= 0xcf;
+
+		// Drop support fr 148.5MHz, declare native support for 74.25MHz
+		if (_edidslv[133] == 0x90)
+			_edidslv[133] = 34|0x80;
+		// Drop support fr 148.5MHz, declare native support for 74.25MHz
+		if (_edidslv[134] == 31)
+			_edidslv[134] = 32;
+	}
+
+	// Now re-establish the checksum
+	{
+		unsigned sum = 0;
+		for(int k=0; k<127; k++) {
+			sum = sum + (_edidslv[k] & 0x0ff);
+		} _edidslv[127] = (-sum) & 0x0ff;
+
+		sum = 0;
+		for(int k=0; k<127; k++) {
+			sum = sum + (_edidslv[128+k] & 0x0ff);
+		} _edidslv[255] = (-sum) & 0x0ff;
+	}
+	// }}}
+
 	// EDID is automatically forwarded
 
 	// Assert the upstream hotplug, and enable the HDMI port--necessary

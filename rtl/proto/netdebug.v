@@ -475,9 +475,9 @@ module	netdebug #(
 	) idle(
 		.i_clk(i_clk), .i_reset(i_reset || cmd_reset),
 		.i_stb(compress_valid || null_valid || w_null_pkt),
-			.i_word(null_valid ? { idle_null, compress_data[27:0] }
+			.i_word((null_valid || w_null_pkt) ? { idle_null, compress_data[27:0] }
 					: compress_data),
-			.i_last(null_valid || compress_last),
+			.i_last(null_valid || w_null_pkt || compress_last),
 			.o_busy(idle_busy),
 		.i_aux(i_gpio[9:8]), .i_cts(1'b1), .i_int(i_interrupt),
 			.i_fifo_err(ofifo_err),

@@ -67,14 +67,17 @@ void	closeup(int v) {
 
 class	VIDSCOPE : public SCOPE {
 public:
-	VIDSCOPE(DEVBUS *fpga, unsigned addr, bool vecread = true)
-		: SCOPE(fpga, addr, false, vecread) {};
+	unsigned VMODE = 6;
+
+	VIDSCOPE(DEVBUS *fpga, unsigned addr, unsigned fps, bool vecread = true)
+		: SCOPE(fpga, addr, false, vecread) {
+		VMODE = (fps >> 29) & 7;
+	};
 	~VIDSCOPE(void) {}
 	virtual	void	decode(DEVBUS::BUSW val) const {
 	}
 
 	virtual	void	define_traces(void) {
-		const	unsigned VMODE = 1;
 		switch(VMODE) {
 		case 0: // SRC DEBUG
 			register_trace("FRAME_LAST", 1, 30);
@@ -102,15 +105,42 @@ public:
 			register_trace("PIPE_DATA",  24, 0);
 			break;
 		case 3: // TRANSMIT
-			register_trace("FRAME_LAST", 1, 30);
-			register_trace("OUT_VALID",  1, 27);
-			register_trace("OUT_READY",  1, 26);
-			register_trace("OUT_HLAST",  1, 25);
-			register_trace("OUT_VLAST",  1, 24);
-			register_trace("OUT_DATA",  24,  0);
+			// register_trace("FRAME_LAST", 1, 30);
+			// register_trace("OUT_VALID",  1, 27);
+			// register_trace("OUT_READY",  1, 26);
+			// register_trace("OUT_HLAST",  1, 25);
+			// register_trace("OUT_VLAST",  1, 24);
+			// register_trace("OUT_DATA",  24,  0);
+
+			register_trace("di_valid",  1, 23);
+			register_trace("di_ready",  1, 22);
+			// register_trace("di_hdr",  24,  0);
+			register_trace("di_last",  1, 20);
+			register_trace("di_data",  8, 12);
+
+			register_trace("opkt_valid", 1, 11);
+			register_trace("opkt_ready", 1, 10);
+			register_trace("opkt_hdr",   1,  9);
+			register_trace("opkt_last",  1,  8);
+			register_trace("opkt_data",  8,  0);
 			break;
 		case 4: // Data Island debug
-			register_trace("DI_DATA", 32, 0);
+			// register_trace("DI_DATA", 32, 0);
+
+			register_trace("dis_valid",    1, 30);
+			register_trace("dis_ready",    1, 29);
+			register_trace("dis_last",     1, 28);
+			register_trace("dis_data",     7, 21);
+			//
+			register_trace("pktdec_valid", 1, 20);
+			register_trace("pktdec_last",  1, 19);
+			register_trace("pktdec_data",  8, 18);
+			//
+			register_trace("ipkt_valid",   1, 10);
+			register_trace("ipkt_hdr",     1,  9);
+			register_trace("ipkt_last",    1,  8);
+			register_trace("ipkt_data",    8,  0);
+
 			break;
 		/*
 		case 5: // RAW Data Island debug
@@ -134,13 +164,45 @@ public:
 			break;
 		case 6: // (CLR=GREEN) HDMI decoding debug
 			// register_trace("trigger", 32, 0);
-			register_trace("sync_valid",       1, 30);
-			register_trace("chosen_match_loc", 4, 26);
-			register_trace("match_loc",        4, 22);
-			register_trace("sync",            10, 12);
-			register_trace("valid_match",      1, 11);
-			register_trace("any_sync",         1, 10);
-			register_trace("i_px",            10, 0);
+			// register_trace("sync_valid",       1, 30);
+			// register_trace("chosen_match_loc", 4, 26);
+			// register_trace("match_loc",        4, 22);
+			// register_trace("sync",            10, 12);
+			// register_trace("valid_match",      1, 11);
+			// register_trace("any_sync",         1, 10);
+			// register_trace("i_px",            10, 0);
+
+			// register_trace("control_sync",   1,30);
+			// register_trace("vid_start_red",  1,29);
+			// register_trace("vid_start_grn",  1,28);
+			// register_trace("vid_start_blu",  1,27);
+			// register_trace("pix_valid",      1,26);
+			// register_trace("o_vsync",        1,25);
+			// register_trace("o_hsync",        1,24);
+			// register_trace("dbg_red",        8,16);
+			// register_trace("dbg_grn",        8, 8);
+			// register_trace("dbg_blu",        8, 0);
+
+// 0x40
+// 0x80
+// 0x80
+// 0x3D
+// DATA: 0x00,0x00,0x00,0x00,0x00....,
+//			0x01, 0x10, 0x01, 0x10, 0x11, 0x00, 0x11, 0x00
+
+			register_trace("pix_valid",   1,28);
+			register_trace("o_vsync",     1,27);
+			register_trace("o_hsync",     1,26);
+			register_trace("sgrn_aux5",   1,25);
+			register_trace("sred_aux5",   1,24);
+			register_trace("sgrn_aux",    4,20);
+			register_trace("sred_aux",    4,16);
+			register_trace("sblu_aux",    5,11);
+			register_trace("M_DI_VALID",  1,10);
+			register_trace("M_DI_HDR",    1, 9);
+			register_trace("M_DI_LAST",   1, 8);
+			register_trace("M_DI_DATA",   8, 0);
+
 			break;
 		default:
 			break;
@@ -154,7 +216,9 @@ int main(int argc, char **argv) {
 	signal(SIGSTOP, closeup);
 	signal(SIGHUP, closeup);
 
-	VIDSCOPE *scope = new VIDSCOPE(m_fpga, WBSCOPE);
+	unsigned fps = m_fpga->readio(R_FPS);
+
+	VIDSCOPE *scope = new VIDSCOPE(m_fpga, WBSCOPE, fps);
 	scope->set_clkfreq_hz(100000000);
 	if (!scope->ready()) {
 		printf("Scope is not yet ready:\n");

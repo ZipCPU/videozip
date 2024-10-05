@@ -103,6 +103,7 @@ module	hdmigate #(
 
 	// lastv
 	// {{{
+	initial	lastv = 0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 		lastv <= 0;	// End of packet pointer is invalid
@@ -233,6 +234,7 @@ module	hdmigate #(
 	end endgenerate
 	// }}}
 
+	initial	{ s_aborting, s_midpacket } <= 0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 		{ s_aborting, s_midpacket } <= 0;
@@ -248,10 +250,14 @@ module	hdmigate #(
 
 	// load
 	// {{{
+	initial	load = 0;
+	initial	M_AXIN_VALID = 0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
+	begin
 		load <= 0;
-	else case({ (S_AXIN_VALID && S_AXIN_READY && S_AXIN_LAST),
+		M_AXIN_VALID <= 1'b0;
+	end else case({ (S_AXIN_VALID && S_AXIN_READY && S_AXIN_LAST),
 				(M_AXIN_VALID && M_AXIN_READY && M_AXIN_LAST) })
 	2'b10: begin
 		load <= load + 1;

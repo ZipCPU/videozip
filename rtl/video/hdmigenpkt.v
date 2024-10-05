@@ -143,6 +143,7 @@ module	hdmigenpkt (
 	end else if (iready && icount >= IPKTLEN)
 	begin
 		ivalid <= !ilast;
+		hdrsreg <= { hdrsreg[29:0], 1'b0 };
 		idata  <= { hdrsreg[30],
 				b3fill[6], b2fill[6], b1fill[6], b0fill[6],
 				b3fill[7], b2fill[7], b1fill[7], b0fill[7] };
@@ -183,7 +184,8 @@ module	hdmigenpkt (
 		.i_clk(i_clk), .i_reset(i_reset),
 		.i_wr(ivalid), .i_data({ ilast, idata }), .o_full(fif_full),
 			.o_fill(fif_fill),
-		.i_rd(M_READY), .o_data({ M_LAST, M_HDR, M_DATA }),
+		.i_rd(loaded != 0 && M_READY),
+			.o_data({ M_LAST, M_HDR, M_DATA }),
 			.o_empty(fif_empty)
 		// }}}
 	);

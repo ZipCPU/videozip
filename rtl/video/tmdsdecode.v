@@ -125,7 +125,7 @@ module	tmdsdecode(
 		10'h18e: begin r_aux <= 7'h26; r_ctl <= 2'h2; end
 		10'h13c: begin r_aux <= 7'h27; r_ctl <= 2'h3; end
 		// This next pixel is also a guard pixel
-		10'h2cc: begin r_aux <= 7'h68; r_ctl <= 2'h0; end
+		10'h2cc: begin r_aux <= 7'h68; r_ctl <= 2'h0; end // BR VidGuard
 		//
 		10'h139: begin r_aux <= 7'h29; r_ctl <= 2'h1; end
 		10'h19c: begin r_aux <= 7'h2a; r_ctl <= 2'h2; end
@@ -136,7 +136,7 @@ module	tmdsdecode(
 		10'h2c3: begin r_aux <= 7'h2f; r_ctl <= 2'h3; end
 		// Guard band characters
 		//10'h2cc:r_aux<= 8'h38; // done above
-		10'h133: begin r_aux <= 7'h41; r_ctl <= 2'h0; end
+		10'h133: begin r_aux <= 7'h41; r_ctl <= 2'h0; end // G VidGuard
 		default: begin end
 		endcase
 	end

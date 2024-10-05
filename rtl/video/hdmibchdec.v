@@ -63,6 +63,7 @@ module	hdmibchdec (
 	reg	[35:0]	bsreg, d0sr, d1sr, d2sr, d3sr, d4sr, d5sr, d6sr,
 			d7sr, lastsr;
 	reg	[4:0]	pkt_count;
+	reg		zero_pkt;
 
 	reg		r_valid, r_last;
 	reg	[7:0]	r_data;
@@ -176,8 +177,11 @@ module	hdmibchdec (
 		d7sr   <= { d7sr[34:0], S_VALID && S_DATA[7] };
 		lastsr <= { lastsr[34:0], S_VALID && S_LAST };
 
+		zero_pkt <= zero_pkt && (!S_VALID || S_DATA == 8'h0);
+
 		if (lastsr[0])
 		begin
+			zero_pkt <= !S_VALID || S_DATA == 8'h0;
 			hdrsr[32:9] <= hdrsr[31:8] ^ dec32[hfill];
 			{ d0sr[32:5], d4sr[32:5] } <= DECODE(
 					{ d0sr[31:4], d4sr[31:4] }, b0fill);
@@ -199,7 +203,9 @@ module	hdmibchdec (
 			pkt_count <= pkt_count + 1;
 
 		if ((!S_VALID && pkt_count != 0)
-				||(S_VALID&& S_LAST && pkt_count[4:0] != 5'd31))
+				||(S_VALID && S_LAST
+					&& ((zero_pkt && S_DATA == 8'h0)
+						|| pkt_count[4:0] != 5'd31)))
 		begin
 			lastsr[0] <= 1'b0;
 			pkt_count <= 0;
@@ -241,6 +247,7 @@ module	hdmibchdec (
 
 		if (i_reset)
 		begin
+			zero_pkt <= 1;
 			lastsr <= 0;
 			pkt_count <= 0;
 			bsreg <= 0;
@@ -259,7 +266,7 @@ module	hdmibchdec (
 			b3fill <= 0;
 		end else if (lastsr[0])
 		begin
-			hfill  <= ECCFN(8'h00, S_HDR);
+			hfill  <= ECCFN(hfill, S_HDR);
 			b0fill <= ECCFN(ECCFN(8'h00, S_DATA[0]), S_DATA[4]);
 			b1fill <= ECCFN(ECCFN(8'h00, S_DATA[1]), S_DATA[5]);
 			b2fill <= ECCFN(ECCFN(8'h00, S_DATA[2]), S_DATA[6]);
