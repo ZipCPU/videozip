@@ -72,6 +72,7 @@ module	hdmibchdec (
 	//
 	// Generate the BCH decode table
 	// {{{
+`ifdef	GENCODE
 	initial begin
 		// 64b Dual error correction (to extent possible)
 		// {{{
@@ -161,6 +162,10 @@ module	hdmibchdec (
 		// 32b zero errors -> zero corrections
 		dec32[8'h0] = 24'h0;
 	end
+`else
+	initial	$readmemh("bchdec64.hex",dec64);
+	initial	$readmemh("bchdec32.hex",dec32);
+`endif
 	// }}}
 
 	always @(posedge i_clk)
@@ -325,8 +330,11 @@ module	hdmibchdec (
 	function automatic [55:0] DECODE(input [55:0] dat, input [7:0] synd);
 		// {{{
 		integer	i;
-		reg	[55:0]	ivec, ovec, vec;
+		reg	[55:0]	vec;
 	begin
+`ifdef	GENCODE
+		reg	[55:0]	ivec, ovec;
+
 		ivec = 0;
 		for(i=0; i<28; i=i+1)
 		begin
@@ -344,6 +352,10 @@ module	hdmibchdec (
 		end
 
 		DECODE = ovec;
+`else
+		vec = dat ^ dec64[synd];
+		DECODE = vec;
+`endif
 	end endfunction
 	// }}}
 

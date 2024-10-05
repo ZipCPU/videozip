@@ -13,6 +13,7 @@ exuart
 flashid
 flashscope
 /frames/
+gendecode
 gpscoeffs
 i2casm
 /i2casm.l
@@ -43,11 +44,14 @@ edidsrc.bin
 qspidump-original.bin
 greentest.sh
 hintst.sh
+/*edid*.bin
 oldregdefs.h
 ramread.sh
 ramwrite.sh
 rawtmds.txt
 rdsynch.sh
+testsync
 tstmem.sh
+tweakedid
 scopdata.txt
 tstmem.sh
