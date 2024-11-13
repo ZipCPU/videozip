@@ -94,7 +94,9 @@ module	vid_wbcamera #(
 		output	wire			S_VID_READY,
 		input	wire	[PW-1:0]	S_VID_DATA,
 		input	wire			S_VID_HLAST,
-		input	wire			S_VID_VLAST
+		input	wire			S_VID_VLAST,
+		//
+		output	reg	[31:0]		o_debug
 		// }}}
 	);
 
@@ -171,8 +173,8 @@ module	vid_wbcamera #(
 	generate if (PW != DW)
 	begin : GEN_SREG
 		// {{{
-		reg		r_valid, r_last, r_vlast;
-		reg	[7:0]	r_data;
+		reg			r_valid, r_last, r_vlast;
+		reg	[SRWIDTH-1:0]	r_data;
 
 		always @(posedge i_pixclk)
 		if (pix_reset)
@@ -251,12 +253,13 @@ module	vid_wbcamera #(
 		assign	sr_data = r_data;
 
 		// Verilator lint_off WIDTH
-		assign	s_ready = (sr_fill <= SRWIDTH) || !afifo_full;
+		assign	s_ready = (sr_fill <= SRWIDTH && !sr_last)
+				|| !afifo_full || pix_clearing;
 		// Verilator lint_on  WIDTH
 		// }}}
 	end else begin : NO_PACKING
 		assign	sr_valid =  s_valid;
-		assign	s_ready  = !afifo_read;
+		assign	s_ready  = afifo_read || pix_clearing;
 		assign	sr_data  = s_data;
 		assign	sr_last  = s_hlast;
 		assign	sr_vlast = s_vlast;
@@ -270,8 +273,8 @@ module	vid_wbcamera #(
 
 	generate if (OPT_ASYNC_CLOCKS)
 	begin : GEN_CLK_XROSSING
-		reg	r_last_clr, r_pix_clearing;
-		wire	pix_clr_ready;
+		reg	last_pix_en;
+		wire	tfr_en_ready, ign_clr_valid;
 
 		afifo #(
 				.WIDTH(DW+2), .LGFIFO(3)
@@ -289,34 +292,30 @@ module	vid_wbcamera #(
 			// }}}
 		);
 
-		tfrstb
-		u_tfrstb (
+		tfrvalue #(
+			.W(1)
+		) u_tfren (
 			.i_a_clk(i_pixclk), .i_a_reset_n(!pix_reset),
-			.i_a_valid(!i_pix_en && !r_last_clr),
-			.o_a_ready(pix_clr_ready),
+			.i_a_valid(i_pix_en != last_pix_en),
+				.o_a_ready(tfr_en_ready), .i_a_data(!i_pix_en),
 
 			.i_b_clk(i_clk), .i_b_reset_n(!i_reset),
-			.o_b_valid(wb_clr),
-			.i_b_ready(1'b1)
+			.o_b_valid(ign_clr_valid), .i_b_ready(1'b1),
+				.o_b_data(wb_clr)
 		);
 
 		always @(posedge i_pixclk)
 		if (pix_reset)
-			r_last_clr <= 1'b1;
-		else if (!i_pix_en)
-			r_last_clr <= 1'b1;
-		else if (r_last_clr)
-			 r_last_clr <= !pix_clr_ready;
+			last_pix_en <= 1'b0;
+		else if (tfr_en_ready)
+			last_pix_en <= i_pix_en;
 
-		always @(posedge i_pixclk)
-		if (pix_reset)
-			r_pix_clearing <= 1'b1;
-		else if (!i_pix_en)
-			r_pix_clearing <= 1'b1;
-		else if (r_pix_clearing)
-			 r_pix_clearing <= r_last_clr || !pix_clr_ready;
+		assign	pix_clearing = !i_pix_en || !last_pix_en;
 
-		assign	pix_clearing = r_pix_clearing || !i_pix_en;
+		// Verilator lint_off UNUSED
+		wire	unused_tfr;
+		assign	unused_tfr = &{ 1'b0, ign_clr_valid };
+		// Verilator lint_on  UNUSED
 	end else begin : NO_ASYNC_FIFO
 		assign	afifo_full  =  sr_valid && !afifo_read;
 		assign	afifo_empty = !sr_valid;
@@ -364,7 +363,7 @@ module	vid_wbcamera #(
 			.o_empty(sfifo_empty)
 	);
 
-	assign	afifo_read = !sfifo_full || sfifo_read;
+	assign	afifo_read = !sfifo_full || sfifo_read || wb_clr;
 
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -484,11 +483,10 @@ module	vid_wbcamera #(
 		o_wb_stb <= 0;
 	end else if (o_wb_cyc)
 	begin
-		if (!i_wb_stall)
+		if (o_wb_stb && !i_wb_stall)
 		begin
-			o_wb_stb <= o_wb_stb && !sfifo_empty && !wb_done;
-			if (o_wb_addr >= line_addr + wide_nwords)
-				o_wb_stb <= 0;
+			if (sfifo_empty || wb_done)
+				o_wb_stb <= 1'b0;
 		end
 
 		if (!o_wb_stb && wb_zero)
@@ -535,7 +533,7 @@ module	vid_wbcamera #(
 
 		initial	r_done = 1'b0;
 		always @(posedge i_clk)
-		if (i_reset || !OPT_ONESHOT)
+		if (i_reset)
 			r_done <= 1'b0;
 		else if (wb_clr || o_err || !i_wb_en || !wb_syncd)
 			r_done <= 1'b0;
@@ -562,6 +560,32 @@ module	vid_wbcamera #(
 
 	assign	o_wb_we = 1'b1;
 	assign	o_wb_sel = {(DW/8){1'b1}};
+	// }}}
+
+	// Debug
+	// {{{
+	always @(posedge i_clk)
+	begin
+		o_debug <= 32'h0;
+
+		o_debug[0 +: 5] <= { o_wb_cyc, o_wb_stb, i_wb_stall, i_wb_ack,
+				i_wb_err };
+
+		// wire	[LGFIFO:0]	sfifo_fill;
+
+		o_debug[5 +: 4] <= { afifo_read, afifo_empty,
+					afifo_vlast && !afifo_empty,
+					afifo_hlast && !afifo_empty };
+		o_debug[9 +: 5] <= { sfifo_read, sfifo_vlast && !sfifo_empty,
+				sfifo_hlast && !sfifo_empty, sfifo_empty,
+						sfifo_full};
+		o_debug[14 +: 8] <= { wb_eol, wb_eof, wb_hlast,
+				wb_vlast, wb_zero,
+				wb_syncd, wb_clr, o_err };
+		o_debug[22 +: LGFIFO] <= sfifo_fill[LGFIFO-1:0];
+
+		o_debug[31] <= wb_clr || o_err;
+	end
 	// }}}
 
 	// Keep Verilator happy

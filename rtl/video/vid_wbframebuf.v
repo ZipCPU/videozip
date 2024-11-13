@@ -106,8 +106,10 @@ module	vid_wbframebuf #(
 		input	wire		M_VID_TREADY,
 		output	wire [PW-1:0]	M_VID_TDATA,
 		output	wire		M_VID_TLAST,
-		output	wire		M_VID_TUSER
+		output	wire		M_VID_TUSER,
 		// }}}
+		output	reg [31:0]	o_pxdebug,
+		output	reg [31:0]	o_debug
 		// }}}
 	);
 
@@ -141,6 +143,9 @@ module	vid_wbframebuf #(
 	wire			fifo_vlast, fifo_hlast;
 	wire			afifo_vlast, afifo_hlast;
 
+	reg			few_outstanding;
+	wire			w_last_ack;
+
 `ifdef	FORMAL
 	wire	i_pixclk = i_clk;
 `endif
@@ -164,11 +169,13 @@ module	vid_wbframebuf #(
 	else if (o_wb_cyc)
 	begin
 		if (!o_wb_stb || !i_wb_stall)
-			o_wb_stb <= !last_request;
+		begin
+			if (o_wb_stb)
+				o_wb_stb <= !last_request;
 
-		if (i_wb_ack && (!o_wb_stb || !i_wb_stall)
-					&& last_request && last_ack)
-			o_wb_cyc <= 1'b0;
+			if ((!o_wb_stb || last_request) && w_last_ack)
+				o_wb_cyc <= 1'b0;
+		end
 	end else if (fifo_fill[LGFIFO:LGBURST] == 0)
 		{ o_wb_cyc, o_wb_stb } <= 2'b11;
 	// }}}
@@ -192,11 +199,21 @@ module	vid_wbframebuf #(
 	// last_ack
 	// {{{
 	always @(posedge i_clk)
+	if (i_reset || !o_wb_cyc)
+		few_outstanding <= 1;
+	else
+		few_outstanding <= wb_outstanding + (o_wb_stb ? 1:0) <= 3;
+
+	always @(posedge i_clk)
 	if (i_reset || !o_wb_cyc || i_wb_err)
 		last_ack <= 0;
 	else
 		last_ack <= (wb_outstanding + (o_wb_stb ? 1:0)
 				<= 1 +(i_wb_ack ? 1:0));
+
+	assign	w_last_ack = (0 && last_ack && i_wb_ack)
+			|| (few_outstanding && !o_wb_stb
+				&& (wb_outstanding[1:0] <= (i_wb_ack ? 1:0)));
 	// }}}
 
 	// last_request
@@ -204,10 +221,17 @@ module	vid_wbframebuf #(
 	always @(posedge i_clk)
 	if (i_reset || !o_wb_cyc)
 		last_request <= 0;
-	else if (wb_outstanding+(o_wb_stb ? 1:0) >= { 1'b0, {(LGBURST){1'b1}} })
-		last_request <= 1;
-	else if (wb_outstanding + fifo_fill + 1 + (o_wb_stb ? 1:0) >= (1<<LGFIFO))
-		last_request <= 1;
+	else begin
+		if (wb_outstanding+(o_wb_stb ? 1:0)
+						>= { 1'b0, {(LGBURST){1'b1}} })
+			last_request <= 1;
+		if (wb_outstanding+(o_wb_stb ? 1:0) + fifo_fill
+						>= { 1'b0, {(LGFIFO){1'b1}} })
+			last_request <= 1;
+		//
+		// if (o_wb_stb && wb_hlast)	// One clock cycle too late
+		//	last_request <= 1;
+	end
 	// }}}
 
 	// o_wb_addr, wb_[hv]pos, wb_[hv]last
@@ -474,7 +498,7 @@ module	vid_wbframebuf #(
 		begin
 			// Verilator lint_off WIDTH
 			afifo_read = (px_count < 2*PW || !px_valid
-				|| (M_VID_TVALID && M_VID_TREADY && M_VID_HLAST));
+				||(M_VID_TVALID && M_VID_TREADY && M_VID_HLAST));
 			// Verilator lint_on  WIDTH
 
 			if (M_VID_TVALID && !M_VID_TREADY)
@@ -493,7 +517,7 @@ module	vid_wbframebuf #(
 		always @(posedge pix_clk)
 		if (pix_reset || pix_clearing)
 			px_valid <= 0;
-		else if (px_lost_sync || !M_VID_TVALID || M_VID_TREADY)
+		else if (!M_VID_TVALID || M_VID_TREADY)
 		begin
 			if (afifo_read)
 				px_valid <= !afifo_empty;
@@ -503,7 +527,15 @@ module	vid_wbframebuf #(
 			else
 				px_valid <= (px_count >= PW);
 				// Verilator lint_on  WIDTH
+
+			if (px_lost_sync)
+				px_valid <= 1'b0;
 		end
+`ifdef	FORMAL
+		always @(*)
+		if (!px_lost_sync)
+			assert(px_valid == (px_count >= PW));
+`endif
 		// }}}
 
 		// px_count
@@ -518,6 +550,9 @@ module	vid_wbframebuf #(
 				px_count <= 0;
 			else if (M_VID_TVALID && M_VID_TREADY)
 			begin
+				if (M_VID_HLAST)
+					px_count <= (afifo_read && !afifo_empty) ? DW : 0;
+				else
 				// Verilator lint_off WIDTH
 				if (afifo_read && !afifo_empty)
 					px_count <= px_count - PW + DW;
@@ -529,6 +564,10 @@ module	vid_wbframebuf #(
 				px_count <= px_count + DW;
 			// Verilator lint_on  WIDTH
 		end
+`ifdef	FORMAL
+		always @(*)
+			assert(px_count <= DW+PW);
+`endif
 		// }}}
 
 		// px_hlast, px_vlast
@@ -556,11 +595,17 @@ module	vid_wbframebuf #(
 			px_data  <= 0;
 		end else if (!M_VID_TVALID || M_VID_TREADY)
 		begin
-			if (afifo_read && !afifo_empty && !px_lost_sync)
+			if (px_lost_sync)
+				px_data <= 0;
+			else if (afifo_read && !afifo_empty)
 			begin
 				if (M_VID_TVALID && M_VID_HLAST)
-					px_data <= { afifo_data, {(PW){1'b0}} };
-				else if (M_VID_TVALID)
+				begin
+					if (OPT_MSB_FIRST)
+						px_data <= { afifo_data, {(PW){1'b0}} };
+					else
+						px_data <= { {(PW){1'b0}}, afifo_data };
+				end else if (M_VID_TVALID)
 					// Verilator lint_off WIDTH
 					px_data <= (px_data << PW)
 						|({ {(PW){1'b0}}, afifo_data } << (2*PW-px_count));
@@ -568,11 +613,23 @@ module	vid_wbframebuf #(
 					px_data <= px_data
 						|({ {(PW){1'b0}}, afifo_data } << (PW-px_count));
 					// Verilator lint_on  WIDTH
+			end else if (M_VID_TVALID && M_VID_HLAST)
+			begin
+				px_data <= 0;
 			end else if (OPT_MSB_FIRST)
 				px_data <= { px_data[SRWID-PW-1:0], {(PW){1'b0}} };
 			else
 				px_data <= { {(PW){1'b0}}, px_data[SRWID-1:PW] };
 		end
+`ifdef	FORMAL
+		reg	[SRWID-1:0]	f_sreg_check;
+
+		always @(*)
+			f_sreg_check = px_data << px_count;
+		always @(*)
+		if (!px_lost_sync)
+			assert(f_sreg_check == 0);
+`endif
 		// }}}
 
 		// px_lost_sync
@@ -628,15 +685,20 @@ module	vid_wbframebuf #(
 		end else if (M_VID_TVALID && M_VID_TREADY)
 		begin
 			m_hpos <= m_hpos + 1;
-			M_VID_HLAST <= (pix_width <= 1) || (m_hpos >= pix_width-2);
+			M_VID_HLAST <= // (pix_width <= 1) ||
+					(m_hpos + 2 >= pix_width);
 			if (M_VID_HLAST)
 			begin
 				m_hpos <= 0;
 				m_vpos <= m_vpos + 1;
-				M_VID_HLAST <= 0;
-				M_VID_VLAST <= (pix_height <= 1) || (m_vpos == pix_height-2);
+				M_VID_HLAST <= 0; // <= (pix_width <= 1);
+				M_VID_VLAST <= // (pix_height <= 1) ||
+						(m_vpos+2 >= pix_height);
 				if (M_VID_VLAST)
+				begin
 					m_vpos <= 0;
+					M_VID_VLAST <= 0;
+				end
 			end
 		end
 		// }}}
@@ -680,6 +742,71 @@ module	vid_wbframebuf #(
 		assign	M_VID_TUSER = M_VID_HLAST;
 		// }}}
 	end endgenerate
+	// }}}
+
+	// System debug
+	// {{{
+	always @(posedge i_clk)
+	begin
+		o_debug <= 0;
+
+		o_debug[0 +: 5] <= { o_wb_cyc, o_wb_stb,
+				i_wb_stall, i_wb_ack, i_wb_err };
+		o_debug[6:5] <= { i_wb_en, wb_pix_en };
+		o_debug[8:7] <= { rx_vlast, rx_hlast };
+		o_debug[9 +: 5] <= { fifo_vlast, fifo_hlast,
+				fifo_read, fifo_empty, ign_fifo_full };
+		// LGFIFO = 7
+		// o_debug[14 +: LGFIFO] <= fifo_fill[LGFIFO-1:0];
+		o_debug[21] <= few_outstanding;
+		o_debug[22 +: LGBURST] <= wb_outstanding[LGBURST-1:0];
+		o_debug[28] <= last_request;
+		o_debug[29] <= w_last_ack;
+
+		if (o_wb_cyc)
+			o_debug[14 +: 6] <= rx_hpos[5:0];
+		else
+			o_debug[14 +: 6] <= wb_hpos[5:0];
+		o_debug[20] <= wb_hlast;
+
+		o_debug[31] <= (o_debug[6:5] != { i_wb_en, wb_pix_en })
+				|| (!o_wb_cyc && rx_hpos != wb_hpos);
+	end
+	// }}}
+
+	// Pixel clock debug
+	// {{{
+	always @(posedge i_pixclk)
+	begin
+		o_pxdebug <= 0;
+
+		o_pxdebug[3:0] <= { M_VID_TVALID, M_VID_TREADY,
+					M_VID_TLAST, M_VID_TUSER };
+
+		/*
+		o_pxdebug[4 +: 4] <= { GEN_REWIDTH.px_valid,
+				GEN_REWIDTH.px_hlast, GEN_REWIDTH.px_vlast,
+				GEN_REWIDTH.px_lost_sync };
+
+		o_pxdebug[8 +: 5] <= GEN_REWIDTH.px_count[7:3];
+		*/
+
+		o_pxdebug[13 +: 4] <= { afifo_read, afifo_vlast, afifo_hlast,
+					afifo_empty };
+
+		// 17, 18, 19, 20 ...
+
+		// p2w_ready might be useful --- but it changes too much
+		// to make the run-length compression useful.
+		// o_pxdebug[20] <= GEN_ASYNC_FIFO.p2w_ready;
+
+		// o_pxdebug[21] <= GEN_ASYNC_FIFO.pix_clear;
+		o_pxdebug[22] <= i_pix_en;
+		o_pxdebug[23] <= pix_clearing;
+
+		o_pxdebug[31] <= (!pix_clearing && !i_pix_en)
+				|| (afifo_read && o_pxdebug[19]);
+	end
 	// }}}
 
 	// Keep Verilator happy
@@ -786,7 +913,8 @@ module	vid_wbframebuf #(
 		// }}}
 	) fvidwb (
 		// {{{
-		.i_clk(i_clk), .i_reset_n(!i_reset && !(o_wb_cyc && i_wb_err)),
+		.i_clk(i_clk), .i_reset_n(!i_reset && !(o_wb_cyc && i_wb_err)
+				&& i_wb_en && wb_pix_en),
 		.S_VID_TVALID(o_wb_stb), .S_VID_TREADY(!i_wb_stall),
 		.S_VID_TDATA(o_wb_addr), .S_VID_TLAST(wb_vlast && wb_hlast),
 		.S_VID_TUSER(wb_hlast),
@@ -798,7 +926,7 @@ module	vid_wbframebuf #(
 	);
 
 	always @(*)
-	if (!wb_reset)
+	if (!wb_reset && i_wb_en && wb_pix_en)
 	begin
 		assert(wb_vlast == fwb_vlast);
 		assert(wb_hlast == fwb_hlast);
@@ -821,8 +949,14 @@ module	vid_wbframebuf #(
 	always @(*)
 	if (!i_reset)
 	begin
-		assume(i_mem_words  > 2*(DW/PW));
+		assume(i_mem_words  > 1);
 		assume(i_height > 2);
+
+		if (PW == 8)
+		begin
+			assume(i_mem_words == (i_width >> $clog2(DW/8))
+					+ (i_width[$clog2(DW/8)-1:0] != 0));
+		end
 	end
 
 	faxivideo #(
@@ -834,11 +968,12 @@ module	vid_wbframebuf #(
 		// }}}
 	) fvid (
 		// {{{
-		.i_clk(i_clk), .i_reset_n(!i_reset),
+		.i_clk(i_clk), .i_reset_n(!i_reset && i_pix_en //&&!px_lost_sync
+						&& !pix_reset && !pix_clearing),
 		.S_VID_TVALID(M_VID_TVALID), .S_VID_TREADY(M_VID_TREADY),
 		.S_VID_TDATA(M_VID_TDATA), .S_VID_TLAST(M_VID_TLAST),
 		.S_VID_TUSER(M_VID_TUSER),
-		.i_width(i_mem_words), .i_height(i_height),
+		.i_width(i_width), .i_height(i_height),
 		.o_xpos(f_xpos), .o_ypos(f_ypos),
 		.f_known_height(f_known_height),
 		.o_hlast(f_hlast), .o_vlast(f_vlast), .o_sof(f_sof)
@@ -846,7 +981,7 @@ module	vid_wbframebuf #(
 	);
 
 	always @(*)
-	if (!i_reset)
+	if (!i_reset && i_pix_en && !pix_reset && !pix_clearing)
 	begin
 		assert(m_hpos == f_xpos);
 		assert(m_vpos == f_ypos);
@@ -895,6 +1030,25 @@ module	vid_wbframebuf #(
 
 		assert(wb_vlast == (wb_vpos == i_height-1));
 	end
+	////////////////////////////////////////////////////////////////////////
+	//
+	// "Careless" assumptions
+	// {{{
+	(* anyconst *)	reg	[LGFRAME-1:0]	fc_height, fc_mem_words,
+						fc_width;
+	always @(*)
+		assume(!i_baseaddr[AW-1]);
+	always @(*)
+	if (!i_reset)
+	begin
+		assume(i_height    == fc_height);
+		assume(i_width     == fc_width);
+		assume(i_mem_words == fc_mem_words);
+
+		assume(wb_pix_en == i_pix_en);
+		assume(!wb_reset);
+	end
+	// }}}
 `endif
 // }}}
 endmodule

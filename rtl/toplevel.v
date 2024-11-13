@@ -741,7 +741,7 @@ i_sd_cd_n,
 	xhdmiout
 	u_hdmitx_clk(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(pix_reset_n), .i_en(1'b1),
 		.i_word(10'b11111_00000),
 		.o_port({ o_hdmitx_clk_p, o_hdmitx_clk_n })
 	);
@@ -749,7 +749,7 @@ i_sd_cd_n,
 	xhdmiout
 	u_hdmitx_red(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(pix_reset_n), .i_en(1'b1),
 		.i_word(hdmitx_red),
 		.o_port({ o_hdmitx_p[2], o_hdmitx_n[2] })
 	);
@@ -757,7 +757,7 @@ i_sd_cd_n,
 	xhdmiout
 	u_hdmitx_grn(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(pix_reset_n), .i_en(1'b1),
 		.i_word(hdmitx_grn),
 		.o_port({ o_hdmitx_p[1], o_hdmitx_n[1] })
 	);
@@ -765,7 +765,7 @@ i_sd_cd_n,
 	xhdmiout
 	u_hdmitx_blu(
 		.i_clk(hdmi_ck), .i_hsclk(hdmi_serdes_clk),
-		.i_reset_n(pix_reset_n),
+		.i_reset_n(pix_reset_n), .i_en(1'b1),
 		.i_word(hdmitx_blu),
 		.o_port({ o_hdmitx_p[0], o_hdmitx_n[0] })
 	);

@@ -332,7 +332,7 @@ module	main(i_clk, i_reset,
 // Port declarations
 // {{{
 // The next step is to declare all of the various ports that were just
-// listed above.  
+// listed above.
 //
 // The following declarations are taken from the values of the various
 // @MAIN.IODECL keys.

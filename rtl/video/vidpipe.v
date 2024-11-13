@@ -294,7 +294,8 @@ module	vidpipe #(
 	wire	[2:0]	dbg_sel;
 	// Verilator lint_off UNUSED
 	wire		pixdbg_valid;
-	wire	[31:0]	src_debug, tx_debug, alph_debug, pip_debug, vga_debug;
+	wire	[31:0]	src_debug, tx_debug, alph_debug, pip_debug, vga_debug,
+			fb_pixdebug, fb_sysdebug, cam_sysdebug;
 	wire	[29:0]	raw_hdmi;
 
 	wire		di_dbg_ce, di_dbg_trigger, di_alt_valid;
@@ -315,7 +316,7 @@ module	vidpipe #(
 	reg	[LGDIM-1:0]	cfg24_xpos, cfg24_words, last_cfg_mem_width;
 	reg	[LGDIM+1:0]	cfg24_bytecount;
 	reg			cfg24_set;
-	
+
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -1047,7 +1048,7 @@ module	vidpipe #(
 				.LGFLEN(6)
 			) u_gate (
 				// {{{
-				.S_AXI_ACLK(i_hdmiclk), .S_AXI_ARESETN(!hdmi_reset),
+				.S_AXI_ACLK(i_hdmiclk), .S_AXI_ARESETN(hdmi_reset_n),
 				.S_AXIN_VALID(pktdec_valid),
 				.S_AXIN_DATA( pktdec_data),
 				.S_AXIN_LAST( pktdec_last),
@@ -1527,8 +1528,10 @@ module	vidpipe #(
 			.M_VID_TREADY(mem_ready),
 			.M_VID_TDATA( mem_data),
 			.M_VID_TLAST( mem_vlast),
-			.M_VID_TUSER( mem_hlast)
+			.M_VID_TUSER( mem_hlast),
 			// }}}
+			.o_pxdebug(fb_pixdebug),
+			.o_debug(fb_sysdebug)
 			// }}}
 		);
 		// }}}
@@ -1663,6 +1666,9 @@ module	vidpipe #(
 		assign	out_data   = pipe_data;
 		assign	out_hlast  = pipe_hlast;
 		assign	out_vlast  = pipe_vlast;
+
+		assign	fb_sysdebug = 32'h0;
+		assign	fb_pixdebug = 32'h0;
 		// }}}
 	end endgenerate
 	////////////////////////////////////////////////////////////////////////
@@ -1874,7 +1880,8 @@ module	vidpipe #(
 			.S_VID_READY(pxm_ready),
 			.S_VID_DATA( pxm_data),
 			.S_VID_HLAST(pxm_hlast),
-			.S_VID_VLAST(pxm_vlast)
+			.S_VID_VLAST(pxm_vlast),
+			.o_debug(cam_sysdebug)
 			// }}}
 		);
 
@@ -1888,6 +1895,8 @@ module	vidpipe #(
 
 		assign	wbcap_err  = 1'b0;
 		assign	wbcap_done = 1'b0;
+
+		assign	cam_sysdebug = 32'h0;
 
 		// Keep Verilator happy
 		// {{{
@@ -2034,10 +2043,13 @@ module	vidpipe #(
 			.M_READY(opkt_ready),
 			.M_HDR(  opkt_hdr),
 			.M_DATA( opkt_data),
-			.M_LAST( opkt_last)
+			.M_LAST( opkt_last),
+			//
+			.o_debug(genpkt_debug)
 			// }}}
 		);
 
+		/*
 		assign	genpkt_debug = { opkt_valid && opkt_ready && opkt_last,
 			7'h0,
 			// 12b
@@ -2047,6 +2059,7 @@ module	vidpipe #(
 			opkt_valid, opkt_ready, opkt_hdr, opkt_last,
 				opkt_data
 			};
+		*/
 
 		vid_dicap	// A basic 8b:32b gearbox via zipdma_rxgears
 		u_dicap (
@@ -2164,6 +2177,22 @@ module	vidpipe #(
 	3'b100: begin
 		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { di_dbg_ce, di_dbg_trigger && di_dbg_ce, di_debug };
 		{ o_dbg_ce, o_dbg_trigger, o_pixdebug } <= { pktdbg_valid, pktdbg_valid && pkt_debug[31], pkt_debug };
+		o_dbg_ce <= 1'b1;
+		o_pixdebug[30] <= pkt_debug[30] && pktdbg_valid;
+		o_pixdebug[10] <= genpkt_debug[23];
+		o_pixdebug[ 9] <= genpkt_debug[22];
+		o_pixdebug[ 8] <= genpkt_debug[20];
+
+		o_pixdebug[8]   <= genhdmi.GEN_DATAISLAND.di_may_commit;
+		o_pixdebug[7]   <= genhdmi.GEN_DATAISLAND.r_active;
+		o_pixdebug[6:4] <= genhdmi.GEN_DATAISLAND.di_fsm;
+
+		o_pixdebug[ 3] <= opkt_valid;
+		o_pixdebug[ 2] <= opkt_ready;
+		o_pixdebug[ 1] <= opkt_hdr;
+		o_pixdebug[ 0] <= opkt_last;
+
+		o_dbg_trigger <= opkt_valid && opkt_ready;
 		end
 	// 3'b101: { o_dbg_ce, o_dbg_trigger, o_pixdebug } <=
 	//		{ di_alt_valid, di_alt_valid, di_alt_debug };

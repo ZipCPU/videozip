@@ -42,7 +42,7 @@ module	xhdmiout (
 		// {{{
 		input	wire		i_clk,
 		input	wire		i_hsclk,
-		input	wire		i_reset_n,
+		input	wire		i_reset_n, i_en,
 		input	wire	[9:0]	i_word,
 		output	wire	[1:0]	o_port
 		// }}}
@@ -79,20 +79,20 @@ module	xhdmiout (
 		//
 		wire	[9:0]	brev_input;
 
-		assign	brev_input[0] = i_word[9];
-		assign	brev_input[1] = i_word[8];
-		assign	brev_input[2] = i_word[7];
-		assign	brev_input[3] = i_word[6];
-		assign	brev_input[4] = i_word[5];
-		assign	brev_input[5] = i_word[4];
-		assign	brev_input[6] = i_word[3];
-		assign	brev_input[7] = i_word[2];
-		assign	brev_input[8] = i_word[1];
-		assign	brev_input[9] = i_word[0];
+		assign	brev_input[0] = i_en && i_word[9];
+		assign	brev_input[1] = i_en && i_word[8];
+		assign	brev_input[2] = i_en && i_word[7];
+		assign	brev_input[3] = i_en && i_word[6];
+		assign	brev_input[4] = i_en && i_word[5];
+		assign	brev_input[5] = i_en && i_word[4];
+		assign	brev_input[6] = i_en && i_word[3];
+		assign	brev_input[7] = i_en && i_word[2];
+		assign	brev_input[8] = i_en && i_word[1];
+		assign	brev_input[9] = i_en && i_word[0];
 
 		assign	w_in_word = brev_input;
 	end else begin : NO_BITREVERSE
-		assign	w_in_word = i_word;
+		assign	w_in_word = i_en ? i_word : 10'h0;
 	end endgenerate
 	// }}}
 

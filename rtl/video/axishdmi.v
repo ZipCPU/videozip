@@ -412,12 +412,15 @@ module	axishdmi #(
 		//			(RAW_WIDTH-(32+2)-(2+32))
 		//		pixels before the end of the frame
 		always @(posedge i_pixclk)
-		if (lost_sync)
+		if (i_reset)
+			di_may_commit <= 0;
+		else if (lost_sync)
 			di_may_commit <= 0;
 		else if (vblank && !vlast)
 			di_may_commit <= 1;
 		else if (di_active)
 		begin
+			// {{{
 			if (!vblank)
 			begin
 				if (hpos + (12+2+2+32) >= i_hm_raw)
@@ -431,22 +434,21 @@ module	axishdmi #(
 				else
 					di_may_commit <= 1;
 			end
-		end else begin
-			if (!vblank)
-			begin
-				if (hpos < i_hm_width+11)
-					di_may_commit <= 0;
-				else if (hpos + (12+2+12+2+2+32) >= i_hm_raw)
-					di_may_commit <= 0;
-				else
-					di_may_commit <= 1;
-			end else // if (vlast)
-			begin
-				if (hpos + (32+2+12+2+2+32) >= i_hm_raw)
-					di_may_commit <= 0;
-				else
-					di_may_commit <= 1;
-			end
+			// }}}
+		end else if (!vblank)
+		begin
+			if (hpos < i_hm_width+11)
+				di_may_commit <= 0;
+			else if (hpos + (12+2+12+2+2+32) >= i_hm_raw)
+				di_may_commit <= 0;
+			else
+				di_may_commit <= 1;
+		end else // if (vlast)
+		begin
+			if (hpos + (32+2+12+2+2+32) >= i_hm_raw)
+				di_may_commit <= 0;
+			else
+				di_may_commit <= 1;
 		end
 		// }}}
 

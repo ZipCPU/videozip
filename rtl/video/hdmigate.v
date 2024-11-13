@@ -234,7 +234,7 @@ module	hdmigate #(
 	end endgenerate
 	// }}}
 
-	initial	{ s_aborting, s_midpacket } <= 0;
+	initial	{ s_aborting, s_midpacket } = 0;
 	always @(posedge S_AXI_ACLK)
 	if (!S_AXI_ARESETN)
 		{ s_aborting, s_midpacket } <= 0;

@@ -48,16 +48,15 @@ module	hdmibchdec (
 		output	wire		M_VALID,
 		output	wire	[7:0]	M_DATA,
 		output	wire		M_LAST
+		//
+		// output	wire	[7:0]	o_dbg
 		// }}}
 	);
 
 	// Local declarations
 	// {{{
-	integer	ij, ik, ip;
 	reg	[23:0]	dec32	[0:255];
 	reg	[55:0]	dec64	[0:255];
-	reg	[63:0]	tmpdata;
-	reg	[7:0]	tmpsynd;
 	reg	[7:0]	hfill, b0fill, b1fill, b2fill, b3fill;
 	reg	[32:0]	hdrsr;
 	reg	[35:0]	bsreg, d0sr, d1sr, d2sr, d3sr, d4sr, d5sr, d6sr,
@@ -73,6 +72,10 @@ module	hdmibchdec (
 	// Generate the BCH decode table
 	// {{{
 `ifdef	GENCODE
+	reg	[63:0]	tmpdata;
+	reg	[7:0]	tmpsynd;
+	integer	ij, ik, ip;
+
 	initial begin
 		// 64b Dual error correction (to extent possible)
 		// {{{
@@ -168,6 +171,10 @@ module	hdmibchdec (
 `endif
 	// }}}
 
+	// reg	[39:0]	dbg_syndrome;
+
+	// DATA/HDR shift registers
+	// {{{
 	always @(posedge i_clk)
 	begin
 		hdrsr  <= { hdrsr[31:0], S_VALID && S_HDR  };
@@ -182,11 +189,13 @@ module	hdmibchdec (
 		d7sr   <= { d7sr[34:0], S_VALID && S_DATA[7] };
 		lastsr <= { lastsr[34:0], S_VALID && S_LAST };
 
-		zero_pkt <= zero_pkt && (!S_VALID || S_DATA == 8'h0);
+		zero_pkt <= zero_pkt && (!S_VALID || { S_HDR, S_DATA } == 9'h0);
+		// dbg_syndrome <= { d3sr[34], d2sr[34], d1sr[34], d0sr[34],
+		//		lastsr[8:5], dbg_syndrome[39:8] };
 
 		if (lastsr[0])
 		begin
-			zero_pkt <= !S_VALID || S_DATA == 8'h0;
+			zero_pkt <= !S_VALID || { S_HDR, S_DATA } == 9'h0;
 			hdrsr[32:9] <= hdrsr[31:8] ^ dec32[hfill];
 			{ d0sr[32:5], d4sr[32:5] } <= DECODE(
 					{ d0sr[31:4], d4sr[31:4] }, b0fill);
@@ -200,6 +209,8 @@ module	hdmibchdec (
 			lastsr[5] <= 1'b1;
 			bsreg[ 4:1] <= 4'h0;
 			lastsr[4:1] <= 4'h0;
+
+			// dbg_syndrome <= { b3fill, b2fill, b1fill, b0fill, hfill };
 		end
 
 		if (!S_VALID || S_LAST)
@@ -258,7 +269,12 @@ module	hdmibchdec (
 			bsreg <= 0;
 		end
 	end
+	// }}}
 
+	// assign	o_dbg = dbg_syndrome[7:0];
+
+	// ECC parity fill/syndrome register(s)
+	// {{{
 	always @(posedge i_clk)
 	if (S_VALID)	// && S_READY is implied
 	begin
@@ -290,6 +306,7 @@ module	hdmibchdec (
 		b2fill <= 0;
 		b3fill <= 0;
 	end
+	// }}}
 
 	always @(posedge i_clk)
 	if (i_reset)
@@ -329,10 +346,10 @@ module	hdmibchdec (
 
 	function automatic [55:0] DECODE(input [55:0] dat, input [7:0] synd);
 		// {{{
-		integer	i;
 		reg	[55:0]	vec;
 	begin
 `ifdef	GENCODE
+		integer	i;
 		reg	[55:0]	ivec, ovec;
 
 		ivec = 0;
@@ -358,5 +375,4 @@ module	hdmibchdec (
 `endif
 	end endfunction
 	// }}}
-
 endmodule
